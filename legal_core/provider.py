@@ -72,8 +72,7 @@ class AnthropicProvider:
             max_tokens=max_tokens,
             messages=[{"role": "user", "content": prompt}],
         ) as s:
-            for text in s.text_stream:
-                yield text
+            yield from s.text_stream
             final = s.get_final_message()
             usage = getattr(final, "usage", None)
             self.last_result = ProviderResult(

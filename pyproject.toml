@@ -21,7 +21,7 @@ api = [
     "redis>=5.0",
     "anthropic>=0.40",
 ]
-dev = ["pytest>=8.0", "httpx>=0.27"]
+dev = ["pytest>=8.0", "httpx>=0.27", "ruff>=0.6"]
 
 [build-system]
 requires = ["hatchling"]
@@ -33,3 +33,13 @@ packages = ["legal_core", "app"]
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+exclude = [".venv", "alembic/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# E501: satır uzunluğu formatter'a; B008: FastAPI Depends() deseni; UP042: str+Enum geçerli
+ignore = ["E501", "B008", "UP042"]

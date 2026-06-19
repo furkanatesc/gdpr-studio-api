@@ -66,7 +66,7 @@ def generate(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Üretim hatası: {e}")
+        raise HTTPException(status_code=502, detail=f"Üretim hatası: {e}") from e
 
 
 @router.post("/generate/stream")

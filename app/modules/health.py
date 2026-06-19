@@ -21,5 +21,5 @@ def readyz(session: Session = Depends(get_session)) -> dict:
     try:
         session.execute(text("SELECT 1"))
     except Exception as e:  # pragma: no cover
-        raise HTTPException(status_code=503, detail=f"db not ready: {e}")
+        raise HTTPException(status_code=503, detail=f"db not ready: {e}") from e
     return {"status": "ready"}

@@ -13,13 +13,12 @@ import time
 import unicodedata
 from collections import defaultdict
 
+from app.config import get_settings
+from app.seed import CATEGORIES_PATH, RULES
 from legal_core import generate_document
 from legal_core.adapters import DictBusinessRuleRepository, JsonCategoryRepository
 from legal_core.grounding import Grounding
 from legal_core.provider import AnthropicProvider
-
-from app.config import get_settings
-from app.seed import CATEGORIES_PATH, RULES
 
 from .cases import GOLDEN, EvalCase, by_name
 from .checks import (
