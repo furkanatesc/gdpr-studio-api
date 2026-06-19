@@ -18,6 +18,7 @@ import app.config as config_module
 from app.db import Base, get_session
 from app.main import app
 from app.models import BusinessRule, Category
+from app.redis_client import reset_redis
 
 # /api/categories ve grounding için temsili minimum seed (gerçek kategori adları).
 _SEED_CATEGORIES = [
@@ -60,7 +61,9 @@ def client(db_session):
         _env_file=None,
         managed_anthropic_api_key="",
         allowed_origins="http://localhost:3000",
+        redis_url="",  # Redis testlerde devre dışı → rate-limit fail-open, cache miss
     )
+    reset_redis()  # ayar değişti → singleton yeniden değerlendirilsin
 
     def _override_get_session():
         yield db_session
@@ -72,3 +75,4 @@ def client(db_session):
     finally:
         app.dependency_overrides.clear()
         config_module._settings = prev_settings
+        reset_redis()

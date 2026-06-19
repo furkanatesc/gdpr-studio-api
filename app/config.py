@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     sentry_dsn: str = ""  # boşsa Sentry devre dışı (no-op)
 
+    # Redis (opsiyonel — erişilemezse rate-limit fail-open, cache miss)
+    rate_limit_generate_per_min: int = 10  # tenant başına dakikalık üretim isteği tavanı
+    categories_cache_ttl_s: int = 300  # /api/categories cache süresi
+
     @property
     def cors_origins(self) -> list[str]:
         return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]

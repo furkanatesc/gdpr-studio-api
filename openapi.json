@@ -246,7 +246,7 @@
     },
     "/api/categories": {
       "get": {
-        "description": "Tüm KVKK kategori adları (grounding referansı).",
+        "description": "Tüm KVKK kategori adları (grounding referansı). Redis varsa TTL'li cache'lenir.",
         "operationId": "list_categories_api_categories_get",
         "responses": {
           "200": {

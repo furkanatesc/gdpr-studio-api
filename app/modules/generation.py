@@ -19,6 +19,7 @@ from legal_core.provider import AnthropicProvider
 
 from ..config import get_settings
 from ..db import get_session
+from ..redis_client import generate_rate_limit
 from ..repositories import PostgresBusinessRuleRepository, PostgresCategoryRepository
 from .auth import Tenant, get_current_tenant
 
@@ -41,7 +42,12 @@ def _sse(event: str, data) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
-@router.post("/generate", response_model=GenerateResponse, response_model_by_alias=True)
+@router.post(
+    "/generate",
+    response_model=GenerateResponse,
+    response_model_by_alias=True,
+    dependencies=[Depends(generate_rate_limit)],
+)
 def generate(
     req: GenerateRequest,
     session: Session = Depends(get_session),
@@ -69,7 +75,7 @@ def generate(
         raise HTTPException(status_code=502, detail=f"Üretim hatası: {e}") from e
 
 
-@router.post("/generate/stream")
+@router.post("/generate/stream", dependencies=[Depends(generate_rate_limit)])
 def generate_stream(
     req: GenerateRequest,
     session: Session = Depends(get_session),
