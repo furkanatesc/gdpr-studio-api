@@ -16,8 +16,12 @@ backend/
 │   ├── provider.py       # ModelProvider soyutlaması + AnthropicProvider (BYOK/managed)
 │   ├── generate.py       # üretim orkestrasyonu
 │   └── adapters.py       # JSON/dict repository'leri (test + masaüstü)
-├── data/categories.json  # grounding kaynağı (Postgres'e seed edilecek)
-├── tests/                # pytest — 16 test (normalize, grounding, generate)
+├── data/categories.json  # grounding kaynağı (Postgres'e seed edilir)
+├── eval/                 # hukuki-doğruluk eval harness (golden set)
+│   ├── cases.py          # temsili senaryolar + beklenen hukuki özellikler
+│   ├── checks.py         # madde atfı / bölüm / m.6 / saklama-uydurma / disclaimer
+│   └── runner.py         # skorlu rapor + exit code
+├── tests/                # pytest — 20 test (normalize, grounding, generate, golden-grounding)
 └── pyproject.toml
 ```
 
@@ -32,3 +36,19 @@ python -m venv .venv
 # veya: source .venv/bin/activate && pip install -e ".[dev]"
 pytest -q
 ```
+
+## Hukuki-doğruluk eval (golden set)
+
+Prompt/model/grounding değişince üretilen dokümanların hukuki doğruluğunun regresyona
+uğramadığını kanıtlar.
+
+```bash
+python -m eval.runner --grounding-only   # modelsiz, ücretsiz (grounding doğruluğu)
+python -m eval.runner                     # tüm senaryolar, GERÇEK model (.env anahtarı gerekir)
+python -m eval.runner aydinlatma_saglik   # tek senaryo
+```
+
+Kontroller: madde atıfları (KVKK/GDPR), zorunlu bölümler, **m.6 özel nitelikli veri
+işlenişi**, **saklama süresi uydurma yasağı** (envanterde yoksa placeholder), zorunlu
+disclaimer, grounding doğruluğu. Deterministik (grounding) kısmı `pytest`'te de koşar.
+
