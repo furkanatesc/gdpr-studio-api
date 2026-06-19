@@ -1,0 +1,43 @@
+services:
+  postgres:
+    # pgvector imajı: vektöre-hazır (CREATE EXTENSION vector ileride). Şimdilik pasif.
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: kvkk
+      POSTGRES_PASSWORD: kvkk
+      POSTGRES_DB: kvkk
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kvkk -d kvkk"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg://kvkk:kvkk@postgres:5432/kvkk
+      REDIS_URL: redis://redis:6379/0
+      ALLOWED_ORIGINS: "http://localhost:3000"
+      MANAGED_ANTHROPIC_API_KEY: "${MANAGED_ANTHROPIC_API_KEY:-}"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Migration + seed + sunucu
+    command: >
+      sh -c "alembic upgrade head &&
+             python -m app.seed &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+volumes:
+  pgdata:
