@@ -8,11 +8,14 @@ pgvector ile eklenecek bir migration'dır.
 
 from __future__ import annotations
 
-from sqlalchemy import Index, Integer, String, Text
+from sqlalchemy import JSON, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .db import Base
+
+# Postgres'te JSONB (prod); SQLite'ta (test) generic JSON'a düşer. Şema/davranış aynı kalır.
+_JSON = JSONB().with_variant(JSON(), "sqlite")
 
 
 class Category(Base):
@@ -22,7 +25,7 @@ class Category(Base):
     # NFC normalize edilmiş kategori adı (grounding anahtarı).
     name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     # veri_turu, amaclar, hukuki_sebepler, kisi_grubu, saklama_sureleri, *_tedbirler
-    data: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    data: Mapped[dict] = mapped_column(_JSON, nullable=False, default=dict)
 
 
 class BusinessRule(Base):
