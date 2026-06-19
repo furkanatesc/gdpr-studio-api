@@ -7,6 +7,7 @@ aynı arayüzü kullanır — fark yalnızca hangi api_key'in geçtiğidir.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
@@ -35,6 +36,12 @@ class AnthropicProvider:
             raise ValueError("api_key zorunludur (BYOK veya managed).")
         self._api_key = api_key
         self._model = model
+        # stream() bittikten sonra final usage burada saklanır.
+        self.last_result: ProviderResult | None = None
+
+    @property
+    def model(self) -> str:
+        return self._model
 
     def generate(self, prompt: str, *, max_tokens: int = DEFAULT_MAX_TOKENS) -> ProviderResult:
         from anthropic import Anthropic  # lazy: legal_core'u saf tutar
@@ -53,3 +60,25 @@ class AnthropicProvider:
             input_tokens=getattr(usage, "input_tokens", 0) or 0,
             output_tokens=getattr(usage, "output_tokens", 0) or 0,
         )
+
+    def stream(self, prompt: str, *, max_tokens: int = DEFAULT_MAX_TOKENS) -> Iterator[str]:
+        """Metin delta'larını akıtır; bitince final usage'ı self.last_result'a yazar."""
+        from anthropic import Anthropic
+
+        client = Anthropic(api_key=self._api_key)
+        self.last_result = None
+        with client.messages.stream(
+            model=self._model,
+            max_tokens=max_tokens,
+            messages=[{"role": "user", "content": prompt}],
+        ) as s:
+            for text in s.text_stream:
+                yield text
+            final = s.get_final_message()
+            usage = getattr(final, "usage", None)
+            self.last_result = ProviderResult(
+                text="",
+                model=self._model,
+                input_tokens=getattr(usage, "input_tokens", 0) or 0,
+                output_tokens=getattr(usage, "output_tokens", 0) or 0,
+            )
