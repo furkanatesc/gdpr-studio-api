@@ -1,0 +1,435 @@
+{
+  "components": {
+    "schemas": {
+      "DocType": {
+        "enum": [
+          "aydinlatma",
+          "cerez",
+          "kayit",
+          "dpa",
+          "dpia",
+          "ihlal"
+        ],
+        "title": "DocType",
+        "type": "string"
+      },
+      "GenerateRequest": {
+        "properties": {
+          "amaclar": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Amaclar",
+            "type": "array"
+          },
+          "fields": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "default": {},
+            "title": "Fields",
+            "type": "object"
+          },
+          "type": {
+            "$ref": "#/components/schemas/DocType"
+          },
+          "veriler": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Veriler",
+            "type": "array"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "GenerateRequest",
+        "type": "object"
+      },
+      "GenerateResponse": {
+        "properties": {
+          "disclaimer": {
+            "title": "Disclaimer",
+            "type": "string"
+          },
+          "grounding": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/GroundingRecord"
+            },
+            "title": "Grounding",
+            "type": "array"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "usage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Usage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "text",
+          "model",
+          "disclaimer"
+        ],
+        "title": "GenerateResponse",
+        "type": "object"
+      },
+      "GroundingRecord": {
+        "description": "Şeffaflık kaydı — çıktının dayandığı envanter kategorisi (web kontratı).",
+        "properties": {
+          "amaclar": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Amaclar",
+            "type": "array"
+          },
+          "hukukiSebepler": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Hukukisebepler",
+            "type": "array"
+          },
+          "kategori": {
+            "title": "Kategori",
+            "type": "string"
+          },
+          "kisiGruplari": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Kisigruplari",
+            "type": "array"
+          },
+          "saklamaSureleri": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Saklamasureleri",
+            "type": "array"
+          },
+          "veriTurleri": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Veriturleri",
+            "type": "array"
+          }
+        },
+        "required": [
+          "kategori"
+        ],
+        "title": "GroundingRecord",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "Usage": {
+        "properties": {
+          "inputTokens": {
+            "title": "Inputtokens",
+            "type": "integer"
+          },
+          "outputTokens": {
+            "title": "Outputtokens",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "inputTokens",
+          "outputTokens"
+        ],
+        "title": "Usage",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "KVKK/GDPR grounded doküman üretimi — legal_core üzerine FastAPI modüler monolit.",
+    "title": "KVKK Yönetim API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/": {
+      "get": {
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Root  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Root"
+      }
+    },
+    "/api/categories": {
+      "get": {
+        "description": "Tüm KVKK kategori adları (grounding referansı).",
+        "operationId": "list_categories_api_categories_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Categories Api Categories Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Categories",
+        "tags": [
+          "grounding"
+        ]
+      }
+    },
+    "/api/generate": {
+      "post": {
+        "operationId": "generate_api_generate_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Anthropic-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Anthropic-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Generate",
+        "tags": [
+          "generation"
+        ]
+      }
+    },
+    "/api/generate/stream": {
+      "post": {
+        "description": "Streaming (SSE): grounding → metin delta'ları → done. Algılanan gecikmeyi düşürür.",
+        "operationId": "generate_stream_api_generate_stream_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Anthropic-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Anthropic-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Generate Stream",
+        "tags": [
+          "generation"
+        ]
+      }
+    },
+    "/healthz": {
+      "get": {
+        "operationId": "healthz_healthz_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Healthz Healthz Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Healthz",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/readyz": {
+      "get": {
+        "operationId": "readyz_readyz_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Readyz Readyz Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Readyz",
+        "tags": [
+          "health"
+        ]
+      }
+    }
+  }
+}
