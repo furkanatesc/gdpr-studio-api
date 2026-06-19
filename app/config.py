@@ -22,6 +22,10 @@ class Settings(BaseSettings):
 
     environment: str = "development"
 
+    # Gözlemlenebilirlik
+    log_level: str = "INFO"
+    sentry_dsn: str = ""  # boşsa Sentry devre dışı (no-op)
+
     @property
     def cors_origins(self) -> list[str]:
         return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]

@@ -54,6 +54,18 @@ def test_generate_stream_anahtarsiz_400(client):
     assert "API anahtarı yok" in r.json()["detail"]
 
 
+def test_request_id_uretilir_ve_donulur(client):
+    r = client.get("/healthz")
+    assert r.status_code == 200
+    rid = r.headers.get("x-request-id")
+    assert rid and len(rid) >= 16  # üretilen uuid hex
+
+
+def test_request_id_istemciden_echolanir(client):
+    r = client.get("/healthz", headers={"X-Request-ID": "test-rid-123"})
+    assert r.headers.get("x-request-id") == "test-rid-123"
+
+
 def test_cors_preflight_izinli_kaynak(client):
     r = client.options(
         "/api/categories",
