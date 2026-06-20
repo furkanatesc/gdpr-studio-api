@@ -4,7 +4,9 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi import HTTPException
 
 import app.auth.jwt as jwtmod
+import app.config as configmod
 from app.auth.jwt import AuthClaims, reset_jwks_cache, verify_token
+from app.config import Settings
 
 
 @pytest.fixture()
@@ -21,7 +23,7 @@ def _make_token(key, *, aud="authenticated", sub="user-123", email="a@b.com"):
     )
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture()
 def _patch_signing_key(monkeypatch, rsa_key):
     # PyJWKClient yerine sabit public key döndür.
     class _Key:
@@ -33,8 +35,7 @@ def _patch_signing_key(monkeypatch, rsa_key):
     reset_jwks_cache()
 
 
-def test_valid_token_returns_claims(rsa_key, monkeypatch):
-    monkeypatch.setenv("SUPABASE_PROJECT_URL", "https://abc.supabase.co")
+def test_valid_token_returns_claims(rsa_key, _patch_signing_key):
     token = _make_token(rsa_key)
     claims = verify_token(token)
     assert isinstance(claims, AuthClaims)
@@ -42,8 +43,24 @@ def test_valid_token_returns_claims(rsa_key, monkeypatch):
     assert claims.email == "a@b.com"
 
 
-def test_wrong_audience_rejected(rsa_key):
+def test_wrong_audience_rejected(rsa_key, _patch_signing_key):
     token = _make_token(rsa_key, aud="other")
     with pytest.raises(HTTPException) as exc:
         verify_token(token)
     assert exc.value.status_code == 401
+    assert exc.value.detail == "Geçersiz veya süresi dolmuş oturum."
+
+
+def test_unconfigured_jwks_url_rejected():
+    # _patch_signing_key fixture'ı kullanılmaz — gerçek _signing_key_for çalışır.
+    saved = configmod._settings
+    try:
+        configmod._settings = Settings(_env_file=None, supabase_project_url="")
+        reset_jwks_cache()
+        with pytest.raises(HTTPException) as exc:
+            verify_token("any.token.here")
+        assert exc.value.status_code == 401
+        assert exc.value.detail == "Kimlik doğrulama yapılandırılmamış."
+    finally:
+        configmod._settings = saved
+        reset_jwks_cache()

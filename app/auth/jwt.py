@@ -23,7 +23,7 @@ def reset_jwks_cache() -> None:
     _jwks_client = None
 
 
-def _signing_key_for(token: str):
+def _signing_key_for(token: str) -> pyjwt.PyJWK:
     global _jwks_client
     if _jwks_client is None:
         url = get_settings().supabase_jwks_url
