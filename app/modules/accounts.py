@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Request
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
 from ..auth.identity import Identity, _claims_from_request, get_current_identity
@@ -16,6 +16,14 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 class BootstrapRequest(BaseModel):
     orgName: str = Field(min_length=2, max_length=255)
+
+    @field_validator("orgName", mode="before")
+    @classmethod
+    def strip_and_reject_blank(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("orgName boş olamaz.")
+        return v
 
 
 class IdentityOut(BaseModel):
@@ -53,7 +61,8 @@ def bootstrap(
     membership = accounts.get_membership_for_user(user.id)
     if membership is not None:  # idempotent: zaten provisioned
         org = session.get(Organization, membership.org_id)
-        session.commit()
+        if org is None:
+            raise HTTPException(status_code=404, detail="Hesap verisi bulunamadı.")
         return _to_out(user, org, membership.role)
 
     pending = invites.get_pending_by_email(claims.email)
@@ -76,4 +85,6 @@ def me(
 ) -> IdentityOut:
     user = session.get(User, identity.user_id)
     org = session.get(Organization, identity.org_id)
+    if user is None or org is None:
+        raise HTTPException(status_code=404, detail="Hesap verisi bulunamadı.")
     return _to_out(user, org, identity.role)
