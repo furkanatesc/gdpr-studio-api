@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import UTC, datetime, timedelta
 
@@ -16,6 +17,8 @@ from ..email.sender import EmailMessage, get_email_sender
 from ..invites.tokens import InviteExpired, InviteInvalid, make_invite_token, read_invite_token
 from ..models import Organization
 from ..repositories import AccountRepository, InvitationRepository
+
+_log = logging.getLogger("app.invitations")
 
 router = APIRouter(prefix="/api/invitations", tags=["invitations"])
 
@@ -51,13 +54,16 @@ def create_invitation(
     session.commit()
 
     link = f"{settings.app_base_url.rstrip('/')}/davet/{token}"
-    get_email_sender().send(
-        EmailMessage(
-            to=str(body.email),
-            subject="KVKK Yönetim — kurum davetiniz",
-            html=f'<p>Bir kuruma davet edildiniz. Katılmak için: <a href="{link}">{link}</a></p>',
+    try:
+        get_email_sender().send(
+            EmailMessage(
+                to=str(body.email),
+                subject="KVKK Yönetim — kurum davetiniz",
+                html=f'<p>Bir kuruma davet edildiniz. Katılmak için: <a href="{link}">{link}</a></p>',
+            )
         )
-    )
+    except Exception:
+        _log.warning("Davet e-postası gönderilemedi: %s", body.email)
     return InviteOut(id=str(inv.id), email=inv.email, role=inv.role, status=inv.status, token=token)
 
 
@@ -77,9 +83,9 @@ def revoke_invitation(
     identity: Identity = Depends(require_role("yonetici")),
 ) -> Response:
     ok = InvitationRepository(session).revoke(inv_id, identity.org_id)
-    session.commit()
     if not ok:
         raise HTTPException(status_code=404, detail="Davet bulunamadı veya zaten işlenmiş.")
+    session.commit()
     return Response(status_code=204)
 
 

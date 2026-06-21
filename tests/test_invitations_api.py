@@ -20,18 +20,31 @@ def test_accept_invitation_creates_membership(client_fresh, accept_as):
     assert out.json()["role"] == "avukat"
 
 
-def test_non_yonetici_cannot_create_invitation(client):
-    """Rol 'yonetici' olmayan kimlik davet oluşturamaz → 403."""
-    # client fixture'ı override edilmiş identity kullanır (yonetici), bu testte
-    # fixture içindeki identity'yi değiştirmek yerine farklı bir senaryo: geçersiz rol.
-    r = client.post("/api/invitations", json={"email": "x@b.com", "role": "hacker"})
-    # yonetici değil mi → 403; veya rol geçersiz → 422. Bu fixture yonetici verir
-    # ama org yok → get_current_identity 403 verir (no membership).
+def test_create_invitation_rejects_invalid_role(client):
+    """Geçersiz rol değeri ile davet isteği → 422."""
     # client fixture: identity override var (yonetici) AMA org DB'de yok; endpoint
     # get_current_identity yerine require_role("yonetici") kullanır. Dependency
     # overrides get_current_identity'yi döndürür, dolayısıyla role guard geçer.
     # Rol geçersiz → 422.
+    r = client.post("/api/invitations", json={"email": "x@b.com", "role": "hacker"})
     assert r.status_code == 422, r.text
+
+
+def test_avukat_cannot_create_invitation(client_fresh):
+    """avukat rolüyle davet oluşturma isteği → 403 (rol kapısı)."""
+    import uuid
+
+    from app.auth.identity import Identity, get_current_identity
+    from app.main import app
+
+    app.dependency_overrides[get_current_identity] = lambda: Identity(
+        user_id=uuid.uuid4(), org_id=uuid.uuid4(), role="avukat", email="avukat@b.com"
+    )
+    try:
+        r = client_fresh.post("/api/invitations", json={"email": "x@y.com", "role": "avukat"})
+        assert r.status_code == 403, r.text
+    finally:
+        app.dependency_overrides.pop(get_current_identity, None)
 
 
 def test_email_mismatch_on_accept_returns_403(client_fresh, accept_as):
