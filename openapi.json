@@ -1,6 +1,21 @@
 {
   "components": {
     "schemas": {
+      "BootstrapRequest": {
+        "properties": {
+          "orgName": {
+            "maxLength": 255,
+            "minLength": 2,
+            "title": "Orgname",
+            "type": "string"
+          }
+        },
+        "required": [
+          "orgName"
+        ],
+        "title": "BootstrapRequest",
+        "type": "object"
+      },
       "DocType": {
         "enum": [
           "aydinlatma",
@@ -157,6 +172,39 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "IdentityOut": {
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "orgId": {
+            "title": "Orgid",
+            "type": "string"
+          },
+          "orgName": {
+            "title": "Orgname",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "userId": {
+            "title": "Userid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "userId",
+          "email",
+          "orgId",
+          "orgName",
+          "role"
+        ],
+        "title": "IdentityOut",
+        "type": "object"
+      },
       "Usage": {
         "properties": {
           "inputTokens": {
@@ -242,6 +290,68 @@
           }
         },
         "summary": "Root"
+      }
+    },
+    "/api/auth/bootstrap": {
+      "post": {
+        "operationId": "bootstrap_api_auth_bootstrap_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BootstrapRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdentityOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bootstrap",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "operationId": "me_api_auth_me_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdentityOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Me",
+        "tags": [
+          "auth"
+        ]
       }
     },
     "/api/categories": {

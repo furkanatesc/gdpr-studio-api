@@ -87,3 +87,37 @@ def client(db_session):
         app.dependency_overrides.clear()
         config_module._settings = prev_settings
         reset_redis()
+
+
+@pytest.fixture()
+def client_fresh(db_session):
+    """A8 için: get_current_identity override'ı YOK — dev-bypass ile DB'den çözümlenir.
+
+    supabase_project_url="" olduğundan _claims_from_request dev claims döndürür
+    (sub="dev-user", email="dev@kvkkyonetim.local"). DB temiz (sadece kategori/kural seed'i;
+    users/orgs yok). bootstrap/me akışı gerçek DB çözümlemesini test eder.
+
+    A11'de bu fixture refactor edilecek; client_fresh geçici ama ileriye dönük ada sahip.
+    """
+    prev_settings = config_module._settings
+    config_module._settings = config_module.Settings(
+        _env_file=None,
+        managed_anthropic_api_key="",
+        allowed_origins="http://localhost:3000",
+        redis_url="",
+        supabase_project_url="",  # dev-bypass aktif: auth olmadan dev claims döner
+    )
+    reset_redis()
+
+    def _override_get_session():
+        yield db_session
+
+    app.dependency_overrides[get_session] = _override_get_session
+    # get_current_identity override edilmez — gerçek DB çözümlemesi çalışır
+    try:
+        with TestClient(app) as c:
+            yield c
+    finally:
+        app.dependency_overrides.clear()
+        config_module._settings = prev_settings
+        reset_redis()
