@@ -11,7 +11,18 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Index, Integer, String, Text, Uuid, func
+from sqlalchemy import (
+    JSON,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    Uuid,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -64,6 +75,9 @@ class User(Base):
 
 class Membership(Base):
     __tablename__ = "memberships"
+    __table_args__ = (
+        CheckConstraint("role IN ('yonetici', 'avukat')", name="ck_memberships_role"),
+    )
     id: Mapped[uuid.UUID] = _uuid_pk()
     # MVP: tek kullanıcı = tek kurum → user_id unique
     user_id: Mapped[uuid.UUID] = mapped_column(
@@ -78,6 +92,10 @@ class Membership(Base):
 
 class Invitation(Base):
     __tablename__ = "invitations"
+    __table_args__ = (
+        CheckConstraint("role IN ('yonetici', 'avukat')", name="ck_invitations_role"),
+        CheckConstraint("status IN ('pending', 'accepted', 'revoked')", name="ck_invitations_status"),
+    )
     id: Mapped[uuid.UUID] = _uuid_pk()
     org_id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("organizations.id"), nullable=False, index=True

@@ -1,7 +1,9 @@
 import datetime as dt
 import uuid
 
+import pytest
 from sqlalchemy import create_engine
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 
 from app.db import Base
@@ -44,3 +46,14 @@ def test_invitation_defaults_pending():
     s.add(inv)
     s.commit()
     assert inv.status == "pending"
+
+
+def test_membership_role_check_rejects_invalid():
+    s = _session()
+    org = Organization(name="Acme")
+    user = User(supabase_user_id="sb-x", email="z@z.com")
+    s.add_all([org, user])
+    s.flush()
+    s.add(Membership(user_id=user.id, org_id=org.id, role="admin"))  # geçersiz rol
+    with pytest.raises(IntegrityError):
+        s.commit()
