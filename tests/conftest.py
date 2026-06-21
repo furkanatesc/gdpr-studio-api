@@ -8,6 +8,8 @@ anahtarın testleri gerçek API'ye çağırmasını önler).
 
 from __future__ import annotations
 
+import uuid
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -15,10 +17,18 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 import app.config as config_module
+from app.auth.identity import Identity, get_current_identity
 from app.db import Base, get_session
 from app.main import app
 from app.models import BusinessRule, Category
 from app.redis_client import reset_redis
+
+_DEV_IDENTITY = Identity(
+    user_id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
+    org_id=uuid.UUID("00000000-0000-0000-0000-000000000002"),
+    role="yonetici",
+    email="dev@kvkkyonetim.local",
+)
 
 # /api/categories ve grounding için temsili minimum seed (gerçek kategori adları).
 _SEED_CATEGORIES = [
@@ -69,6 +79,7 @@ def client(db_session):
         yield db_session
 
     app.dependency_overrides[get_session] = _override_get_session
+    app.dependency_overrides[get_current_identity] = lambda: _DEV_IDENTITY
     try:
         with TestClient(app) as c:
             yield c
