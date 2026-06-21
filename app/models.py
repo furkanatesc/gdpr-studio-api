@@ -86,6 +86,6 @@ class Invitation(Base):
     role: Mapped[str] = mapped_column(String(20), nullable=False)
     token: Mapped[str] = mapped_column(String(512), unique=True, nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
-    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    invited_by: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    invited_by: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
