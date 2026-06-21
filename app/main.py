@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
-from .modules import accounts, generation, grounding, health
+from .modules import accounts, generation, grounding, health, invitations
 from .observability import RequestContextMiddleware, configure_logging, init_sentry
 
 settings = get_settings()
@@ -32,6 +32,7 @@ app.add_middleware(RequestContextMiddleware)
 
 app.include_router(health.router)
 app.include_router(accounts.router)
+app.include_router(invitations.router)
 app.include_router(grounding.router)
 app.include_router(generation.router)
 

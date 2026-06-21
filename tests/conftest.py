@@ -90,6 +90,24 @@ def client(db_session):
 
 
 @pytest.fixture()
+def accept_as(client_fresh, monkeypatch):
+    """Farklı bir kimlik olarak davet kabul et.
+
+    accept endpoint _claims_from_request'i doğrudan çağırır (FastAPI Depends üzerinden değil),
+    bu nedenle dependency_overrides çalışmaz. Bunun yerine modül içindeki fonksiyonu monkeypatch
+    ile geçici olarak değiştiririz; monkeypatch test sonrası otomatik geri alır.
+    """
+    import app.modules.invitations as invmod
+    from app.auth.jwt import AuthClaims
+
+    def _accept(sub: str, email: str, token: str):
+        monkeypatch.setattr(invmod, "_claims_from_request", lambda request: AuthClaims(sub=sub, email=email))
+        return client_fresh.post(f"/api/invitations/{token}/accept")
+
+    return _accept
+
+
+@pytest.fixture()
 def client_fresh(db_session):
     """A8 için: get_current_identity override'ı YOK — dev-bypass ile DB'den çözümlenir.
 
