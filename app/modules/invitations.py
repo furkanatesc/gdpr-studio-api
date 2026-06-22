@@ -11,7 +11,7 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
 from ..auth.identity import Identity, _claims_from_request, require_role
-from ..auth.tenant_session import tenant_session
+from ..auth.tenant_session import begin_provisioning, tenant_session
 from ..config import get_settings
 from ..db import get_session
 from ..email.sender import EmailMessage, get_email_sender
@@ -103,6 +103,7 @@ def accept_invitation(
     except InviteInvalid:
         raise HTTPException(status_code=404, detail="Davet geçersiz.") from None
 
+    begin_provisioning(session)  # org-ötesi okuma (davet + üyelik-var-mı) için bypass-RLS
     invs = InvitationRepository(session)
     inv = invs.get_by_token(token)
     if inv is None or inv.status != "pending":
@@ -119,9 +120,10 @@ def accept_invitation(
 
     accounts.add_membership(user.id, inv.org_id, inv.role)
     invs.mark_accepted(inv)
+    # org okuması commit'ten ÖNCE: commit'te bypass GUC sıfırlanır, sonrası fail-closed olur.
+    org = session.get(Organization, inv.org_id)
     session.commit()
 
-    org = session.get(Organization, inv.org_id)
     return {
         "userId": str(user.id),
         "email": user.email,

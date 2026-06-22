@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool
@@ -15,13 +16,18 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-config.set_main_option("sqlalchemy.url", get_settings().database_url)
+# Migration'lar DDL + rol oluşturma için owner (kvkk) ile çalışmalı; uygulama ise
+# non-superuser kvkk_app ile bağlanır. MIGRATION_DATABASE_URL set edilmezse
+# DATABASE_URL'e düşer → mevcut yerel komutlar değişmeden çalışır.
+_MIGRATION_URL = os.getenv("MIGRATION_DATABASE_URL") or get_settings().database_url
+
+config.set_main_option("sqlalchemy.url", _MIGRATION_URL)
 target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
     context.configure(
-        url=get_settings().database_url,
+        url=_MIGRATION_URL,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},

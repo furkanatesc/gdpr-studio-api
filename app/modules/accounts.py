@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
 from ..auth.identity import Identity, _claims_from_request, get_current_identity
-from ..auth.tenant_session import tenant_session
+from ..auth.tenant_session import begin_provisioning, tenant_session
 from ..db import get_session
 from ..models import Organization, User
 from ..repositories import AccountRepository, InvitationRepository
@@ -52,6 +52,7 @@ def bootstrap(
     session: Session = Depends(get_session),
 ) -> IdentityOut:
     claims = _claims_from_request(request)
+    begin_provisioning(session)  # org-ötesi okuma (üyelik-var-mı / davet) için bypass-RLS
     accounts = AccountRepository(session)
     invites = InvitationRepository(session)
 

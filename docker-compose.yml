@@ -24,7 +24,10 @@ services:
   api:
     build: .
     environment:
-      DATABASE_URL: postgresql+psycopg://kvkk:kvkk@postgres:5432/kvkk
+      # Uygulama non-superuser rolle bağlanır → RLS gerçekten zorlanır.
+      DATABASE_URL: postgresql+psycopg://kvkk_app:kvkk_app@postgres:5432/kvkk
+      # Migration'lar owner ile çalışır (DDL + kvkk_app rolünü oluşturur).
+      MIGRATION_DATABASE_URL: postgresql+psycopg://kvkk:kvkk@postgres:5432/kvkk
       REDIS_URL: redis://redis:6379/0
       ALLOWED_ORIGINS: "http://localhost:3000"
       MANAGED_ANTHROPIC_API_KEY: "${MANAGED_ANTHROPIC_API_KEY:-}"

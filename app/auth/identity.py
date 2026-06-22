@@ -42,11 +42,24 @@ def get_current_identity(
     session: Session = Depends(get_session),
 ) -> Identity:
     claims = _claims_from_request(request)
+    # Kimlik çözümü doğası gereği org-ötesi bir okumadır: kullanıcının HANGİ org'a
+    # ait olduğunu bulmadan app.current_org_id set edilemez (set edilecek değer budur).
+    # FORCE RLS altında (non-superuser uygulama rolü) bu üyelik okuması bypass GUC
+    # olmadan fail-closed döner → her uç patlar. Bu yüzden YALNIZ bu okuma için
+    # transaction-local bypass açıp HEMEN kapatırız; böylece sonraki tenant
+    # erişimleri (tenant_session'ın set ettiği app.current_org_id ile) izole kalır.
+    # Yerel import: tenant_session bu modülü import eder (döngüyü kırmak için).
+    from .tenant_session import begin_provisioning, end_provisioning
+
     accounts = AccountRepository(session)
-    user = accounts.get_user_by_supabase_id(claims.sub)
+    begin_provisioning(session)
+    try:
+        user = accounts.get_user_by_supabase_id(claims.sub)
+        membership = accounts.get_membership_for_user(user.id) if user is not None else None
+    finally:
+        end_provisioning(session)
     if user is None:
         raise HTTPException(status_code=403, detail="Önce kurum oluşturun (kayıt tamamlanmamış).")
-    membership = accounts.get_membership_for_user(user.id)
     if membership is None:
         raise HTTPException(status_code=403, detail="Bir kuruma ait değilsiniz.")
     return Identity(user_id=user.id, org_id=membership.org_id, role=membership.role, email=user.email)
