@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
 from ..auth.identity import Identity, _claims_from_request, get_current_identity
+from ..auth.tenant_session import tenant_session
 from ..db import get_session
 from ..models import Organization, User
 from ..repositories import AccountRepository, InvitationRepository
@@ -81,7 +82,7 @@ def bootstrap(
 @router.get("/me", response_model=IdentityOut)
 def me(
     identity: Identity = Depends(get_current_identity),
-    session: Session = Depends(get_session),
+    session: Session = Depends(tenant_session),
 ) -> IdentityOut:
     user = session.get(User, identity.user_id)
     org = session.get(Organization, identity.org_id)

@@ -11,6 +11,7 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
 from ..auth.identity import Identity, _claims_from_request, require_role
+from ..auth.tenant_session import tenant_session
 from ..config import get_settings
 from ..db import get_session
 from ..email.sender import EmailMessage, get_email_sender
@@ -41,7 +42,7 @@ class InviteOut(BaseModel):
 @router.post("", status_code=201, response_model=InviteOut)
 def create_invitation(
     body: InviteRequest,
-    session: Session = Depends(get_session),
+    session: Session = Depends(tenant_session),
     identity: Identity = Depends(require_role("yonetici")),
 ) -> InviteOut:
     if body.role not in _ROLES:
@@ -69,7 +70,7 @@ def create_invitation(
 
 @router.get("", response_model=list[InviteOut])
 def list_invitations(
-    session: Session = Depends(get_session),
+    session: Session = Depends(tenant_session),
     identity: Identity = Depends(require_role("yonetici")),
 ) -> list[InviteOut]:
     invs = InvitationRepository(session).list_pending(identity.org_id)
@@ -79,7 +80,7 @@ def list_invitations(
 @router.delete("/{inv_id}", status_code=204)
 def revoke_invitation(
     inv_id: uuid.UUID,
-    session: Session = Depends(get_session),
+    session: Session = Depends(tenant_session),
     identity: Identity = Depends(require_role("yonetici")),
 ) -> Response:
     ok = InvitationRepository(session).revoke(inv_id, identity.org_id)
