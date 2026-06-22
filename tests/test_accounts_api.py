@@ -25,9 +25,9 @@ def test_bootstrap_idempotent(client_fresh):
     assert a["orgId"] == b["orgId"]  # ikinci çağrı yeni kurum açmaz
 
 
-def test_me_without_account_403(client_fresh):
+def test_me_without_account_403(client_no_account):
     # bootstrap çağrılmadı → kullanıcı DB'de yok → get_current_identity 403 döndürür
-    assert client_fresh.get("/api/auth/me").status_code == 403
+    assert client_no_account.get("/api/auth/me").status_code == 403
 
 
 def test_bootstrap_rejects_blank_org_name(client_fresh):
