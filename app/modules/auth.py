@@ -1,12 +1,12 @@
-"""Auth modülü — Faz 1'de DİKİŞ (seam), gerçek auth Faz 2.
-
-Şimdilik sabit dev tenant döner; Faz 2'de buraya gerçek sağlayıcı (Authentik/
-Keycloak/Supabase EU) + RLS tenant çözümü takılır. Uçlar baştan tenant-farkındadır.
-"""
+"""Auth modülü — Tenant dikişi artık gerçek kimlikten (org) türetilir."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+
+from fastapi import Depends
+
+from ..auth.identity import Identity, get_current_identity
 
 
 @dataclass(frozen=True)
@@ -15,6 +15,5 @@ class Tenant:
     name: str
 
 
-def get_current_tenant() -> Tenant:
-    # TODO(Faz 2): token doğrula → tenant + rol çöz (RLS).
-    return Tenant(id="dev", name="Geliştirme Kiracısı")
+def get_current_tenant(identity: Identity = Depends(get_current_identity)) -> Tenant:
+    return Tenant(id=str(identity.org_id), name="")
