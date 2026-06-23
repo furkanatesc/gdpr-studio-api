@@ -62,6 +62,17 @@ def upgrade() -> None:
     op.execute("GRANT USAGE ON SCHEMA public TO kvkk_app")
     op.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO kvkk_app")
     op.execute("GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO kvkk_app")
+    # GRANT ... ON ALL TABLES yalnız MEVCUT nesneleri kapsayan bir snapshot'tır;
+    # gelecek migration'larda owner (kvkk) tarafından oluşturulan tablo/sequence'lar
+    # kvkk_app'e otomatik grant'lanmaz → uygulama "permission denied" alır. ALTER
+    # DEFAULT PRIVILEGES, owner'ın bundan SONRA oluşturacağı tüm nesnelere grant uygular.
+    op.execute(
+        "ALTER DEFAULT PRIVILEGES IN SCHEMA public "
+        "GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO kvkk_app"
+    )
+    op.execute(
+        "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO kvkk_app"
+    )
 
 
 def downgrade() -> None:
@@ -70,6 +81,8 @@ def downgrade() -> None:
     op.execute(
         "DO $$ BEGIN "
         "IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'kvkk_app') THEN "
+        "ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM kvkk_app; "
+        "ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON SEQUENCES FROM kvkk_app; "
         "REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM kvkk_app; "
         "REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM kvkk_app; "
         "REVOKE USAGE ON SCHEMA public FROM kvkk_app; "

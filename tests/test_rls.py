@@ -1,7 +1,12 @@
 """Gerçek iki-org RLS izolasyon testi (Postgres-only, FORCE altında).
 
-FORCE ROW LEVEL SECURITY sayesinde tablo-owner (kvkk) rolüyle bağlanmak artık
-RLS'e tabidir → bu test vacuous değil, izolasyonu GERÇEK kanıtlar:
+DİKKAT: Bu test NON-SUPERUSER rolle (kvkk_app, NOSUPERUSER NOBYPASSRLS) koşmalıdır.
+FORCE ROW LEVEL SECURITY tablo-OWNER'ı RLS'e tabi kılar ama bir SUPERUSER'ı ASLA;
+owner rolü kvkk postgres imajında superuser olduğundan FORCE onu kapsamaz ve test
+vacuous geçer. Bu yüzden RLS_TEST_DATABASE_URL kvkk_app'e yönlendirilmeli; aşağıdaki
+_assert_non_superuser guard'ı yanlış role karşı koşmayı erkenden yakalar.
+
+kvkk_app altında bu test vacuous değil, izolasyonu GERÇEK kanıtlar:
   - app.current_org_id=A iken yalnız A'nın üyeliği görünür (B gizli),
   - app.bypass_rls='on' iken her iki üyelik de görünür (provisioning yolu).
 
@@ -17,6 +22,17 @@ from sqlalchemy import create_engine, text
 DB_URL = os.getenv("RLS_TEST_DATABASE_URL")  # ör. postgresql+psycopg://kvkk:kvkk@localhost:5432/kvkk
 
 pytestmark = pytest.mark.skipif(not DB_URL, reason="RLS yalnız Postgres'te; RLS_TEST_DATABASE_URL gerekli")
+
+
+def _assert_non_superuser(conn) -> None:
+    """RLS testi superuser ile koşarsa FORCE bypass edilir ve test vacuous geçer."""
+    is_super = conn.execute(
+        text("SELECT rolsuper FROM pg_roles WHERE rolname = current_user")
+    ).scalar()
+    assert not is_super, (
+        "RLS testleri non-superuser rolle (kvkk_app) koşmalı; superuser RLS'i bypass "
+        "eder → test anlamsızca geçer. RLS_TEST_DATABASE_URL'i kvkk_app'e yönlendirin."
+    )
 
 
 def _count_memberships(conn) -> int:
@@ -39,6 +55,7 @@ def test_force_rls_isolates_orgs_and_bypass_sees_all():
     conn = eng.connect()
     trans = conn.begin()
     try:
+        _assert_non_superuser(conn)
         # 1) bypass açıkken iki org + ikisine birer membership ekle.
         conn.execute(text("SELECT set_config('app.bypass_rls', 'on', true)"))
         for oid, name in [(org_a, "RLS Test A"), (org_b, "RLS Test B")]:
@@ -72,7 +89,7 @@ def test_force_rls_isolates_orgs_and_bypass_sees_all():
         # 2) İZOLASYON: bypass KAPALI, org A bağlamı → yalnız A'nınki görünür.
         # (DB'de başka org'ların verisi olabilir; bizim iki test org'umuz üzerinden
         # ölçüyoruz: A bağlamında bizim org'larımızdan yalnız A'nınki sayılmalı, B gizli.)
-        conn.execute(text("SELECT set_config('app.bypass_rls', '', true)"))
+        conn.execute(text("SELECT set_config('app.bypass_rls', 'off', true)"))
         conn.execute(
             text("SELECT set_config('app.current_org_id', :oid, true)"),
             {"oid": str(org_a)},
@@ -99,6 +116,7 @@ def test_force_rls_fail_closed_without_guc():
     conn = eng.connect()
     trans = conn.begin()
     try:
+        _assert_non_superuser(conn)
         # Hiçbir GUC set edilmedi → current_setting(..., true)=NULL → NULL::uuid=NULL → false.
         assert _count_memberships(conn) == 0
     finally:

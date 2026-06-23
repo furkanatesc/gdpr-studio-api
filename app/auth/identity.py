@@ -52,8 +52,8 @@ def get_current_identity(
     from .tenant_session import begin_provisioning, end_provisioning
 
     accounts = AccountRepository(session)
-    begin_provisioning(session)
     try:
+        begin_provisioning(session)
         user = accounts.get_user_by_supabase_id(claims.sub)
         membership = accounts.get_membership_for_user(user.id) if user is not None else None
     finally:
