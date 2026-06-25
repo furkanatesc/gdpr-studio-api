@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .auth.startup_guard import verify_rls_enforcement
 from .config import get_settings
+from .db import get_engine
 from .modules import accounts, generation, grounding, health, invitations
 from .observability import RequestContextMiddleware, configure_logging, init_sentry
 
@@ -14,10 +18,23 @@ settings = get_settings()
 configure_logging(settings.log_level)
 init_sentry(settings.sentry_dsn, settings.environment)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Uygulama yaşam döngüsü: startup'ta RLS zorlama doğrulaması (prod+postgresql).
+
+    Prod'da DB bağlantı rolü SUPERUSER veya BYPASSRLS ise RuntimeError fırlatır
+    ve uygulama başlamaz (fail-closed, fail-fast). Dev/test/sqlite'ta no-op.
+    """
+    verify_rls_enforcement(get_engine(), settings)
+    yield
+
+
 app = FastAPI(
     title="KVKK Yönetim API",
     version="0.1.0",
     description="KVKK/GDPR grounded doküman üretimi — legal_core üzerine FastAPI modüler monolit.",
+    lifespan=lifespan,
 )
 
 # İstek bağlamı (request_id + erişim logu) en dışta; CORS onun içinde.
