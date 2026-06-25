@@ -80,3 +80,44 @@ def test_verify_noop_for_development_sqlite():
     engine = _fake_engine("sqlite")
     settings = _fake_settings("development")
     verify_rls_enforcement(engine, settings)  # type: ignore[arg-type]
+
+
+# ---------------------------------------------------------------------------
+# verify_rls_enforcement: prod+postgres, pg_roles boş satır → RuntimeError
+# ---------------------------------------------------------------------------
+
+
+def _fake_engine_with_result(dialect_name: str, one_or_none_result):
+    """Sorgu sonucu kontrol edilebilen sahte engine nesnesi."""
+
+    class FakeResult:
+        def one_or_none(self):
+            return one_or_none_result
+
+    class FakeConn:
+        def execute(self, _query):
+            return FakeResult()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+    class FakeEngine:
+        dialect = types.SimpleNamespace(name=dialect_name)
+
+        def connect(self):
+            return FakeConn()
+
+    return FakeEngine()
+
+
+def test_verify_raises_when_pg_roles_returns_no_row():
+    """Prod+postgresql'de pg_roles sorgusu satır döndürmezse RuntimeError fırlatılmalı (fail-closed)."""
+    import pytest
+
+    engine = _fake_engine_with_result("postgresql", None)
+    settings = _fake_settings("production")
+    with pytest.raises(RuntimeError, match="pg_roles'te bulunamadı"):
+        verify_rls_enforcement(engine, settings)  # type: ignore[arg-type]

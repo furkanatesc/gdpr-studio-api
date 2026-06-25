@@ -75,7 +75,12 @@ def verify_rls_enforcement(engine, settings) -> None:  # type: ignore[type-arg]
     with engine.connect() as conn:
         row = conn.execute(
             text("SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user")
-        ).one()
+        ).one_or_none()
+
+    if row is None:
+        raise RuntimeError(
+            "RLS guard: current_user pg_roles'te bulunamadı — rol doğrulanamadı, başlatma reddediliyor."
+        )
 
     reason = rls_enforcement_violation(
         environment=settings.environment,
