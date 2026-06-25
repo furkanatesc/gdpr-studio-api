@@ -8,6 +8,22 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: kvkk
+          POSTGRES_PASSWORD: kvkk
+          POSTGRES_DB: kvkk
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U kvkk"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
 
@@ -22,5 +38,12 @@ jobs:
       - name: Lint (ruff)
         run: ruff check .
 
-      - name: Testler (pytest — birim + golden grounding)
+      - name: Migration (owner kvkk — tablolar + RLS politikaları + kvkk_app rolü)
+        env:
+          DATABASE_URL: postgresql+psycopg://kvkk:kvkk@localhost:5432/kvkk
+        run: alembic upgrade head
+
+      - name: Testler (pytest — birim + golden grounding + gerçek RLS izolasyonu)
+        env:
+          RLS_TEST_DATABASE_URL: postgresql+psycopg://kvkk_app:kvkk_app@localhost:5432/kvkk
         run: pytest -q
