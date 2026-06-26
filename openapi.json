@@ -597,6 +597,29 @@
         ]
       }
     },
+    "/api/billing/webhook": {
+      "post": {
+        "operationId": "webhook_api_billing_webhook_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Webhook Api Billing Webhook Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Webhook",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
     "/api/categories": {
       "get": {
         "description": "Tüm KVKK kategori adları (grounding referansı). Redis varsa TTL'li cache'lenir.",
