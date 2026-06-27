@@ -39,6 +39,11 @@ def test_create_checkout_session_builds_params(monkeypatch, settings):
     assert captured["line_items"] == [{"price": "price_sy", "quantity": 1}]
     assert captured["subscription_data"]["metadata"]["org_id"] == "org-1"
     assert "customer" not in captured  # customer_id None → Stripe yeni müşteri yaratır
+    # KDV (Stripe Tax): hariç fiyat üzerine otomatik vergi + adres/vergi no toplama
+    assert captured["automatic_tax"] == {"enabled": True}
+    assert captured["billing_address_collection"] == "required"
+    assert captured["tax_id_collection"] == {"enabled": True}
+    assert "customer_update" not in captured  # müşteri yokken geri-yazım gerekmez
 
 
 def test_create_checkout_attaches_existing_customer(monkeypatch, settings):
@@ -57,6 +62,8 @@ def test_create_checkout_attaches_existing_customer(monkeypatch, settings):
         success_url="s", cancel_url="c",
     )
     assert captured["customer"] == "cus_7"
+    # automatic_tax + mevcut müşteri → adresin müşteriye geri yazılması zorunlu
+    assert captured["customer_update"] == {"address": "auto", "name": "auto"}
 
 
 def test_construct_event_delegates_to_stripe(monkeypatch, settings):
