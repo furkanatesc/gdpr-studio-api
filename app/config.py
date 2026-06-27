@@ -47,6 +47,16 @@ class Settings(BaseSettings):
     # Frontend taban URL (davet linki üretimi)
     app_base_url: str = "http://localhost:3000"
 
+    # --- Stripe faturalandırma (env-gated: STRIPE_SECRET_KEY boşsa billing kapalı) ---
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_price_standart_month: str = ""
+    stripe_price_standart_year: str = ""
+    stripe_price_premium_month: str = ""
+    stripe_price_premium_year: str = ""
+    billing_success_url: str = "http://localhost:3000/app/faturalama?billing=success"
+    billing_cancel_url: str = "http://localhost:3000/app/faturalama?billing=cancel"
+
     @property
     def cors_origins(self) -> list[str]:
         return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
@@ -55,6 +65,26 @@ class Settings(BaseSettings):
     def supabase_jwks_url(self) -> str:
         base = self.supabase_project_url.rstrip("/")
         return f"{base}/auth/v1/.well-known/jwks.json" if base else ""
+
+    @property
+    def billing_enabled(self) -> bool:
+        return bool(self.stripe_secret_key)
+
+    @property
+    def price_map(self) -> dict[str, tuple[str, str]]:
+        raw = {
+            self.stripe_price_standart_month: ("standart", "month"),
+            self.stripe_price_standart_year: ("standart", "year"),
+            self.stripe_price_premium_month: ("premium", "month"),
+            self.stripe_price_premium_year: ("premium", "year"),
+        }
+        return {pid: v for pid, v in raw.items() if pid}
+
+    def price_for(self, plan: str, interval: str) -> str | None:
+        for pid, (p, i) in self.price_map.items():
+            if p == plan and i == interval:
+                return pid
+        return None
 
 
 _settings: Settings | None = None

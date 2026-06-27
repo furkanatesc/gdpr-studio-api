@@ -1,6 +1,58 @@
 {
   "components": {
     "schemas": {
+      "BillingStatusOut": {
+        "properties": {
+          "canManage": {
+            "title": "Canmanage",
+            "type": "boolean"
+          },
+          "currentPeriodEnd": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currentperiodend"
+          },
+          "interval": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interval"
+          },
+          "plan": {
+            "title": "Plan",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/UsageOut"
+          }
+        },
+        "required": [
+          "plan",
+          "status",
+          "interval",
+          "currentPeriodEnd",
+          "usage",
+          "canManage"
+        ],
+        "title": "BillingStatusOut",
+        "type": "object"
+      },
       "BootstrapRequest": {
         "properties": {
           "orgName": {
@@ -14,6 +66,24 @@
           "orgName"
         ],
         "title": "BootstrapRequest",
+        "type": "object"
+      },
+      "CheckoutRequest": {
+        "properties": {
+          "interval": {
+            "title": "Interval",
+            "type": "string"
+          },
+          "plan": {
+            "title": "Plan",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan",
+          "interval"
+        ],
+        "title": "CheckoutRequest",
         "type": "object"
       },
       "DocType": {
@@ -257,6 +327,19 @@
         "title": "InviteRequest",
         "type": "object"
       },
+      "UrlOut": {
+        "properties": {
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "UrlOut",
+        "type": "object"
+      },
       "Usage": {
         "properties": {
           "inputTokens": {
@@ -273,6 +356,31 @@
           "outputTokens"
         ],
         "title": "Usage",
+        "type": "object"
+      },
+      "UsageOut": {
+        "properties": {
+          "quota": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quota"
+          },
+          "used": {
+            "title": "Used",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "used",
+          "quota"
+        ],
+        "title": "UsageOut",
         "type": "object"
       },
       "ValidationError": {
@@ -403,6 +511,112 @@
         "summary": "Me",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/billing/checkout": {
+      "post": {
+        "operationId": "checkout_api_billing_checkout_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckoutRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UrlOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Checkout",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/api/billing/portal": {
+      "post": {
+        "operationId": "portal_api_billing_portal_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UrlOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Portal",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/api/billing/status": {
+      "get": {
+        "operationId": "status_api_billing_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingStatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Status",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/api/billing/webhook": {
+      "post": {
+        "operationId": "webhook_api_billing_webhook_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Webhook Api Billing Webhook Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Webhook",
+        "tags": [
+          "billing"
         ]
       }
     },
