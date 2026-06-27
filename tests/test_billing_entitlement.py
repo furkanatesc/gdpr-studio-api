@@ -80,3 +80,25 @@ def test_price_map_and_lookup():
 
 def test_billing_disabled_when_no_key():
     assert Settings(_env_file=None).billing_enabled is False
+
+
+# --- Fix #1: kota, abonelik durumuna bağlıdır ---
+
+def test_paid_past_due_gets_free_quota(session):
+    """past_due ücretli plan: kota ücretsiz plana düşer; plan ve durum gerçek değerleriyle raporlanır."""
+    org_id = _org(session)
+    SubscriptionRepository(session).upsert(org_id, plan="premium", status="past_due")
+    ent = resolve_entitlement(session, org_id)
+    assert ent.quota == FREE_MONTHLY_QUOTA
+    assert ent.plan == "premium"
+    assert ent.status == "past_due"
+
+
+def test_paid_canceled_gets_free_quota(session):
+    """canceled ücretli plan: kota ücretsiz plana düşer; plan ve durum gerçek değerleriyle raporlanır."""
+    org_id = _org(session)
+    SubscriptionRepository(session).upsert(org_id, plan="standart", status="canceled")
+    ent = resolve_entitlement(session, org_id)
+    assert ent.quota == FREE_MONTHLY_QUOTA
+    assert ent.plan == "standart"
+    assert ent.status == "canceled"

@@ -2,6 +2,7 @@ import app.billing.stripe_client as sc
 import app.config as config_module
 from app.billing.repositories import StripeEventRepository, SubscriptionRepository
 from app.models import Organization
+from app.modules.billing import _status_map
 
 
 def _enable_billing():
@@ -118,3 +119,22 @@ def test_payment_failed_sets_past_due(client_fresh, db_session, monkeypatch):
     }
     _post(client_fresh, monkeypatch, event)
     assert SubscriptionRepository(db_session).get_by_org(uuid.UUID(org_id)).status == "past_due"
+
+
+# --- Fix #2: _status_map bilinmeyen durumları kısıtlayıcı yönde eşleştirmeli ---
+
+def test_status_map_known_mappings():
+    """Bilinen Stripe durumları doğru iç duruma eşleşmeli."""
+    assert _status_map("active") == "active"
+    assert _status_map("trialing") == "active"
+    assert _status_map("past_due") == "past_due"
+    assert _status_map("unpaid") == "past_due"
+    assert _status_map("canceled") == "canceled"
+    assert _status_map("incomplete_expired") == "canceled"
+
+
+def test_status_map_unknown_maps_to_canceled():
+    """Bilinmeyen Stripe durumları 'canceled' (kısıtlayıcı) yönde eşleşmeli, 'active' değil."""
+    assert _status_map("incomplete") == "canceled"
+    assert _status_map("paused") == "canceled"
+    assert _status_map("some_future_stripe_status") == "canceled"

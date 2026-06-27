@@ -12,6 +12,9 @@ from .repositories import SubscriptionRepository, UsageRepository
 
 FREE_MONTHLY_QUOTA = 5
 
+# Kota yalnızca bu iç durumlarda sıfırlanır (Stripe trialing → dahili "active"'e eşlenir).
+ENTITLED_STATUSES = frozenset({"active", "trialing"})
+
 
 def current_period(now: datetime | None = None) -> str:
     """Takvim ayı anahtarı 'YYYY-MM' (UTC). Yeni ay = yeni anahtar → cron'suz reset."""
@@ -41,11 +44,14 @@ def resolve_entitlement(session: Session, org_id: uuid.UUID) -> Entitlement:
             quota=FREE_MONTHLY_QUOTA,
             used=used,
         )
+    # Kota, durum bilgisine bağlıdır: yalnızca aktif/deneme abonelikleri sınırsız erişim alır.
+    # Plan ve durum ise frontend'in kart-hata uyarısı göstermesi için gerçek değerleriyle raporlanır.
+    quota = None if sub.status in ENTITLED_STATUSES else FREE_MONTHLY_QUOTA
     return Entitlement(
         plan=sub.plan,
         status=sub.status,
         interval=sub.interval,
         current_period_end=sub.current_period_end,
-        quota=None,  # ücretli planlar sınırsız
+        quota=quota,
         used=used,
     )

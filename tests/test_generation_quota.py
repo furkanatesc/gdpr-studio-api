@@ -47,3 +47,33 @@ def test_record_usage_increments(db_session):
     settings = config_module.Settings(_env_file=None, stripe_secret_key="sk_test_x")
     record_generation_usage(db_session, settings, org_id)
     assert UsageRepository(db_session).get_count(org_id, current_period()) == 1
+
+
+# --- Fix #1 uçtan uca: past_due ücretli org kota kapısına takılmalı ---
+
+def test_quota_blocks_past_due_paid_org_at_five(client, db_session):
+    """past_due ücretli org, 5 kullanım sonrası 402 almalı (aktif olmayan abonelik → ücretsiz kota)."""
+    from app.billing.repositories import SubscriptionRepository
+    _enable_billing_no_key_paid()
+    org_id = uuid.UUID("00000000-0000-0000-0000-000000000002")
+    SubscriptionRepository(db_session).upsert(org_id, plan="premium", status="past_due")
+    for _ in range(5):
+        UsageRepository(db_session).increment(org_id, current_period())
+    db_session.commit()
+    r = client.post("/api/generate", json={"type": "aydinlatma"})
+    assert r.status_code == 402
+    assert r.json()["detail"]["code"] == "quota_exceeded"
+
+
+def test_quota_allows_active_paid_org_regardless(client, db_session):
+    """Aktif ücretli org sınırsız erişime sahip; 10 kullanımda bile 402 yok."""
+    from app.billing.repositories import SubscriptionRepository
+    _enable_billing_no_key_paid()
+    org_id = uuid.UUID("00000000-0000-0000-0000-000000000002")
+    SubscriptionRepository(db_session).upsert(org_id, plan="premium", status="active")
+    for _ in range(10):
+        UsageRepository(db_session).increment(org_id, current_period())
+    db_session.commit()
+    r = client.post("/api/generate", json={"type": "aydinlatma"})
+    # Kota engeli yok → API anahtarsız üretim 400 döner
+    assert r.status_code == 400

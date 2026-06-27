@@ -112,7 +112,8 @@ def _status_map(stripe_status: str) -> str:
         return "past_due"
     if stripe_status in ("canceled", "incomplete_expired"):
         return "canceled"
-    return "active"
+    # Bilinmeyen/gelecekteki Stripe durumları kısıtlayıcı yönde eşleşir → ücretsiz kota.
+    return "canceled"
 
 
 def _handle_event(session, settings, event: dict) -> None:

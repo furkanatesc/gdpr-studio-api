@@ -18,9 +18,9 @@ from legal_core.grounding import Grounding
 from legal_core.provider import AnthropicProvider
 
 from ..auth.identity import Identity
+from ..auth.tenant_session import tenant_session
 from ..billing.quota import enforce_generation_quota, record_generation_usage
 from ..config import get_settings
-from ..db import get_session
 from ..redis_client import generate_rate_limit
 from ..repositories import PostgresBusinessRuleRepository, PostgresCategoryRepository
 
@@ -51,7 +51,8 @@ def _sse(event: str, data) -> str:
 )
 def generate(
     req: GenerateRequest,
-    session: Session = Depends(get_session),
+    # tenant_session: RLS org bağlamını set eder; record_generation_usage bu oturumda yazar.
+    session: Session = Depends(tenant_session),
     identity: Identity = Depends(enforce_generation_quota),
     x_anthropic_key: str | None = Header(default=None, alias="X-Anthropic-Key"),
 ) -> GenerateResponse:
@@ -81,7 +82,8 @@ def generate(
 @router.post("/generate/stream", dependencies=[Depends(generate_rate_limit)])
 def generate_stream(
     req: GenerateRequest,
-    session: Session = Depends(get_session),
+    # tenant_session: RLS org bağlamını set eder; record_generation_usage bu oturumda yazar.
+    session: Session = Depends(tenant_session),
     identity: Identity = Depends(enforce_generation_quota),
     x_anthropic_key: str | None = Header(default=None, alias="X-Anthropic-Key"),
 ) -> StreamingResponse:
