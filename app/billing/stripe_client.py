@@ -33,9 +33,18 @@ def create_checkout_session(
         "cancel_url": cancel_url,
         "client_reference_id": org_id,
         "subscription_data": {"metadata": {"org_id": org_id}},
+        # KDV: Price'lar KDV hariç (Dashboard'da tax_behavior=exclusive) → Stripe Tax
+        # %20 KDV'yi checkout'ta ayrı satır olarak ekler. automatic_tax müşterinin
+        # konumunu ister → adres toplanır; vergi no (B2B e-fatura için) opsiyonel alınır.
+        "automatic_tax": {"enabled": True},
+        "billing_address_collection": "required",
+        "tax_id_collection": {"enabled": True},
     }
     if customer_id:
         params["customer"] = customer_id
+        # Mevcut müşteri + automatic_tax: checkout'ta toplanan adresin müşteriye geri
+        # yazılması Stripe tarafından zorunlu (yoksa "customer_update required" hatası).
+        params["customer_update"] = {"address": "auto", "name": "auto"}
     session = stripe.checkout.Session.create(**params)
     return session.url
 
