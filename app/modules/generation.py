@@ -75,7 +75,15 @@ def generate(
         raise
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Üretim hatası: {e}") from e
-    record_generation_usage(session, settings, identity.org_id)  # yalnız başarıda
+    record_generation_usage(
+        session,
+        settings,
+        identity.org_id,
+        model=result.model,
+        input_tokens=result.usage.input_tokens,
+        output_tokens=result.usage.output_tokens,
+        byok=x_anthropic_key is not None,
+    )  # yalnız başarıda
     return result
 
 
@@ -110,7 +118,16 @@ def generate_stream(
                     yield _sse("delta", {"text": payload})
                 elif kind == "done":
                     yield _sse("done", payload)
-                    record_generation_usage(session, settings, identity.org_id)  # akış başarıyla bitti
+                    usage = payload.get("usage")
+                    record_generation_usage(
+                        session,
+                        settings,
+                        identity.org_id,
+                        model=payload.get("model") or settings.default_model,
+                        input_tokens=usage["inputTokens"] if usage else 0,
+                        output_tokens=usage["outputTokens"] if usage else 0,
+                        byok=x_anthropic_key is not None,
+                    )  # akış başarıyla bitti
         except Exception as e:  # akış ortasında hata → error olayı
             yield _sse("error", {"detail": f"Üretim hatası: {e}"})
 
