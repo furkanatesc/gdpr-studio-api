@@ -86,6 +86,34 @@ class UsageRepository:
         self._s.flush()
         return row.doc_count
 
+    def get_cost(self, org_id: uuid.UUID, period: str) -> int:
+        row = self._row(org_id, period)
+        return row.cost_micros if row else 0
+
+    def add_cost(
+        self,
+        org_id: uuid.UUID,
+        period: str,
+        input_tokens: int,
+        output_tokens: int,
+        cost_micros: int,
+    ) -> None:
+        row = self._row(org_id, period)
+        if row is None:
+            row = UsageCounter(
+                org_id=org_id,
+                period=period,
+                doc_count=0,
+                cost_micros=0,
+                input_tokens=0,
+                output_tokens=0,
+            )
+            self._s.add(row)
+        row.cost_micros += cost_micros
+        row.input_tokens += input_tokens
+        row.output_tokens += output_tokens
+        self._s.flush()
+
 
 class StripeEventRepository:
     def __init__(self, session: Session) -> None:
