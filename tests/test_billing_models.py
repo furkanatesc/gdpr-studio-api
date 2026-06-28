@@ -23,3 +23,10 @@ def test_usage_counter_unique_constraint():
         if c.__class__.__name__ == "UniqueConstraint"
     ]
     assert ("org_id", "period") in uniques
+
+
+def test_usage_counter_has_cost_columns():
+    from app.models import UsageCounter
+
+    cols = set(UsageCounter.__table__.columns.keys())
+    assert {"cost_micros", "input_tokens", "output_tokens"} <= cols
