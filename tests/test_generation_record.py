@@ -1,5 +1,3 @@
-import uuid  # noqa: F401  (paralellik; gerekirse)
-
 import app.config as config_module
 import app.modules.generation as genmod
 from legal_core.models import GenerateResponse, Usage

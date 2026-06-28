@@ -30,3 +30,9 @@ def test_cost_budget_for_unknown_plan_is_none():
 
 def test_budget_table_keys_are_known_plans():
     assert set(COST_BUDGET_MICROS) == {"baslangic", "standart", "premium"}
+
+
+def test_default_model_is_priced():
+    from app.billing.pricing import PRICING
+    from app.config import Settings
+    assert Settings(_env_file=None).default_model in PRICING

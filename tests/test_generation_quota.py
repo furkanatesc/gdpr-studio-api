@@ -153,3 +153,18 @@ def test_quota_allows_active_paid_org_regardless(client, db_session):
     r = client.post("/api/generate", json={"type": "aydinlatma"})
     # Kota engeli yok → API anahtarsız üretim 400 döner
     assert r.status_code == 400
+
+
+def test_byok_still_blocked_by_doc_quota(client, db_session):
+    """BYOK (X-Anthropic-Key) maliyet kapısını atlar ama doküman kotası hâlâ uygulanır."""
+    _enable_billing_no_key_paid()
+    org_id = uuid.UUID("00000000-0000-0000-0000-000000000002")
+    # Ücretsiz plan (abonelik yok) → kota 5; tüketip taşıyoruz
+    for _ in range(5):
+        UsageRepository(db_session).increment(org_id, current_period())
+    db_session.commit()
+    r = client.post(
+        "/api/generate", json={"type": "aydinlatma"}, headers={"X-Anthropic-Key": "sk-ant-byok-fake"}
+    )
+    assert r.status_code == 402
+    assert r.json()["detail"]["code"] == "quota_exceeded"
