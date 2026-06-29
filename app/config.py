@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from .semantic_config import DEFAULT_SEMANTIC_MODEL
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_prefix="", extra="ignore")
@@ -56,6 +58,11 @@ class Settings(BaseSettings):
     stripe_price_premium_year: str = ""
     billing_success_url: str = "http://localhost:3000/app/faturalama?billing=success"
     billing_cancel_url: str = "http://localhost:3000/app/faturalama?billing=cancel"
+
+    # --- Semantik fallback (env-gated: kapalıyken no-op, model yüklenmez) ---
+    semantic_fallback_enabled: bool = False
+    semantic_model: str = DEFAULT_SEMANTIC_MODEL
+    semantic_threshold: float = 0.80  # cosine benzerlik tabanı; altı → eşleşme yok
 
     @property
     def cors_origins(self) -> list[str]:
