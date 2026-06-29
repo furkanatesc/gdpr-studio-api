@@ -13,6 +13,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     JSON,
+    BigInteger,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -144,6 +145,9 @@ class UsageCounter(Base):
     )
     period: Mapped[str] = mapped_column(String(7), nullable=False)  # 'YYYY-MM'
     doc_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    cost_micros: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
+    input_tokens: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
+    output_tokens: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
 
 
 class StripeEvent(Base):

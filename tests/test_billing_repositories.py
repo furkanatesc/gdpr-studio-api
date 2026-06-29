@@ -69,3 +69,23 @@ def test_stripe_event_idempotency(session):
     assert repo.seen("evt_1") is False
     repo.record("evt_1", "checkout.session.completed")
     assert repo.seen("evt_1") is True
+
+
+def test_get_cost_zero_when_no_row(session):
+    import uuid
+
+    repo = UsageRepository(session)
+    assert repo.get_cost(uuid.uuid4(), "2026-06") == 0
+
+
+def test_add_cost_accumulates(session):
+    import uuid
+
+    org_id = uuid.uuid4()
+    repo = UsageRepository(session)
+    repo.add_cost(org_id, "2026-06", 100, 200, 5000)
+    repo.add_cost(org_id, "2026-06", 10, 20, 500)
+    assert repo.get_cost(org_id, "2026-06") == 5500
+    row = repo._row(org_id, "2026-06")
+    assert row.input_tokens == 110
+    assert row.output_tokens == 220
