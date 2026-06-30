@@ -41,6 +41,17 @@ TAG_SYNONYMS: dict[str, str] = {
 
 
 @runtime_checkable
+class SemanticMatcher(Protocol):
+    """Deterministik eşleşme başarısızsa etiketi en yakın kategoriye eşler.
+
+    Eşik kontrolü implementasyonun içindedir: dönen değer zaten eşiği geçmiştir.
+    `None` → güvenli eşleşme yok (etiket düşer; uydurma yapılmaz).
+    """
+
+    def best_category(self, tag: str) -> tuple[str, float] | None: ...
+
+
+@runtime_checkable
 class CategoryRepository(Protocol):
     """Kategori adı -> alan sözlüğü (veri_turu, amaclar, hukuki_sebepler, ...).
 
@@ -58,16 +69,20 @@ class Grounding:
         self,
         repo: CategoryRepository,
         synonyms: dict[str, str] | None = None,
+        matcher: SemanticMatcher | None = None,
     ) -> None:
         self._repo = repo
         self._synonyms = synonyms if synonyms is not None else TAG_SYNONYMS
+        self._matcher = matcher
 
     def resolve_categories(self, tags: list[str]) -> set[str]:
         """Gelen etiketleri gerçek envanter kategorilerine eşler.
 
-        Üç aşamalı (sırayla): (1) sinonim sözlüğü, (2) kategori adıyla doğrudan
-        eşleşme, (3) etiketin kategori içindeki veri_turu listesinde alt-dize
-        taranması. Döndürülen: eşleşen kategori adlarının kümesi.
+        Dört aşamalı (sırayla, ilki eşleşince durur): (1) sinonim sözlüğü,
+        (2) kategori adıyla doğrudan eşleşme, (3) etiketin kategori içindeki
+        veri_turu listesinde alt-dize taranması, (4) yalnız bir matcher
+        enjekte edilmişse semantik fallback (eşik-üstü en yakın kategori;
+        eşik-altı = eşleşme yok). Döndürülen: eşleşen kategori adlarının kümesi.
         """
         cats = self._repo.all_categories()
         norm_keys = {norm(k): k for k in cats}
@@ -100,6 +115,14 @@ class Grounding:
                         break
                 if found:
                     break
+            if found:
+                continue
+
+            # 4) Semantik fallback — yalnız 1-3 boşsa ve matcher enjekte edildiyse.
+            if self._matcher is not None:
+                hit = self._matcher.best_category(tag)
+                if hit is not None:
+                    matched.add(hit[0])
 
         return matched
 

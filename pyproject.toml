@@ -26,6 +26,7 @@ api = [
     "httpx>=0.27",
     "email-validator>=2",
     "stripe>=10",
+    "fastembed>=0.3",
 ]
 dev = ["pytest>=8.0", "httpx>=0.27", "ruff>=0.6"]
 

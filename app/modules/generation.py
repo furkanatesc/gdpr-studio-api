@@ -23,8 +23,20 @@ from ..billing.quota import enforce_generation_quota, record_generation_usage
 from ..config import get_settings
 from ..redis_client import generate_rate_limit
 from ..repositories import PostgresBusinessRuleRepository, PostgresCategoryRepository
+from ..semantic import PostgresSemanticMatcher, get_embedder
 
 router = APIRouter(prefix="/api", tags=["generation"])
+
+
+def _build_grounding(session: Session, settings) -> Grounding:
+    """Env-gated grounding: semantic_fallback_enabled ise pgvector matcher enjekte edilir."""
+    repo = PostgresCategoryRepository(session)
+    if settings.semantic_fallback_enabled:
+        matcher = PostgresSemanticMatcher(
+            session, get_embedder(settings), settings.semantic_threshold
+        )
+        return Grounding(repo, matcher=matcher)
+    return Grounding(repo)
 
 
 def _resolve_api_key(x_anthropic_key: str | None) -> str:
@@ -59,7 +71,7 @@ def generate(
     settings = get_settings()
     api_key = _resolve_api_key(x_anthropic_key)
 
-    grounding = Grounding(PostgresCategoryRepository(session))
+    grounding = _build_grounding(session, settings)
     rules_repo = PostgresBusinessRuleRepository(session)
     provider = AnthropicProvider(api_key, model=settings.default_model)
 
@@ -99,7 +111,7 @@ def generate_stream(
     settings = get_settings()
     api_key = _resolve_api_key(x_anthropic_key)
 
-    grounding = Grounding(PostgresCategoryRepository(session))
+    grounding = _build_grounding(session, settings)
     rules_repo = PostgresBusinessRuleRepository(session)
     provider = AnthropicProvider(api_key, model=settings.default_model)
 
