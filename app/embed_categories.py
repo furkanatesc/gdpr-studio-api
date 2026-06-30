@@ -12,7 +12,7 @@ from sqlalchemy import select, text
 from .config import get_settings
 from .db import get_sessionmaker
 from .models import Category
-from .semantic import get_embedder
+from .semantic import get_embedder, to_vector_literal
 
 
 def build_source_text(name: str, data: dict) -> str:
@@ -36,7 +36,7 @@ def main() -> None:
         # idempotent: tümünü sil + yeniden ekle (20 satır; basit ve drift'siz).
         session.execute(text("DELETE FROM category_embeddings"))
         for cid, src, vec in zip(ids, texts, vectors, strict=True):
-            lit = "[" + ",".join(repr(x) for x in vec) + "]"
+            lit = to_vector_literal(vec)
             session.execute(
                 text(
                     """
