@@ -6,6 +6,8 @@ kapalıyken Embedder hiç kurulmaz, model yüklenmez. legal_core saf kalır.
 
 from __future__ import annotations
 
+import threading
+
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -14,6 +16,14 @@ from .config import Settings
 # e5 ailesi asimetrik prefiks ister: sorgu "query: ", belge "passage: ".
 _QUERY_PREFIX = "query: "
 _PASSAGE_PREFIX = "passage: "
+
+
+def to_vector_literal(vec: list[float]) -> str:
+    """float listesini pgvector metin literaline çevirir: '[1.0,0.0,...]'.
+
+    repr() bilimsel gösterim üretse de (örn. 1e-05) pgvector kabul eder.
+    """
+    return "[" + ",".join(repr(x) for x in vec) + "]"
 
 
 class Embedder:
@@ -25,8 +35,8 @@ class Embedder:
         self._model = TextEmbedding(model_name)
 
     def embed_query(self, text: str) -> list[float]:
-        vecs = list(self._model.embed([_QUERY_PREFIX + text]))
-        return [float(x) for x in vecs[0]]
+        vecs = self._model.embed([_QUERY_PREFIX + text])
+        return [float(x) for x in next(iter(vecs))]
 
     def embed_passages(self, texts: list[str]) -> list[list[float]]:
         out = self._model.embed([_PASSAGE_PREFIX + t for t in texts])
@@ -34,13 +44,24 @@ class Embedder:
 
 
 _embedder: Embedder | None = None
+_embedder_lock = threading.Lock()
 
 
 def get_embedder(settings: Settings) -> Embedder:
-    """Süreç-içi singleton (model bir kez yüklenir)."""
+    """Süreç-içi singleton (model bir kez yüklenir).
+
+    Çift-kontrollü kilit: FastAPI senkron uçları threadpool'da koşar; kilit
+    olmadan iki eşzamanlı cold-start isteği ~1GB e5 modelini 2× yükleyebilir.
+
+    Deployment notu: model ilk kullanımda HF'den iner. Üretimde flag açıksa
+    cold-start gecikmesini önlemek için modeli image'a göm ya da başlangıçta
+    ısıt (offline `python -m app.embed_categories` zaten on-disk cache'i doldurur).
+    """
     global _embedder
     if _embedder is None:
-        _embedder = Embedder(settings.semantic_model)
+        with _embedder_lock:
+            if _embedder is None:
+                _embedder = Embedder(settings.semantic_model)
     return _embedder
 
 
@@ -57,7 +78,7 @@ class PostgresSemanticMatcher:
 
     def _nearest(self, qvec: list[float]) -> tuple[str, float] | None:
         # cosine mesafe (<=>) → benzerlik = 1 - mesafe. pgvector literali '[...]'.
-        lit = "[" + ",".join(repr(x) for x in qvec) + "]"
+        lit = to_vector_literal(qvec)
         row = self._session.execute(
             text(
                 """
