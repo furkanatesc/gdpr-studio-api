@@ -78,9 +78,11 @@ class Grounding:
     def resolve_categories(self, tags: list[str]) -> set[str]:
         """Gelen etiketleri gerçek envanter kategorilerine eşler.
 
-        Üç aşamalı (sırayla): (1) sinonim sözlüğü, (2) kategori adıyla doğrudan
-        eşleşme, (3) etiketin kategori içindeki veri_turu listesinde alt-dize
-        taranması. Döndürülen: eşleşen kategori adlarının kümesi.
+        Dört aşamalı (sırayla, ilki eşleşince durur): (1) sinonim sözlüğü,
+        (2) kategori adıyla doğrudan eşleşme, (3) etiketin kategori içindeki
+        veri_turu listesinde alt-dize taranması, (4) yalnız bir matcher
+        enjekte edilmişse semantik fallback (eşik-üstü en yakın kategori;
+        eşik-altı = eşleşme yok). Döndürülen: eşleşen kategori adlarının kümesi.
         """
         cats = self._repo.all_categories()
         norm_keys = {norm(k): k for k in cats}
