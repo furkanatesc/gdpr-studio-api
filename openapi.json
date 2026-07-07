@@ -54,6 +54,7 @@
         "type": "object"
       },
       "BootstrapRequest": {
+        "additionalProperties": false,
         "properties": {
           "orgName": {
             "maxLength": 255,
@@ -69,6 +70,7 @@
         "type": "object"
       },
       "CheckoutRequest": {
+        "additionalProperties": false,
         "properties": {
           "interval": {
             "title": "Interval",
@@ -99,6 +101,7 @@
         "type": "string"
       },
       "GenerateRequest": {
+        "additionalProperties": false,
         "properties": {
           "amaclar": {
             "default": [],
@@ -309,6 +312,7 @@
         "type": "object"
       },
       "InviteRequest": {
+        "additionalProperties": false,
         "properties": {
           "email": {
             "format": "email",

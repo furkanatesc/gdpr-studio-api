@@ -6,7 +6,7 @@ import uuid
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
 from ..auth.identity import Identity, get_current_identity, require_role
@@ -24,6 +24,8 @@ _INTERVALS = {"month", "year"}
 
 
 class CheckoutRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     plan: str
     interval: str
 

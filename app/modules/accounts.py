@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy.orm import Session
 
 from ..auth.identity import Identity, _claims_from_request, get_current_identity
@@ -16,6 +16,8 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 class BootstrapRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     orgName: str = Field(min_length=2, max_length=255)
 
     @field_validator("orgName", mode="before")

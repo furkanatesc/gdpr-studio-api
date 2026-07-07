@@ -41,6 +41,9 @@ class GroundingRecord(_CamelModel):
 
 
 class GenerateRequest(_CamelModel):
+    # İstek gövdesi istemciden gelir — tanımsız (çöp) alan sessizce yutulmaz, 422 döner.
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="forbid")
+
     type: DocType
     fields: dict[str, str] = {}
     veriler: list[str] = []

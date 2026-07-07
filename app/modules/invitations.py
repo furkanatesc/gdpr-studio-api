@@ -7,7 +7,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr
 from sqlalchemy.orm import Session
 
 from ..auth.identity import Identity, _claims_from_request, require_role
@@ -27,6 +27,8 @@ _ROLES = {"yonetici", "avukat"}
 
 
 class InviteRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     email: EmailStr
     role: str
 
