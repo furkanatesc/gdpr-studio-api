@@ -9,6 +9,9 @@ from pydantic import BaseModel
 
 from ..config import get_settings
 
+# Sunucu ile IdP arası saat kaymasına tolerans (iat/exp/nbf); saniye.
+_CLOCK_SKEW_LEEWAY_S = 60
+
 
 class AuthClaims(BaseModel):
     sub: str
@@ -42,6 +45,7 @@ def verify_token(token: str) -> AuthClaims:
             signing_key.key,
             algorithms=["RS256", "ES256"],
             audience=settings.supabase_jwt_aud,
+            leeway=_CLOCK_SKEW_LEEWAY_S,
             options={"require": ["sub"]},
         )
     except HTTPException:
