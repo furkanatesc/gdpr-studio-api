@@ -22,7 +22,11 @@ from ..auth.tenant_session import tenant_session
 from ..billing.quota import enforce_generation_quota, record_generation_usage
 from ..config import get_settings
 from ..redis_client import generate_rate_limit
-from ..repositories import PostgresBusinessRuleRepository, PostgresCategoryRepository
+from ..repositories import (
+    GeneratedDocumentRepository,
+    PostgresBusinessRuleRepository,
+    PostgresCategoryRepository,
+)
 from ..semantic import PostgresSemanticMatcher, get_embedder
 
 router = APIRouter(prefix="/api", tags=["generation"])
@@ -87,6 +91,9 @@ def generate(
         raise
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Üretim hatası: {e}") from e
+    # Uyum sinyali: başarılı üretimi generated_documents'a yaz. record_generation_usage
+    # commit ettiği için kayıt ONDAN ÖNCE flush'lanır → aynı işlemde persist olur (spec §4).
+    GeneratedDocumentRepository(session).record(identity.org_id, req.type)
     record_generation_usage(
         session,
         settings,
@@ -131,6 +138,8 @@ def generate_stream(
                 elif kind == "done":
                     yield _sse("done", payload)
                     usage = payload.get("usage")
+                    # Uyum sinyali (aynı işlemde, record_generation_usage commit'inden önce).
+                    GeneratedDocumentRepository(session).record(identity.org_id, req.type)
                     record_generation_usage(
                         session,
                         settings,

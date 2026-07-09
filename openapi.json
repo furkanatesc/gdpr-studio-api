@@ -69,6 +69,147 @@
         "title": "BootstrapRequest",
         "type": "object"
       },
+      "ChecklistGroup": {
+        "properties": {
+          "group": {
+            "title": "Group",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ChecklistItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "group",
+          "items"
+        ],
+        "title": "ChecklistGroup",
+        "type": "object"
+      },
+      "ChecklistItem": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "maddeRef": {
+            "title": "Madderef",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "sourceType": {
+            "title": "Sourcetype",
+            "type": "string"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "suggestion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggestion"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "title",
+          "maddeRef",
+          "description",
+          "sourceType"
+        ],
+        "title": "ChecklistItem",
+        "type": "object"
+      },
+      "ChecklistOut": {
+        "properties": {
+          "groupScores": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Groupscores",
+            "type": "object"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/ChecklistGroup"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          }
+        },
+        "required": [
+          "groups",
+          "score",
+          "groupScores"
+        ],
+        "title": "ChecklistOut",
+        "type": "object"
+      },
       "CheckoutRequest": {
         "additionalProperties": false,
         "properties": {
@@ -329,6 +470,36 @@
           "role"
         ],
         "title": "InviteRequest",
+        "type": "object"
+      },
+      "StatusUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "status": {
+            "enum": [
+              "yapildi",
+              "eksik",
+              "uygulanmaz"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "StatusUpdate",
         "type": "object"
       },
       "UrlOut": {
@@ -645,6 +816,79 @@
         "summary": "List Categories",
         "tags": [
           "grounding"
+        ]
+      }
+    },
+    "/api/compliance/checklist": {
+      "get": {
+        "operationId": "get_checklist_api_compliance_checklist_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChecklistOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Checklist",
+        "tags": [
+          "compliance"
+        ]
+      }
+    },
+    "/api/compliance/status/{key}": {
+      "put": {
+        "operationId": "put_status_api_compliance_status__key__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChecklistItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Status",
+        "tags": [
+          "compliance"
         ]
       }
     },

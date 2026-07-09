@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .auth.startup_guard import verify_rls_enforcement
 from .config import get_settings
 from .db import get_engine
-from .modules import accounts, billing, generation, grounding, health, invitations
+from .modules import accounts, billing, compliance, generation, grounding, health, invitations
 from .observability import RequestContextMiddleware, configure_logging, init_sentry
 
 settings = get_settings()
@@ -53,6 +53,7 @@ app.include_router(invitations.router)
 app.include_router(billing.router)
 app.include_router(grounding.router)
 app.include_router(generation.router)
+app.include_router(compliance.router)
 
 
 @app.get("/")
