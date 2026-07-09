@@ -155,3 +155,56 @@ class StripeEvent(Base):
     event_id: Mapped[str] = mapped_column(String(255), primary_key=True)
     type: Mapped[str] = mapped_column(String(100), nullable=False)
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ComplianceRequirement(Base):
+    __tablename__ = "compliance_requirements"
+    __table_args__ = (
+        CheckConstraint("source_type IN ('manual', 'auto')", name="ck_compliance_req_source_type"),
+    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    key: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    madde_ref: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    group: Mapped[str] = mapped_column(String(100), nullable=False, default="")
+    source_type: Mapped[str] = mapped_column(String(10), nullable=False, default="manual")
+    auto_signal: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+class ComplianceStatus(Base):
+    __tablename__ = "compliance_status"
+    __table_args__ = (
+        UniqueConstraint("org_id", "requirement_key", name="uq_compliance_status_org_key"),
+        CheckConstraint("status IN ('yapildi', 'eksik', 'uygulanmaz')", name="ck_compliance_status_status"),
+        CheckConstraint("source IN ('user', 'auto_suggested')", name="ck_compliance_status_source"),
+    )
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("organizations.id"), nullable=False, index=True
+    )
+    requirement_key: Mapped[str] = mapped_column(String(100), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    source: Mapped[str] = mapped_column(String(20), nullable=False, default="user")
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    updated_by: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class GeneratedDocument(Base):
+    __tablename__ = "generated_documents"
+    __table_args__ = (
+        CheckConstraint(
+            "doc_type IN ('aydinlatma', 'cerez', 'kayit', 'dpa', 'dpia', 'ihlal')",
+            name="ck_generated_documents_type",
+        ),
+    )
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("organizations.id"), nullable=False, index=True
+    )
+    doc_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
