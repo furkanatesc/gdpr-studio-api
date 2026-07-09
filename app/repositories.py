@@ -9,7 +9,17 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .models import BusinessRule, Category, Invitation, Membership, Organization, User
+from .models import (
+    BusinessRule,
+    Category,
+    ComplianceRequirement,
+    ComplianceStatus,
+    GeneratedDocument,
+    Invitation,
+    Membership,
+    Organization,
+    User,
+)
 
 
 class PostgresCategoryRepository:
@@ -108,3 +118,47 @@ class InvitationRepository:
         inv.status = "revoked"
         self._s.flush()
         return True
+
+
+class ComplianceRepository:
+    def __init__(self, session: Session) -> None:
+        self._s = session
+
+    def all_requirements(self) -> list[ComplianceRequirement]:
+        return list(
+            self._s.scalars(select(ComplianceRequirement).order_by(ComplianceRequirement.sort_order))
+        )
+
+    def statuses_for_org(self, org_id: uuid.UUID) -> dict[str, ComplianceStatus]:
+        rows = self._s.scalars(select(ComplianceStatus).where(ComplianceStatus.org_id == org_id))
+        return {r.requirement_key: r for r in rows}
+
+    def upsert_status(self, org_id, key, status, source, note, updated_by) -> ComplianceStatus:
+        row = self._s.scalar(
+            select(ComplianceStatus).where(
+                ComplianceStatus.org_id == org_id, ComplianceStatus.requirement_key == key
+            )
+        )
+        if row is None:
+            row = ComplianceStatus(org_id=org_id, requirement_key=key)
+            self._s.add(row)
+        row.status, row.source, row.note, row.updated_by = status, source, note, updated_by
+        self._s.flush()
+        return row
+
+
+class GeneratedDocumentRepository:
+    def __init__(self, session: Session) -> None:
+        self._s = session
+
+    def record(self, org_id: uuid.UUID, doc_type: str) -> GeneratedDocument:
+        row = GeneratedDocument(org_id=org_id, doc_type=doc_type)
+        self._s.add(row)
+        self._s.flush()
+        return row
+
+    def doc_types_for_org(self, org_id: uuid.UUID) -> set[str]:
+        rows = self._s.scalars(
+            select(GeneratedDocument.doc_type).where(GeneratedDocument.org_id == org_id)
+        )
+        return set(rows)
