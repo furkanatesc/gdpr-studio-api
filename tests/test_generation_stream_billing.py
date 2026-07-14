@@ -56,11 +56,13 @@ def _fake_stream_factory(settings):
 
 
 def _stream_response(db_session, *, doc_type="aydinlatma", byok=None):
+    # Doğrudan çağrı (FastAPI Depends/Header varsayılanları çözülmez) → hepsi açıkça geçilir.
     return genmod.generate_stream(
         GenerateRequest(type=doc_type),
         session=db_session,
         identity=IDENT,
         x_anthropic_key=byok,
+        idempotency_key=None,
     )
 
 
