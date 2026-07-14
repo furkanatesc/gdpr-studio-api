@@ -72,3 +72,59 @@ def record_generation_usage(
         cm = cost_micros(model, input_tokens, output_tokens)
         repo.add_cost(org_id, current_period(), input_tokens, output_tokens, cm)
     session.commit()
+
+
+def reserve_generation_usage(
+    session: Session,
+    settings: Settings,
+    org_id: uuid.UUID,
+    *,
+    model: str,
+    byok: bool,
+) -> int:
+    """Akış üretiminde model çağrısı başlar başlamaz sayımı REZERVE eder; rezerve maliyeti döner.
+
+    Neden rezervasyon: istemci 'done' olayından önce koparsa üretecin `finally`'si ancak çöp
+    toplamada çalışır ve o an istek oturumu kapanmış olabilir → oradan yazmak kaybolabilir.
+    Sayım bu yüzden akış CANLIYKEN (ilk delta) yazılır; koparan istemci rezervasyonu üstlenir.
+
+    Maliyet, tokenlar daha bilinmediği için en kötü durumdan (tam `max_tokens` çıktı) rezerve
+    edilir; 'done' gelince `settle_generation_usage` gerçek maliyetle mahsuplaşır. Böylece
+    erken kopma maliyet bütçesini atlatmaz — aksine pahalı sayılır (kötüye kullanım teşviki yok).
+    Rezerve maliyet bir guardrail sayacıdır; müşteriye fatura edilmez (Stripe aboneliği faturalar).
+    """
+    if not settings.billing_enabled:
+        return 0
+    repo = UsageRepository(session)
+    repo.increment(org_id, current_period())  # doküman sayımı (BYOK dahil — mevcut davranış)
+    reserved = 0
+    if not byok:
+        reserved = cost_micros(model, 0, settings.max_tokens)
+        repo.add_cost(org_id, current_period(), 0, 0, reserved)  # token'lar 'done'da yazılır
+    session.commit()
+    return reserved
+
+
+def settle_generation_usage(
+    session: Session,
+    settings: Settings,
+    org_id: uuid.UUID,
+    *,
+    model: str,
+    input_tokens: int,
+    output_tokens: int,
+    byok: bool,
+    reserved_micros: int,
+) -> None:
+    """Akış 'done': gerçek token'ları yaz ve rezervasyon farkını düzelt (fark negatif olabilir)."""
+    if not settings.billing_enabled or byok:
+        return
+    actual = cost_micros(model, input_tokens, output_tokens)
+    UsageRepository(session).add_cost(
+        org_id,
+        current_period(),
+        input_tokens,
+        output_tokens,
+        actual - reserved_micros,
+    )
+    session.commit()
