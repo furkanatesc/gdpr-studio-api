@@ -6,6 +6,8 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
 from ..models import StripeEvent, Subscription, UsageCounter
@@ -63,6 +65,15 @@ class SubscriptionRepository:
 
 
 class UsageRepository:
+    """Aylık kullanım sayaçları. Artışlar ATOMİKTİR (tek ifade, read-modify-write yok).
+
+    Neden: `SELECT` → Python'da `+= 1` → `UPDATE` deseni READ COMMITTED altında lost-update
+    üretir (eşzamanlı iki üretim aynı N'i okur, ikisi de N+1 yazar → bir artış kaybolur;
+    kota/bütçe sessizce aşılır). Bunun yerine `INSERT ... ON CONFLICT (org_id, period)
+    DO UPDATE SET col = col + :delta` — çakışan yazar satır kilidinde bekler ve GÜNCEL
+    değerin üstüne ekler.
+    """
+
     def __init__(self, session: Session) -> None:
         self._s = session
 
@@ -73,18 +84,24 @@ class UsageRepository:
             )
         )
 
+    def _bump(self, org_id: uuid.UUID, period: str, **deltas: int) -> int:
+        """Atomik artış; güncel doc_count'u döner. deltas: sayaç kolonu → eklenecek değer."""
+        table = UsageCounter.__table__
+        # Dialect'e özgü upsert: prod Postgres, testler SQLite (ikisi de ON CONFLICT destekler).
+        insert = pg_insert if self._s.get_bind().dialect.name == "postgresql" else sqlite_insert
+        stmt = insert(table).values(org_id=org_id, period=period, **deltas)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[table.c.org_id, table.c.period],
+            set_={column: table.c[column] + delta for column, delta in deltas.items()},
+        ).returning(table.c.doc_count)
+        return self._s.execute(stmt).scalar_one()
+
     def get_count(self, org_id: uuid.UUID, period: str) -> int:
         row = self._row(org_id, period)
         return row.doc_count if row else 0
 
     def increment(self, org_id: uuid.UUID, period: str) -> int:
-        row = self._row(org_id, period)
-        if row is None:
-            row = UsageCounter(org_id=org_id, period=period, doc_count=0)
-            self._s.add(row)
-        row.doc_count += 1
-        self._s.flush()
-        return row.doc_count
+        return self._bump(org_id, period, doc_count=1)
 
     def get_cost(self, org_id: uuid.UUID, period: str) -> int:
         row = self._row(org_id, period)
@@ -98,21 +115,14 @@ class UsageRepository:
         output_tokens: int,
         cost_micros: int,
     ) -> None:
-        row = self._row(org_id, period)
-        if row is None:
-            row = UsageCounter(
-                org_id=org_id,
-                period=period,
-                doc_count=0,
-                cost_micros=0,
-                input_tokens=0,
-                output_tokens=0,
-            )
-            self._s.add(row)
-        row.cost_micros += cost_micros
-        row.input_tokens += input_tokens
-        row.output_tokens += output_tokens
-        self._s.flush()
+        # cost_micros negatif olabilir (akış 'done' mahsuplaşması rezervasyon farkını düşer).
+        self._bump(
+            org_id,
+            period,
+            cost_micros=cost_micros,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+        )
 
 
 class StripeEventRepository:
