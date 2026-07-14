@@ -19,7 +19,12 @@ from legal_core.provider import AnthropicProvider
 
 from ..auth.identity import Identity
 from ..auth.tenant_session import tenant_session
-from ..billing.quota import enforce_generation_quota, record_generation_usage
+from ..billing.quota import (
+    enforce_generation_quota,
+    record_generation_usage,
+    reserve_generation_usage,
+    settle_generation_usage,
+)
 from ..config import get_settings
 from ..redis_client import generate_rate_limit
 from ..repositories import (
@@ -122,7 +127,16 @@ def generate_stream(
     rules_repo = PostgresBusinessRuleRepository(session)
     provider = AnthropicProvider(api_key, model=settings.default_model)
 
+    byok = x_anthropic_key is not None
+
     def event_stream():
+        # Sayım 'done'a bırakılamaz: istemci hemen öncesinde koparsa (GeneratorExit) üretim
+        # hiç sayılmaz → ücretsiz tavan + maliyet bütçesi süresiz atlanır. Kopma anında
+        # üretecin `finally`'si ancak çöp toplamada, istek oturumu kapandıktan sonra
+        # çalışabildiği için oraya da yazılamaz. Bu yüzden: ilk delta'da (model çağrıldı,
+        # oturum canlı) REZERVE et, 'done'da gerçek kullanımla mahsuplaş.
+        reserved = 0
+        started = False
         try:
             for kind, payload in generate_document_stream(
                 req,
@@ -134,22 +148,32 @@ def generate_stream(
                 if kind == "grounding":
                     yield _sse("grounding", [g.model_dump(by_alias=True) for g in payload])
                 elif kind == "delta":
+                    if not started:
+                        started = True
+                        # Uyum sinyali (aynı işlemde, rezervasyon commit'inden önce).
+                        GeneratedDocumentRepository(session).record(identity.org_id, req.type)
+                        reserved = reserve_generation_usage(
+                            session,
+                            settings,
+                            identity.org_id,
+                            model=settings.default_model,
+                            byok=byok,
+                        )
                     yield _sse("delta", {"text": payload})
                 elif kind == "done":
                     yield _sse("done", payload)
                     usage = payload.get("usage")
-                    # Uyum sinyali (aynı işlemde, record_generation_usage commit'inden önce).
-                    GeneratedDocumentRepository(session).record(identity.org_id, req.type)
-                    record_generation_usage(
+                    settle_generation_usage(
                         session,
                         settings,
                         identity.org_id,
                         model=payload.get("model") or settings.default_model,
                         input_tokens=usage["inputTokens"] if usage else 0,
                         output_tokens=usage["outputTokens"] if usage else 0,
-                        byok=x_anthropic_key is not None,
-                    )  # akış başarıyla bitti
-        except Exception as e:  # akış ortasında hata → error olayı
+                        byok=byok,
+                        reserved_micros=reserved,
+                    )
+        except Exception as e:  # akış ortasında hata → error olayı (rezervasyon durur: token yandı)
             yield _sse("error", {"detail": f"Üretim hatası: {e}"})
 
     return StreamingResponse(
