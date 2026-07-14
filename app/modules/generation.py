@@ -17,6 +17,7 @@ from legal_core.generate import generate_document_stream
 from legal_core.grounding import Grounding
 from legal_core.provider import AnthropicProvider
 
+from .. import idempotency
 from ..auth.identity import Identity
 from ..auth.tenant_session import tenant_session
 from ..billing.quota import (
@@ -64,6 +65,20 @@ def _sse(event: str, data) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
+def _claim_idempotency(identity: Identity, key: str | None) -> None:
+    """Aynı (org, Idempotency-Key) ile ikinci üretimi reddet (çift model çağrısı + çift fatura)."""
+    if key is not None and len(key) > idempotency.MAX_KEY_LENGTH:
+        raise HTTPException(status_code=400, detail="Idempotency-Key çok uzun.")
+    if not idempotency.claim(identity.org_id, key):
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "duplicate_request",
+                "message": "Bu Idempotency-Key ile bir üretim zaten işlendi veya işleniyor.",
+            },
+        )
+
+
 @router.post(
     "/generate",
     response_model=GenerateResponse,
@@ -76,9 +91,11 @@ def generate(
     session: Session = Depends(tenant_session),
     identity: Identity = Depends(enforce_generation_quota),
     x_anthropic_key: str | None = Header(default=None, alias="X-Anthropic-Key"),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ) -> GenerateResponse:
     settings = get_settings()
     api_key = _resolve_api_key(x_anthropic_key)
+    _claim_idempotency(identity, idempotency_key)
 
     grounding = _build_grounding(session, settings)
     rules_repo = PostgresBusinessRuleRepository(session)
@@ -95,6 +112,8 @@ def generate(
     except HTTPException:
         raise
     except Exception as e:
+        # Üretim başarısız → kilidi bırak: istemci aynı anahtarla yeniden deneyebilsin.
+        idempotency.release(identity.org_id, idempotency_key)
         raise HTTPException(status_code=502, detail=f"Üretim hatası: {e}") from e
     # Uyum sinyali: başarılı üretimi generated_documents'a yaz. record_generation_usage
     # commit ettiği için kayıt ONDAN ÖNCE flush'lanır → aynı işlemde persist olur (spec §4).
@@ -118,10 +137,12 @@ def generate_stream(
     session: Session = Depends(tenant_session),
     identity: Identity = Depends(enforce_generation_quota),
     x_anthropic_key: str | None = Header(default=None, alias="X-Anthropic-Key"),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ) -> StreamingResponse:
     """Streaming (SSE): grounding → metin delta'ları → done. Algılanan gecikmeyi düşürür."""
     settings = get_settings()
     api_key = _resolve_api_key(x_anthropic_key)
+    _claim_idempotency(identity, idempotency_key)  # web asıl bu ucu kullanır → kilit burada da şart
 
     grounding = _build_grounding(session, settings)
     rules_repo = PostgresBusinessRuleRepository(session)
@@ -174,6 +195,9 @@ def generate_stream(
                         reserved_micros=reserved,
                     )
         except Exception as e:  # akış ortasında hata → error olayı (rezervasyon durur: token yandı)
+            if not started:
+                # Model hiç çağrılmadı → sayım da yok; kilidi bırak ki aynı anahtarla denenebilsin.
+                idempotency.release(identity.org_id, idempotency_key)
             yield _sse("error", {"detail": f"Üretim hatası: {e}"})
 
     return StreamingResponse(
