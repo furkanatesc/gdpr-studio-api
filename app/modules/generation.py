@@ -99,7 +99,12 @@ def generate(
 
     grounding = _build_grounding(session, settings)
     rules_repo = PostgresBusinessRuleRepository(session)
-    provider = AnthropicProvider(api_key, model=settings.default_model)
+    provider = AnthropicProvider(
+        api_key,
+        model=settings.default_model,
+        timeout_s=settings.anthropic_timeout_s,
+        max_retries=settings.anthropic_max_retries,
+    )
 
     try:
         result = generate_document(
@@ -146,7 +151,12 @@ def generate_stream(
 
     grounding = _build_grounding(session, settings)
     rules_repo = PostgresBusinessRuleRepository(session)
-    provider = AnthropicProvider(api_key, model=settings.default_model)
+    provider = AnthropicProvider(
+        api_key,
+        model=settings.default_model,
+        timeout_s=settings.anthropic_timeout_s,
+        max_retries=settings.anthropic_max_retries,
+    )
 
     byok = x_anthropic_key is not None
 
