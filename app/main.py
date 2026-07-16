@@ -11,7 +11,12 @@ from .auth.startup_guard import verify_rls_enforcement
 from .config import get_settings
 from .db import get_engine
 from .modules import accounts, billing, compliance, generation, grounding, health, invitations
-from .observability import RequestContextMiddleware, configure_logging, init_sentry
+from .observability import (
+    RequestContextMiddleware,
+    SecurityHeadersMiddleware,
+    configure_logging,
+    init_sentry,
+)
 
 settings = get_settings()
 
@@ -38,6 +43,7 @@ app = FastAPI(
 )
 
 # İstek bağlamı (request_id + erişim logu) en dışta; CORS onun içinde.
+# add_middleware sırası ters-uygulanır: en son eklenen en dışta çalışır.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -45,6 +51,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestContextMiddleware)
 
 app.include_router(health.router)
