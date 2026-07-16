@@ -77,6 +77,54 @@ class AccountRepository:
         return m
 
 
+class MembershipRepository:
+    """Kurum üyeleri: listele / rol değiştir / çıkar. Tüm sorgular RLS altında org'a kapalı.
+
+    `memberships` FORCE RLS ile org'a filtrelenir → org_id koşulu savunma-derinliği + sqlite'ta
+    (RLS yok) gerçek izolasyon sağlar. `users`'ta RLS yok ama join yalnız bu org'un üyelik
+    satırlarından geçtiği için çapraz-kiracı sızıntı olmaz.
+    """
+
+    def __init__(self, session: Session) -> None:
+        self._s = session
+
+    def list_members(self, org_id: uuid.UUID) -> list[tuple[Membership, User]]:
+        rows = self._s.execute(
+            select(Membership, User)
+            .join(User, User.id == Membership.user_id)
+            .where(Membership.org_id == org_id)
+            .order_by(Membership.created_at)
+        ).all()
+        return [(m, u) for m, u in rows]
+
+    def get_member(self, org_id: uuid.UUID, user_id: uuid.UUID) -> Membership | None:
+        return self._s.scalar(
+            select(Membership).where(
+                Membership.org_id == org_id, Membership.user_id == user_id
+            )
+        )
+
+    def count_role(self, org_id: uuid.UUID, role: str) -> int:
+        return len(
+            list(
+                self._s.scalars(
+                    select(Membership.id).where(
+                        Membership.org_id == org_id, Membership.role == role
+                    )
+                )
+            )
+        )
+
+    def set_role(self, membership: Membership, role: str) -> Membership:
+        membership.role = role
+        self._s.flush()
+        return membership
+
+    def remove(self, membership: Membership) -> None:
+        self._s.delete(membership)
+        self._s.flush()
+
+
 class InvitationRepository:
     def __init__(self, session: Session) -> None:
         self._s = session
