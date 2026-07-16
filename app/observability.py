@@ -25,6 +25,20 @@ def get_request_id() -> str | None:
     return _request_id.get()
 
 
+def capture_exception(exc: BaseException) -> None:
+    """Hatayı Sentry'ye gönder (kuruluysa). DSN yoksa sessizce no-op.
+
+    Streaming üretim gibi yanıt 200 başladıktan SONRA patlayan işlemler erişim
+    middleware'ine görünmez; onları ops'a taşımak için buradan capture edilir.
+    """
+    try:
+        import sentry_sdk
+
+        sentry_sdk.capture_exception(exc)  # init edilmemişse SDK içinde no-op
+    except Exception:  # gözlemlenebilirlik asla asıl akışı bozmamalı
+        pass
+
+
 class JsonFormatter(logging.Formatter):
     """Log kaydını tek satır JSON'a çevirir; varsa request_id ve ekstra alanları katar."""
 
