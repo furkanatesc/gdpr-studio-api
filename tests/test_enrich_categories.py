@@ -6,7 +6,7 @@ import json
 
 from scripts.enrich_categories.__main__ import build_enriched
 from scripts.enrich_categories.aggregate import aggregate_rows, clean_tokens, merge_catalog
-from scripts.enrich_categories.mapping import row_to_record, split_cell
+from scripts.enrich_categories.mapping import canonical_category, row_to_record, split_cell
 from scripts.enrich_categories.xlsx_reader import parse_shared_strings, parse_worksheet
 
 
@@ -39,6 +39,18 @@ def test_aggregate_skips_rows_without_category():
     assert aggregate_rows([{"kategori": "", "veri_turu": ["X"]}]) == {}
 
 
+def test_aggregate_category_keys_case_insensitive():
+    rows = [
+        {"kategori": "Görsel Ve İşitsel Kayıtlar", "veri_turu": ["Foto"]},
+        {"kategori": "Görsel ve İşitsel Kayıtlar", "veri_turu": ["Video"]},
+    ]
+    got = aggregate_rows(rows)
+    assert len(got) == 1  # "Ve"/"ve" aynı kategori
+    (name,) = got
+    assert name == "Görsel Ve İşitsel Kayıtlar"  # ilk görülen yazım
+    assert got[name]["veri_turu"] == ["Foto", "Video"]
+
+
 # ── merge_catalog ────────────────────────────────────────────────────────────
 def test_merge_enriches_existing_and_adds_new():
     base = {"Kimlik": {"veri_turu": ["Ad"], "saklama_sureleri": [], "hukuki_sebepler": ["???"]}}
@@ -51,6 +63,14 @@ def test_merge_enriches_existing_and_adds_new():
     assert got["Kimlik"]["saklama_sureleri"] == ["10 yıl (VUK)"]  # boş dolduruldu
     assert got["Kimlik"]["hukuki_sebepler"] == ["5/2ç"]  # ??? çöpü temizlendi
     assert "Müşteri İşlem" in got  # yeni kategori eklendi
+
+
+def test_merge_drops_all_empty_category():
+    base = {"Kimlik": {"veri_turu": ["Ad"]}}
+    src = {"Genetik Veri": {"veri_turu": [], "saklama_sureleri": []}}  # tümü boş kabuk
+    got = merge_catalog(base, src)
+    assert "Kimlik" in got
+    assert "Genetik Veri" not in got  # boş kabuk eklenmez
 
 
 # ── mapping ──────────────────────────────────────────────────────────────────
@@ -73,6 +93,18 @@ def test_row_to_record_maps_headers():
 def test_row_to_record_none_without_category():
     header = ["Kişisel Veri Kategorisi", "Veri Türü"]
     assert row_to_record(header, ["", "Ad"]) is None
+
+
+def test_canonical_category_strips_numbering_prefix():
+    assert canonical_category("1- Kimlik") == "Kimlik"
+    assert canonical_category("12-    Pazarlama") == "Pazarlama"
+    assert canonical_category("Kimlik") == "Kimlik"  # öneksiz değişmez
+
+
+def test_row_to_record_canonicalizes_category():
+    header = ["Kişisel Veri Kategorisi", "Veri Türü"]
+    rec = row_to_record(header, ["3- Lokasyon", "GPS"])
+    assert rec["kategori"] == "Lokasyon"
 
 
 # ── xlsx_reader (saf parser) ─────────────────────────────────────────────────

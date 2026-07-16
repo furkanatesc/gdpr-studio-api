@@ -14,6 +14,14 @@ import unicodedata
 from .aggregate import aggregate_rows, merge_catalog
 from .xlsx_reader import read_inventory_rows
 
+# Retention-öncelikli kürasyon: envanterlerdeki veri_turu aşırı granüler + anlamsal near-dup
+# içeriyor (ör. Özlük'te 525). Prompt şişmesini/token maliyetini sınırlamak için kategori başına
+# tavan uygulanır (yüksek-değerli saklama_sureleri/hukuki_sebepler/tedbirler sınırlanmaz).
+VERI_TURU_CAP = 40
+
+# İnsan denetiminde tespit edilen bozuk/mangled tek-satır kategori artıkları (düşülür).
+MANGLED_CATEGORIES = {"Üye A", "Çalışan Aday İşlem"}
+
 
 def _load_json(path: str) -> dict:
     with open(path, encoding="utf-8") as f:
@@ -21,12 +29,32 @@ def _load_json(path: str) -> dict:
     return {unicodedata.normalize("NFC", k): v for k, v in raw.items()}
 
 
+def curate(
+    catalog: dict[str, dict],
+    veri_turu_cap: int = VERI_TURU_CAP,
+    exclude: set[str] | None = None,
+) -> dict[str, dict]:
+    """Bozuk kategorileri düş + veri_turu'yu tavanla (sıra-kararlı ilk N)."""
+    exclude = MANGLED_CATEGORIES if exclude is None else exclude
+    out: dict[str, dict] = {}
+    for cat, data in catalog.items():
+        if cat in exclude:
+            continue
+        d = dict(data)
+        vt = d.get("veri_turu")
+        if isinstance(vt, list) and veri_turu_cap and len(vt) > veri_turu_cap:
+            d["veri_turu"] = vt[:veri_turu_cap]
+        out[cat] = d
+    return out
+
+
 def build_enriched(
     base_json_path: str,
     xlsx_paths: list[str],
     report_json_path: str | None = None,
+    veri_turu_cap: int = VERI_TURU_CAP,
 ) -> dict[str, dict]:
-    """Tüm kaynakları oku → birleşik katalog döndür (saf; dosya yazmaz)."""
+    """Tüm kaynakları oku → birleşik + küratörlü katalog döndür (saf; dosya yazmaz)."""
     base = _load_json(base_json_path)
     sources: list[dict[str, dict]] = []
     rows: list[dict] = []
@@ -36,7 +64,7 @@ def build_enriched(
         sources.append(aggregate_rows(rows))
     if report_json_path:
         sources.append(_load_json(report_json_path))
-    return merge_catalog(base, *sources)
+    return curate(merge_catalog(base, *sources), veri_turu_cap=veri_turu_cap)
 
 
 def _summary(catalog: dict[str, dict]) -> str:

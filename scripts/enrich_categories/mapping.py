@@ -26,6 +26,17 @@ def _hnorm(s: str) -> str:
 
 HEADER_TO_FIELD = {_hnorm(k): v for k, v in _RAW_MAP.items()}
 
+# Envanterlerde kategori hücreleri numaralı önek taşıyabilir ("1- Kimlik", "12- Pazarlama").
+# Bu bir sıra numarası; kategori adı değil → temizlenir ki "Kimlik" ile birleşsin.
+_NUM_PREFIX = re.compile(r"^\s*\d+\s*[-–—.)]\s*")
+
+
+def canonical_category(name: str) -> str:
+    """Kategori adını kanonikleştir: NFC + numaralı önek at + iç boşluğu tekle."""
+    n = unicodedata.normalize("NFC", name).strip()
+    n = _NUM_PREFIX.sub("", n)
+    return re.sub(r"\s+", " ", n).strip()
+
 
 def split_cell(value: str) -> list[str]:
     """Hücreyi \\n / ; / , ile böler; parçaları trimler, boşları atar."""
@@ -44,7 +55,7 @@ def row_to_record(header_row: list[str], cells: list[str]) -> dict | None:
             continue
         val = cells[i]
         if field == "kategori":
-            rec["kategori"] = unicodedata.normalize("NFC", val).strip()
+            rec["kategori"] = canonical_category(val)
         else:
             rec[field] = split_cell(val)
     return rec if rec["kategori"] else None

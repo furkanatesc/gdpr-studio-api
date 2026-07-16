@@ -41,37 +41,57 @@ def clean_tokens(values: list[str]) -> list[str]:
 
 
 def aggregate_rows(rows: list[dict]) -> dict[str, dict]:
-    """Satırları kategoriye göre grupla; her alanı clean_tokens ile birleştir (boş→boş)."""
+    """Satırları kategoriye göre grupla; her alanı clean_tokens ile birleştir (boş→boş).
+
+    Kategori anahtarları büyük/küçük-harf DUYARSIZ gruplanır ("Ve"/"ve", "hukuki"/"Hukuki"
+    aynı kategoridir); görüntü adı ilk görülen yazımdır.
+    """
     acc: dict[str, dict[str, list[str]]] = {}
+    display: dict[str, str] = {}
     for row in rows:
         cat = _norm(row.get("kategori", ""))
         if not cat:
             continue
-        bucket = acc.setdefault(cat, {f: [] for f in CATALOG_FIELDS})
+        key = cat.casefold()
+        display.setdefault(key, cat)
+        bucket = acc.setdefault(key, {f: [] for f in CATALOG_FIELDS})
         for f in CATALOG_FIELDS:
             bucket[f].extend(row.get(f, []) or [])
     return {
-        cat: {f: clean_tokens(vals) for f, vals in fields.items()}
-        for cat, fields in acc.items()
+        display[key]: {f: clean_tokens(vals) for f, vals in fields.items()}
+        for key, fields in acc.items()
     }
 
 
 def merge_catalog(base: dict[str, dict], *sources: dict[str, dict]) -> dict[str, dict]:
     """Mevcut katalog + N kaynak → alan-birleşimli katalog. Yeni kategori eklenir; boş→boş.
 
-    base'te olmayan alan anahtarları (ör. 'kaynaklar') korunur.
+    Kategoriler büyük/küçük-harf duyarsız birleşir (görüntü adı ilk görülen, base öncelikli).
+    base'te olmayan alan anahtarları (ör. 'kaynaklar') korunur. Tümü-boş kategori düşülür.
     """
-    cats = set(base) | {c for s in sources for c in s}
+    display: dict[str, str] = {}
+    order: list[str] = []
+    for d in (base, *sources):
+        for cat in d:
+            key = _norm(cat).casefold()
+            if key not in display:
+                display[key] = _norm(cat)
+                order.append(key)
+
     out: dict[str, dict] = {}
-    for cat in cats:
-        contributors = [d.get(cat, {}) for d in (base, *sources) if cat in d]
-        keys = {k for c in contributors for k in c}
+    for key in order:
+        contributors = [
+            fields for d in (base, *sources) for cat, fields in d.items()
+            if _norm(cat).casefold() == key
+        ]
+        field_keys = {k for c in contributors for k in c}
         merged: dict[str, list[str]] = {}
-        for k in keys:
+        for fk in field_keys:
             vals: list[str] = []
             for c in contributors:
-                v = c.get(k, [])
+                v = c.get(fk, [])
                 vals.extend(v if isinstance(v, list) else [v])
-            merged[k] = clean_tokens([str(x) for x in vals])
-        out[cat] = merged
+            merged[fk] = clean_tokens([str(x) for x in vals])
+        if any(merged.get(f) for f in merged):  # tümü-boş kabuk kategoriyi ekleme
+            out[display[key]] = merged
     return out
