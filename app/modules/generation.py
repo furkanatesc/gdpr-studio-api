@@ -7,6 +7,7 @@ veya managed (sunucu anahtarı). Çekirdek mantık legal_core.generate_document'
 from __future__ import annotations
 
 import json
+import logging
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi.responses import StreamingResponse
@@ -27,6 +28,7 @@ from ..billing.quota import (
     settle_generation_usage,
 )
 from ..config import get_settings
+from ..observability import capture_exception
 from ..redis_client import generate_rate_limit
 from ..repositories import (
     GeneratedDocumentRepository,
@@ -36,6 +38,7 @@ from ..repositories import (
 from ..semantic import PostgresSemanticMatcher, get_embedder
 
 router = APIRouter(prefix="/api", tags=["generation"])
+_log = logging.getLogger("app.generation")
 
 
 def _build_grounding(session: Session, settings) -> Grounding:
@@ -208,6 +211,9 @@ def generate_stream(
             if not started:
                 # Model hiç çağrılmadı → sayım da yok; kilidi bırak ki aynı anahtarla denenebilsin.
                 idempotency.release(identity.org_id, idempotency_key)
+            # Yanıt 200 başladı → erişim middleware'i bu hatayı görmez; ops'a burada taşı.
+            _log.exception("streaming üretim hatası (org=%s, type=%s)", identity.org_id, req.type)
+            capture_exception(e)
             yield _sse("error", {"detail": f"Üretim hatası: {e}"})
 
     return StreamingResponse(
