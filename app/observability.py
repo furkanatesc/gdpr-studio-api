@@ -86,6 +86,49 @@ def init_sentry(dsn: str, environment: str) -> bool:
     return True
 
 
+class SecurityHeadersMiddleware:
+    """Her yanıta temel güvenlik başlıkları ekler (pure-ASGI, SSE'yi bozmaz).
+
+    API JSON döndürse de tarayıcı doğrudan erişebildiği için derinlik savunması: nosniff,
+    çerçeve reddi, dar CSP (API içerik sunmaz → default-src 'none'), Referrer-Policy.
+    HSTS yalnız prod'da (dev http bağlantısını kırmasın). CORS başlıklarına dokunmaz.
+    """
+
+    _STATIC = (
+        (b"x-content-type-options", b"nosniff"),
+        (b"x-frame-options", b"DENY"),
+        (b"referrer-policy", b"no-referrer"),
+        (b"content-security-policy", b"default-src 'none'; frame-ancestors 'none'; base-uri 'none'"),
+    )
+    _HSTS = (b"strict-transport-security", b"max-age=63072000; includeSubDomains")
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        # HSTS kararı istek anında ayardan: dev http'de kapalı, prod https'te açık.
+        from .config import get_settings
+
+        headers_to_add = list(self._STATIC)
+        if get_settings().environment == "production":
+            headers_to_add.append(self._HSTS)
+
+        async def send_wrapper(message) -> None:
+            if message["type"] == "http.response.start":
+                headers = message.setdefault("headers", [])
+                existing = {k.lower() for k, _ in headers}
+                for key, value in headers_to_add:
+                    if key not in existing:  # el ile set edilmişse ezme
+                        headers.append((key, value))
+            await send(message)
+
+        await self.app(scope, receive, send_wrapper)
+
+
 _access_logger = logging.getLogger("app.access")
 
 
