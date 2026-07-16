@@ -10,7 +10,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from .auth.startup_guard import verify_rls_enforcement
 from .config import get_settings
 from .db import get_engine
-from .modules import accounts, billing, compliance, generation, grounding, health, invitations
+from .modules import (
+    accounts,
+    billing,
+    compliance,
+    generation,
+    grounding,
+    health,
+    invitations,
+    memberships,
+)
 from .observability import (
     RequestContextMiddleware,
     SecurityHeadersMiddleware,
@@ -57,6 +66,7 @@ app.add_middleware(RequestContextMiddleware)
 app.include_router(health.router)
 app.include_router(accounts.router)
 app.include_router(invitations.router)
+app.include_router(memberships.router)
 app.include_router(billing.router)
 app.include_router(grounding.router)
 app.include_router(generation.router)
