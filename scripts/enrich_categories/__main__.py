@@ -86,8 +86,14 @@ def main() -> None:
     ap.add_argument("--report", default=None, help="deep-research JSON (opsiyonel)")
     ap.add_argument("--out", required=True, help="çıktı categories.json")
     ap.add_argument("--summary", default=None, help="insan-okur özet dosyası (opsiyonel)")
+    ap.add_argument(
+        "--veri-turu-cap",
+        type=int,
+        default=VERI_TURU_CAP,
+        help=f"kategori başına veri_turu tavanı (varsayılan {VERI_TURU_CAP}; 0 = sınırsız)",
+    )
     args = ap.parse_args()
-    catalog = build_enriched(args.base, args.xlsx, args.report)
+    catalog = build_enriched(args.base, args.xlsx, args.report, veri_turu_cap=args.veri_turu_cap)
     with open(args.out, "w", encoding="utf-8") as f:
         json.dump(catalog, f, ensure_ascii=False, indent=1, sort_keys=True)
     summary = _summary(catalog)

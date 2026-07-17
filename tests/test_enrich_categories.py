@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from scripts.enrich_categories.__main__ import build_enriched
+from scripts.enrich_categories.__main__ import build_enriched, curate
 from scripts.enrich_categories.aggregate import aggregate_rows, clean_tokens, merge_catalog
 from scripts.enrich_categories.mapping import canonical_category, row_to_record, split_cell
 from scripts.enrich_categories.xlsx_reader import parse_shared_strings, parse_worksheet
@@ -124,6 +124,30 @@ def test_parse_worksheet_resolves_shared_and_inline():
     rows = parse_worksheet(xml, shared)
     assert rows[0] == ["Kimlik", "Ad"]
     assert rows[1][0] == "İletişim"
+
+
+# ── curate (kürasyon: bozuk kategori düş + veri_turu tavanı) ─────────────────
+def test_curate_caps_veri_turu_and_keeps_order():
+    catalog = {"Özlük": {"veri_turu": [f"V{i}" for i in range(100)], "saklama_sureleri": ["10 yıl"]}}
+    got = curate(catalog, veri_turu_cap=40, exclude=set())
+    assert got["Özlük"]["veri_turu"] == [f"V{i}" for i in range(40)]  # ilk 40, sıra korunur
+    assert got["Özlük"]["saklama_sureleri"] == ["10 yıl"]  # yüksek değerli alan sınırlanmaz
+
+
+def test_curate_drops_mangled_categories():
+    catalog = {
+        "Kimlik": {"veri_turu": ["Ad"]},
+        "Üye A": {"veri_turu": ["CMK Eğitimi Başvuru Talebi Bilgisi"]},
+    }
+    got = curate(catalog)  # varsayılan exclude = MANGLED_CATEGORIES
+    assert "Kimlik" in got
+    assert "Üye A" not in got
+
+
+def test_curate_cap_zero_means_unlimited():
+    catalog = {"Kimlik": {"veri_turu": [f"V{i}" for i in range(50)]}}
+    got = curate(catalog, veri_turu_cap=0, exclude=set())
+    assert len(got["Kimlik"]["veri_turu"]) == 50
 
 
 # ── build_enriched (CLI saf çekirdek) ────────────────────────────────────────

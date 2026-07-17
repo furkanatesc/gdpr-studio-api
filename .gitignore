@@ -8,3 +8,8 @@ dist/
 build/
 _lastgen.*
 _*.tmp
+
+# Zenginlestirme kaynaklari: gercek sirket verisi iceren envanterler ASLA commit edilmez
+# (bkz. docs/grounding-katalog-kaynak-notu.md). Ara cikti da repoda tutulmaz.
+*.xlsx
+data/categories.enriched.json
