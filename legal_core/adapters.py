@@ -44,3 +44,39 @@ class DictBusinessRuleRepository:
 
     def business_rules(self, doc_type: str) -> list[str]:
         return list(self._rules.get("Tümü", [])) + list(self._rules.get(doc_type, []))
+
+
+class DictProcessRepository:
+    """Bellek-içi süreç listesi (test/masaüstü). Öğeler processes.json şeklindedir."""
+
+    def __init__(self, processes: list[dict]) -> None:
+        self._items = processes
+
+    def by_sector_and_group(self, sector: str, kisi_grubu: str | None):
+        from .models import ProcessRecord
+
+        out = []
+        for p in self._items:
+            if p["sector"] != sector:
+                continue
+            if kisi_grubu is not None and p["kisi_grubu"] != kisi_grubu:
+                continue
+            d = p.get("data", {})
+            out.append(
+                ProcessRecord(
+                    departman=p["departman"], is_sureci=p["is_sureci"],
+                    alt_surec=p["alt_surec"], kisi_grubu=p["kisi_grubu"],
+                    kategoriler=list(d.get("kategoriler", [])),
+                    veri_turleri=list(d.get("veri_turleri", [])),
+                    amaclar=list(d.get("amaclar", [])),
+                    hukuki_sebepler=list(d.get("hukuki_sebepler", [])),
+                    dayanaklar=list(d.get("dayanaklar", [])),
+                    saklama_sureleri=list(d.get("saklama_sureleri", [])),
+                    islem=list(d.get("islem", [])),
+                    ortam_format=list(d.get("ortam_format", [])),
+                    konum=list(d.get("konum", [])),
+                    idari_tedbirler=list(d.get("idari_tedbirler", [])),
+                    teknik_tedbirler=list(d.get("teknik_tedbirler", [])),
+                )
+            )
+        return out
