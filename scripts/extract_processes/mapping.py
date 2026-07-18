@@ -56,6 +56,7 @@ SECTOR_BY_FILENAME = {
 # (TAG_SYNONYMS deseni). Uydurma değil; yeni hata çıkarsa buraya eklenir.
 _KISI_GRUBU_ALIASES = {
     "tederikçi yetkilisi": "Tedarikçi Yetkilisi",  # 8x
+    "evrakta yer alan 3. kişi": "Evrakta Yer Alan 3. Kişi",  # aynı grup, baş harf küçük yazılmış (1x)
 }
 # Kişi grubu OLMAYAN, veride kalmış çöp (1x).
 _KISI_GRUBU_JUNK = {"organizasyon şirket fiyat teklifi"}
