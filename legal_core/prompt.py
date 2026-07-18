@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 
-from .models import InventoryRecord
+from .models import InventoryRecord, ProcessRecord
 
 # Her çıktının en altına eklenen zorunlu uyarı (hooks.json playbook'u ile uyumlu).
 DISCLAIMER = (
@@ -19,6 +19,9 @@ DISCLAIMER = (
 
 # Disclaimer'ın yeniden eklenip eklenmeyeceğini saptamak için sabit anahtar ifade.
 DISCLAIMER_MARKER = "avukat incelemesine tabi"
+
+# format_processes'in varsayılan kırpma tavanı (build_prompt ile paylaşılır).
+DEFAULT_PROCESS_CAP = 60
 
 
 def format_inventory(records: list[InventoryRecord]) -> str:
@@ -48,14 +51,71 @@ def format_inventory(records: list[InventoryRecord]) -> str:
     return out
 
 
+def format_processes(records: list[ProcessRecord], cap: int = DEFAULT_PROCESS_CAP) -> str:
+    """Süreçleri prompt bloklarına çevirir — her süreç KENDİ hukuki sebebi + saklamasıyla.
+
+    Kategori ekseninde tüm süreçlerin süreleri tek listeye yığıldığı için model hangi
+    sürenin hangi sürece ait olduğunu seçemiyordu (spec §1); bu format o bağlamı korur.
+    Cap aşılırsa kırpma SESSİZ OLMAZ — prompt'a açık not düşülür.
+    """
+    if not records:
+        return ""
+    total = len(records)
+    shown = records[:cap] if cap and total > cap else records
+    out = ""
+    for r in shown:
+        out += f"\n### Süreç: {r.departman} / {r.is_sureci} / {r.alt_surec}\n"
+        out += f"- Kişi grubu: {r.kisi_grubu}\n"
+        if r.kategoriler:
+            out += f"- Kategoriler: {', '.join(r.kategoriler)}\n"
+        if r.veri_turleri:
+            out += f"- Veri türleri: {', '.join(r.veri_turleri[:25])}\n"
+        if r.amaclar:
+            out += f"- Amaçlar: {', '.join(r.amaclar)}\n"
+        if r.hukuki_sebepler:
+            out += f"- Hukuki sebep: {', '.join(r.hukuki_sebepler)}\n"
+        if r.dayanaklar:
+            out += f"- Dayanak: {', '.join(r.dayanaklar)}\n"
+        out += (
+            "- Saklama: "
+            f"{', '.join(r.saklama_sureleri) if r.saklama_sureleri else '[envanterde belirtilmemiş — UYDURMA]'}\n"
+        )
+        if r.islem:
+            out += f"- İşlem: {', '.join(r.islem)}\n"
+        if r.konum:
+            out += f"- Konum: {', '.join(r.konum)}\n"
+        if r.idari_tedbirler:
+            out += f"- İdari tedbir: {', '.join(r.idari_tedbirler)}\n"
+        if r.teknik_tedbirler:
+            out += f"- Teknik tedbir: {', '.join(r.teknik_tedbirler)}\n"
+    if cap and total > cap:
+        out += f"\n(NOT: {total} süreçten ilk {cap} tanesi gösteriliyor — liste kırpıldı.)\n"
+    return out
+
+
 def build_prompt(
     doc_type: str,
     user_input: dict,
     inventory: list[InventoryRecord],
     rules: list[str],
+    processes: list[ProcessRecord] | None = None,
+    process_cap: int = DEFAULT_PROCESS_CAP,
 ) -> str:
-    """Tam üretim prompt'unu kurar (model-agnostik)."""
+    """Tam üretim prompt'unu kurar (model-agnostik).
+
+    Süreç kayıtları verilirse ONLAR birincil bağlayıcı çerçevedir (her süreç kendi hukuki
+    sebebi + saklamasıyla); kategori envanteri tamamlayıcı sözlük olarak kalır.
+    """
     kurallar_metni = "## KVKK ENVANTERİ — BAĞLAYICI KAYITLAR\n" + format_inventory(inventory)
+
+    surec_metni = ""
+    if processes:
+        surec_metni = (
+            "## SÜREÇ ENVANTERİ — BAĞLAYICI (her süreç KENDİ hukuki sebebi ve saklama süresiyle;\n"
+            "başka bir sürecin süresini bu sürece UYGULAMA)\n"
+            + format_processes(processes, cap=process_cap)
+            + "\n"
+        )
 
     is_mantigi = "## BAĞLAYICI İŞ KURALLARI (HARFİYEN UY)\n"
     for i, br in enumerate(rules, 1):
@@ -66,7 +126,7 @@ Kullanıcı '{doc_type}' türünde bir doküman istiyor. Aşağıdaki BAĞLAYICI
 dışına çıkma; kendi kafandan hukuki prosedür, dayanak, süre veya şablon uydurma.
 
 {is_mantigi}
-
+{surec_metni}
 {kurallar_metni}
 
 ## KULLANICI GİRDİLERİ
