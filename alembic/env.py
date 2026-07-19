@@ -9,7 +9,7 @@ from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 from app import models  # noqa: F401 — tabloları Base.metadata'ya kaydeder
-from app.config import get_settings
+from app.config import get_settings, normalize_pg_url
 from app.db import Base
 
 config = context.config

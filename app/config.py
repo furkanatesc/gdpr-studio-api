@@ -2,9 +2,18 @@
 
 from __future__ import annotations
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from .semantic_config import DEFAULT_SEMANTIC_MODEL
+
+
+def normalize_pg_url(url: str) -> str:
+    """`postgres://` / `postgresql://` → `postgresql+psycopg://` (Railway/Heroku uyumu)."""
+    for p in ("postgres://", "postgresql://"):
+        if url.startswith(p):
+            return "postgresql+psycopg://" + url[len(p):]
+    return url
 
 
 class Settings(BaseSettings):
@@ -69,6 +78,11 @@ class Settings(BaseSettings):
     semantic_fallback_enabled: bool = False
     semantic_model: str = DEFAULT_SEMANTIC_MODEL
     semantic_threshold: float = 0.80  # cosine benzerlik tabanı; altı → eşleşme yok
+
+    @field_validator("database_url")
+    @classmethod
+    def _normalize_database_url(cls, v: str) -> str:
+        return normalize_pg_url(v)
 
     @property
     def cors_origins(self) -> list[str]:
