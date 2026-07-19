@@ -18,6 +18,10 @@ from scripts.enrich_categories.xlsx_reader import parse_shared_strings, parse_wo
 _PREFIX = re.compile(r"^\s*\d+\s*[.\-)]\s*")
 # Başlığın kendisi hücreye düşerse ele (veri değil).
 _HEADER_JUNK = {"tedbirler", "idari guvenlik tedbiri", "teknik guvenlik tedbiri", "tedbir"}
+# İnsan denetiminde (plan Step 6) tespit edilen tedbir-olmayan değerler (açık, gözden geçirilmiş):
+# "Diğer" = checklist catch-all ("41.Diğer"); "Web Sunucu" = E-Ticaret İdari Tedbir sütununda
+# 33× tekrarlanan yanlış değer (veri-kalitesi hatası) — hiçbiri güvenlik tedbiri değil.
+_MEASURE_JUNK = {"diğer", "web sunucu"}
 # Tedbir hücrelerinde satır sonu/noktalı virgül gerçek öğe ayracıdır; VİRGÜL değildir —
 # kaynakta bir hücre = bir tam tedbir cümlesi, virgül cümle-içi noktalamadır
 # (ör. "Erişim, bilgi güvenliği, kullanım, saklama ve imha konularında...").
@@ -67,7 +71,8 @@ def read_measures(path: str) -> list[str]:
                         continue
                     for piece in _split_measure_cell(row[ci]):
                         val = strip_measure_prefix(piece)
-                        if val and _hnorm(val) not in _HEADER_JUNK:
+                        nv = _hnorm(val)
+                        if val and nv not in _HEADER_JUNK and nv not in _MEASURE_JUNK:
                             out.append(val)
     return out
 
