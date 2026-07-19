@@ -260,6 +260,17 @@
             "title": "Fields",
             "type": "object"
           },
+          "kisiGrubu": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kisigrubu"
+          },
           "type": {
             "$ref": "#/components/schemas/DocType"
           },
@@ -404,6 +415,17 @@
             "title": "Role",
             "type": "string"
           },
+          "sector": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sector"
+          },
           "userId": {
             "title": "Userid",
             "type": "string"
@@ -498,6 +520,20 @@
           "isSelf"
         ],
         "title": "MemberOut",
+        "type": "object"
+      },
+      "OrgUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "sector": {
+            "title": "Sector",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sector"
+        ],
+        "title": "OrgUpdate",
         "type": "object"
       },
       "RoleUpdate": {
@@ -726,6 +762,48 @@
           }
         },
         "summary": "Me",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/org": {
+      "patch": {
+        "description": "Kurum profili — sektör (süreç şablonu ekseni). Yalnız yönetici.",
+        "operationId": "update_org_api_auth_org_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrgUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdentityOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Org",
         "tags": [
           "auth"
         ]
@@ -1336,6 +1414,32 @@
         "summary": "Update Member Role",
         "tags": [
           "memberships"
+        ]
+      }
+    },
+    "/api/processes/person-groups": {
+      "get": {
+        "description": "Org'un sektöründeki kişi grupları. Sektör yoksa boş liste (sahte seçenek üretilmez).",
+        "operationId": "person_groups_api_processes_person_groups_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Response Person Groups Api Processes Person Groups Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Person Groups",
+        "tags": [
+          "processes"
         ]
       }
     },

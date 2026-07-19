@@ -48,6 +48,7 @@ class GenerateRequest(_CamelModel):
     fields: dict[str, str] = {}
     veriler: list[str] = []
     amaclar: list[str] = []
+    kisi_grubu: str | None = None  # wire: kisiGrubu — süreç grounding ekseni
 
 
 class Usage(_CamelModel):

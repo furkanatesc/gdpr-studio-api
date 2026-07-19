@@ -28,12 +28,14 @@ from ..billing.quota import (
     settle_generation_usage,
 )
 from ..config import get_settings
+from ..models import Organization
 from ..observability import capture_exception
 from ..redis_client import generate_rate_limit
 from ..repositories import (
     GeneratedDocumentRepository,
     PostgresBusinessRuleRepository,
     PostgresCategoryRepository,
+    PostgresProcessRepository,
 )
 from ..semantic import PostgresSemanticMatcher, get_embedder
 
@@ -42,14 +44,14 @@ _log = logging.getLogger("app.generation")
 
 
 def _build_grounding(session: Session, settings) -> Grounding:
-    """Env-gated grounding: semantic_fallback_enabled ise pgvector matcher enjekte edilir."""
+    """Env-gated grounding: semantic_fallback_enabled ise pgvector matcher enjekte edilir.
+    Süreç repo'su her zaman enjekte edilir; sektör yoksa process_rules boş döner (fallback)."""
     repo = PostgresCategoryRepository(session)
+    process_repo = PostgresProcessRepository(session)
     if settings.semantic_fallback_enabled:
-        matcher = PostgresSemanticMatcher(
-            session, get_embedder(settings), settings.semantic_threshold
-        )
-        return Grounding(repo, matcher=matcher)
-    return Grounding(repo)
+        matcher = PostgresSemanticMatcher(session, get_embedder(settings), settings.semantic_threshold)
+        return Grounding(repo, matcher=matcher, process_repo=process_repo)
+    return Grounding(repo, process_repo=process_repo)
 
 
 def _resolve_api_key(x_anthropic_key: str | None) -> str:
@@ -108,6 +110,8 @@ def generate(
         timeout_s=settings.anthropic_timeout_s,
         max_retries=settings.anthropic_max_retries,
     )
+    org = session.get(Organization, identity.org_id)
+    sector = org.sector if org else None
 
     try:
         result = generate_document(
@@ -116,6 +120,9 @@ def generate(
             rules_repo=rules_repo,
             provider=provider,
             max_tokens=settings.max_tokens,
+            sector=sector,
+            kisi_grubu=req.kisi_grubu,
+            process_cap=settings.process_cap,
         )
     except HTTPException:
         raise
@@ -160,6 +167,8 @@ def generate_stream(
         timeout_s=settings.anthropic_timeout_s,
         max_retries=settings.anthropic_max_retries,
     )
+    org = session.get(Organization, identity.org_id)
+    sector = org.sector if org else None
 
     byok = x_anthropic_key is not None
 
@@ -178,6 +187,9 @@ def generate_stream(
                 rules_repo=rules_repo,
                 provider=provider,
                 max_tokens=settings.max_tokens,
+                sector=sector,
+                kisi_grubu=req.kisi_grubu,
+                process_cap=settings.process_cap,
             ):
                 if kind == "grounding":
                     yield _sse("grounding", [g.model_dump(by_alias=True) for g in payload])
