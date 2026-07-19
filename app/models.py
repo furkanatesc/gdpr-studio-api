@@ -235,3 +235,14 @@ class Process(Base):
     is_sureci: Mapped[str] = mapped_column(String(255), nullable=False, default="")
     alt_surec: Mapped[str] = mapped_column(String(500), nullable=False, default="")
     data: Mapped[dict] = mapped_column(_JSON, nullable=False, default=dict)
+
+
+class Measure(Base):
+    """Global standart güvenlik tedbiri (KVKK m.12). Kategoriye bağlı değil — org geneli.
+
+    Faz 1 processes/categories gibi GLOBAL referans verisi (org_id YOK).
+    """
+
+    __tablename__ = "measures"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    tedbir: Mapped[str] = mapped_column(Text, nullable=False)
