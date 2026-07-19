@@ -1,7 +1,19 @@
 import json
 from pathlib import Path
 
-from scripts.extract_measures.extract import strip_measure_prefix
+from scripts.extract_measures.extract import _split_measure_cell, strip_measure_prefix
+
+
+def test_split_measure_cell_never_splits_on_comma():
+    """Merkezî sapma koruması: tedbir cümlesi iç virgülde BÖLÜNMEZ (split_cell'e geri dönüş regresyonu)."""
+    # Tek tedbir, gramatik virgüller içerir → tek parça kalmalı.
+    assert _split_measure_cell("Erişim, bilgi güvenliği, kullanım, saklama ve imha") == [
+        "Erişim, bilgi güvenliği, kullanım, saklama ve imha"
+    ]
+    # Satır sonu / noktalı virgül gerçek öğe ayracıdır → bölünür.
+    assert _split_measure_cell("Şifreleme yapılır\nLoglama tutulur") == ["Şifreleme yapılır", "Loglama tutulur"]
+    assert _split_measure_cell("A tedbiri; B tedbiri") == ["A tedbiri", "B tedbiri"]
+    assert _split_measure_cell("") == []
 
 
 def test_strip_measure_prefix():

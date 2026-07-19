@@ -15,6 +15,8 @@ from scripts.enrich_categories.aggregate import clean_tokens
 from scripts.enrich_categories.xlsx_reader import parse_shared_strings, parse_worksheet
 
 # Baştaki sıra numarası öneki: "1.", "2-", "12)" — tedbir metninin parçası değil.
+# NOT: "3. şahıs..." gibi sıra-sıfatı önekini de kırpardı → gerçek metin kaybı riski. Mevcut
+# 41 tedbirde böyle bir değer yok (denetlendi); yeni kaynak eklenirse çıktı insan denetlenmeli.
 _PREFIX = re.compile(r"^\s*\d+\s*[.\-)]\s*")
 # Başlığın kendisi hücreye düşerse ele (veri değil).
 _HEADER_JUNK = {"tedbirler", "idari guvenlik tedbiri", "teknik guvenlik tedbiri", "tedbir"}
