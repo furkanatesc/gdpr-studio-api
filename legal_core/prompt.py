@@ -149,8 +149,7 @@ Kullanıcı '{doc_type}' türünde bir doküman istiyor. Aşağıdaki BAĞLAYICI
 dışına çıkma; kendi kafandan hukuki prosedür, dayanak, süre veya şablon uydurma.
 
 {is_mantigi}
-{surec_metni}
-{tedbir_metni}
+{surec_metni}{tedbir_metni}
 {kurallar_metni}
 
 ## KULLANICI GİRDİLERİ

@@ -31,6 +31,16 @@ def test_build_prompt_without_measures_unchanged():
     assert "Ağ güvenliği sağlanır" not in p
 
 
+def test_build_prompt_char_identical_when_measures_suppressed():
+    """Regresyon: tedbir bloğu bastırıldığında prompt karakter-özdeş (fazladan boş satır yok)."""
+    base = build_prompt("aydinlatma", {"type": "aydinlatma"}, [], ["kural"])
+    with_m = build_prompt("aydinlatma", {"type": "aydinlatma"}, [], ["kural"], measures=_M)
+    assert with_m == base
+    assert build_prompt("kayit", {"type": "kayit"}, [], ["kural"], measures=None) == build_prompt(
+        "kayit", {"type": "kayit"}, [], ["kural"], measures=[]
+    )
+
+
 def test_grounding_measures_empty_without_repo():
     assert Grounding(DictCategoryRepository({})).measures() == []
     g = Grounding(DictCategoryRepository({}), measure_repo=DictMeasureRepository(_M))
