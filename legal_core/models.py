@@ -48,6 +48,7 @@ class GenerateRequest(_CamelModel):
     fields: dict[str, str] = {}
     veriler: list[str] = []
     amaclar: list[str] = []
+    kisi_grubu: str | None = None  # wire: kisiGrubu — süreç grounding ekseni
 
 
 class Usage(_CamelModel):
@@ -94,3 +95,28 @@ class InventoryRecord:
             kisi_gruplari=self.kisi_gruplari,
             saklama_sureleri=self.saklama_sureleri,
         )
+
+
+@dataclass(frozen=True)
+class ProcessRecord:
+    """Tek işleme faaliyeti (VERBİS satırı) — kendi hukuki sebebi ve saklama süresiyle.
+
+    Kategori ekseninden farkı: saklama süresi/hukuki sebep SÜRECE bağlıdır; kategoriye
+    yığılınca hangi sürenin hangi sürece ait olduğu kaybolur (spec §1).
+    """
+
+    departman: str
+    is_sureci: str
+    alt_surec: str
+    kisi_grubu: str
+    kategoriler: list[str] = field(default_factory=list)
+    veri_turleri: list[str] = field(default_factory=list)
+    amaclar: list[str] = field(default_factory=list)
+    hukuki_sebepler: list[str] = field(default_factory=list)
+    dayanaklar: list[str] = field(default_factory=list)
+    saklama_sureleri: list[str] = field(default_factory=list)
+    islem: list[str] = field(default_factory=list)
+    ortam_format: list[str] = field(default_factory=list)
+    konum: list[str] = field(default_factory=list)
+    idari_tedbirler: list[str] = field(default_factory=list)
+    teknik_tedbirler: list[str] = field(default_factory=list)

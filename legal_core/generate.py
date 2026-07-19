@@ -12,7 +12,7 @@ from typing import Any
 
 from .grounding import Grounding
 from .models import GenerateRequest, GenerateResponse, Usage
-from .prompt import DISCLAIMER, build_prompt, ensure_disclaimer
+from .prompt import DEFAULT_PROCESS_CAP, DISCLAIMER, build_prompt, ensure_disclaimer
 from .provider import DEFAULT_MAX_TOKENS, ModelProvider
 from .rules import GLOBAL_RULES, BusinessRuleRepository
 
@@ -33,6 +33,9 @@ def generate_document(
     rules_repo: BusinessRuleRepository,
     provider: ModelProvider,
     max_tokens: int = DEFAULT_MAX_TOKENS,
+    sector: str | None = None,
+    kisi_grubu: str | None = None,
+    process_cap: int = DEFAULT_PROCESS_CAP,
 ) -> GenerateResponse:
     doc_type = request.type.value
 
@@ -41,7 +44,10 @@ def generate_document(
 
     inventory = grounding.inventory_rules(tags)
     rules = GLOBAL_RULES + rules_repo.business_rules(doc_type)
-    prompt = build_prompt(doc_type, _user_input(request), inventory, rules)
+    processes = grounding.process_rules(sector, kisi_grubu)
+    prompt = build_prompt(
+        doc_type, _user_input(request), inventory, rules, processes=processes, process_cap=process_cap
+    )
 
     result = provider.generate(prompt, max_tokens=max_tokens)
     text = ensure_disclaimer(result.text)
@@ -62,6 +68,9 @@ def generate_document_stream(
     rules_repo: BusinessRuleRepository,
     provider: Any,  # stream() metoduna sahip bir ModelProvider (duck-typed)
     max_tokens: int = DEFAULT_MAX_TOKENS,
+    sector: str | None = None,
+    kisi_grubu: str | None = None,
+    process_cap: int = DEFAULT_PROCESS_CAP,
 ) -> Iterator[tuple[str, Any]]:
     """Olay akışı üretir: ('grounding', records) → ('delta', text)* → ('done', meta).
 
@@ -76,7 +85,10 @@ def generate_document_stream(
     yield ("grounding", [r.to_grounding() for r in inventory])
 
     rules = GLOBAL_RULES + rules_repo.business_rules(doc_type)
-    prompt = build_prompt(doc_type, _user_input(request), inventory, rules)
+    processes = grounding.process_rules(sector, kisi_grubu)
+    prompt = build_prompt(
+        doc_type, _user_input(request), inventory, rules, processes=processes, process_cap=process_cap
+    )
 
     chunks: list[str] = []
     for delta in provider.stream(prompt, max_tokens=max_tokens):

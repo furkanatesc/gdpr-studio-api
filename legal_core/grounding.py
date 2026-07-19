@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
 
-from .models import InventoryRecord
+from .models import InventoryRecord, ProcessRecord
 from .normalize import norm
 
 # Arayüzdeki kullanıcı dostu etiketler -> gerçek KVKK kategori adı.
@@ -62,6 +62,13 @@ class CategoryRepository(Protocol):
     def all_categories(self) -> dict[str, dict]: ...
 
 
+@runtime_checkable
+class ProcessRepository(Protocol):
+    """Sektör + kişi grubuna göre süreç kayıtları. kisi_grubu=None → sektörün tümü."""
+
+    def by_sector_and_group(self, sector: str, kisi_grubu: str | None) -> list[ProcessRecord]: ...
+
+
 class Grounding:
     """Etiket -> kategori çözümleme + envanter kaydı getirme."""
 
@@ -70,10 +77,12 @@ class Grounding:
         repo: CategoryRepository,
         synonyms: dict[str, str] | None = None,
         matcher: SemanticMatcher | None = None,
+        process_repo: ProcessRepository | None = None,
     ) -> None:
         self._repo = repo
         self._synonyms = synonyms if synonyms is not None else TAG_SYNONYMS
         self._matcher = matcher
+        self._process_repo = process_repo
 
     def resolve_categories(self, tags: list[str]) -> set[str]:
         """Gelen etiketleri gerçek envanter kategorilerine eşler.
@@ -151,3 +160,10 @@ class Grounding:
                 )
             )
         return records
+
+    def process_rules(self, sector: str | None, kisi_grubu: str | None) -> list[ProcessRecord]:
+        """Süreç ekseni grounding. Sektör yoksa veya repo enjekte edilmediyse boş → çağıran
+        kategori yoluna düşer (regresyon yok)."""
+        if not sector or self._process_repo is None:
+            return []
+        return self._process_repo.by_sector_and_group(sector, kisi_grubu)

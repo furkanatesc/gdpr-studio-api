@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     managed_anthropic_api_key: str = ""
     default_model: str = "claude-sonnet-4-6"
     max_tokens: int = 8000
+    # Süreç grounding'i prompt'a kaç süreç bassın (0 = sınırsız). Kırpma sessiz değildir.
+    process_cap: int = 60
     # Sağlayıcı dayanıklılığı: sync üretim uçları threadpool'da; timeout/retry olmadan
     # upstream asılırsa worker+DB bağlantısı süresiz tutulur (H1-4).
     anthropic_timeout_s: float = 60.0

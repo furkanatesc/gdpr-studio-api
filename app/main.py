@@ -19,6 +19,7 @@ from .modules import (
     health,
     invitations,
     memberships,
+    processes,
 )
 from .observability import (
     RequestContextMiddleware,
@@ -71,6 +72,7 @@ app.include_router(billing.router)
 app.include_router(grounding.router)
 app.include_router(generation.router)
 app.include_router(compliance.router)
+app.include_router(processes.router)
 
 
 @app.get("/")

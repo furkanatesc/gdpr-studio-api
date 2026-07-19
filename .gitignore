@@ -13,3 +13,4 @@ _*.tmp
 # (bkz. docs/grounding-katalog-kaynak-notu.md). Ara cikti da repoda tutulmaz.
 *.xlsx
 data/categories.enriched.json
+ozet.txt
