@@ -16,11 +16,12 @@ from pathlib import Path
 from sqlalchemy import delete
 
 from .db import get_sessionmaker
-from .models import BusinessRule, Category, Process
+from .models import BusinessRule, Category, Measure, Process
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 CATEGORIES_PATH = DATA_DIR / "categories.json"
 PROCESSES_PATH = DATA_DIR / "processes.json"
+MEASURES_PATH = DATA_DIR / "measures.json"
 
 # (dokuman_turu, kural_metni) — seed_rules.py (Electron) ile birebir.
 RULES: list[tuple[str, str]] = [
@@ -78,6 +79,7 @@ def seed() -> None:
     raw = json.loads(CATEGORIES_PATH.read_text(encoding="utf-8"))
     categories = {unicodedata.normalize("NFC", k): v for k, v in raw.items()}
     processes = json.loads(PROCESSES_PATH.read_text(encoding="utf-8"))
+    measures = json.loads(MEASURES_PATH.read_text(encoding="utf-8")).get("tedbirler", [])
 
     session = get_sessionmaker()()
     try:
@@ -85,6 +87,7 @@ def seed() -> None:
         session.execute(delete(Category))
         session.execute(delete(BusinessRule))
         session.execute(delete(Process))
+        session.execute(delete(Measure))
         session.add_all(Category(name=name, data=data) for name, data in categories.items())
         session.add_all(BusinessRule(dokuman_turu=t, kural_metni=m) for t, m in RULES)
         session.add_all(
@@ -92,8 +95,9 @@ def seed() -> None:
                     is_sureci=p["is_sureci"], alt_surec=p["alt_surec"], data=p["data"])
             for p in processes
         )
+        session.add_all(Measure(tedbir=t) for t in measures)
         session.commit()
-        print(f"Seed tamam: {len(categories)} kategori, {len(RULES)} iş kuralı, {len(processes)} süreç.")
+        print(f"Seed tamam: {len(categories)} kategori, {len(RULES)} iş kuralı, {len(processes)} süreç, {len(measures)} tedbir.")
     finally:
         session.close()
 

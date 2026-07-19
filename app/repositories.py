@@ -18,6 +18,7 @@ from .models import (
     ComplianceStatus,
     GeneratedDocument,
     Invitation,
+    Measure,
     Membership,
     Organization,
     Process,
@@ -89,6 +90,16 @@ class PostgresProcessRepository:
             idari_tedbirler=list(d.get("idari_tedbirler", [])),
             teknik_tedbirler=list(d.get("teknik_tedbirler", [])),
         )
+
+
+class PostgresMeasureRepository:
+    """legal_core.MeasureRepository — global tedbirleri Postgres'ten sunar."""
+
+    def __init__(self, session: Session) -> None:
+        self._s = session
+
+    def all_measures(self) -> list[str]:
+        return list(self._s.scalars(select(Measure.tedbir).order_by(Measure.id)))
 
 
 class AccountRepository:
