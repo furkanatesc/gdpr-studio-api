@@ -65,6 +65,9 @@ class Organization(Base):
     id: Mapped[uuid.UUID] = _uuid_pk()
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # Süreç şablonu seçimi için (grounding ekseni). None → süreç grounding'i devre dışı,
+    # kategori fallback'i çalışır. Kapalı liste: app.sectors.SECTORS.
+    sector: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
 
 class User(Base):
@@ -208,3 +211,27 @@ class GeneratedDocument(Base):
     )
     doc_type: Mapped[str] = mapped_column(String(20), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Process(Base):
+    """Global süreç şablonu (VERBİS satırı). Faz 1'de org_id YOK — referans verisi.
+
+    Sorgu eksenleri (sector, kisi_grubu) gerçek sütun; kalan 20 alan JSONB (Category deseni).
+    Faz 2'de aynı şemaya org_id + RLS eklenerek müşteri envanterine dönüşecek.
+    """
+
+    __tablename__ = "processes"
+    __table_args__ = (
+        UniqueConstraint(
+            "sector", "departman", "is_sureci", "alt_surec", "kisi_grubu",
+            name="uq_processes_identity",
+        ),
+        Index("ix_processes_sector_group", "sector", "kisi_grubu"),
+    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    sector: Mapped[str] = mapped_column(String(50), nullable=False)
+    kisi_grubu: Mapped[str] = mapped_column(String(150), nullable=False)
+    departman: Mapped[str] = mapped_column(String(150), nullable=False, default="")
+    is_sureci: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    alt_surec: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    data: Mapped[dict] = mapped_column(_JSON, nullable=False, default=dict)

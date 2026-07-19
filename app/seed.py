@@ -16,10 +16,11 @@ from pathlib import Path
 from sqlalchemy import delete
 
 from .db import get_sessionmaker
-from .models import BusinessRule, Category
+from .models import BusinessRule, Category, Process
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 CATEGORIES_PATH = DATA_DIR / "categories.json"
+PROCESSES_PATH = DATA_DIR / "processes.json"
 
 # (dokuman_turu, kural_metni) — seed_rules.py (Electron) ile birebir.
 RULES: list[tuple[str, str]] = [
@@ -76,16 +77,23 @@ RULES: list[tuple[str, str]] = [
 def seed() -> None:
     raw = json.loads(CATEGORIES_PATH.read_text(encoding="utf-8"))
     categories = {unicodedata.normalize("NFC", k): v for k, v in raw.items()}
+    processes = json.loads(PROCESSES_PATH.read_text(encoding="utf-8"))
 
     session = get_sessionmaker()()
     try:
         # Idempotent: temizle + yeniden yükle.
         session.execute(delete(Category))
         session.execute(delete(BusinessRule))
+        session.execute(delete(Process))
         session.add_all(Category(name=name, data=data) for name, data in categories.items())
         session.add_all(BusinessRule(dokuman_turu=t, kural_metni=m) for t, m in RULES)
+        session.add_all(
+            Process(sector=p["sector"], kisi_grubu=p["kisi_grubu"], departman=p["departman"],
+                    is_sureci=p["is_sureci"], alt_surec=p["alt_surec"], data=p["data"])
+            for p in processes
+        )
         session.commit()
-        print(f"Seed tamam: {len(categories)} kategori, {len(RULES)} iş kuralı.")
+        print(f"Seed tamam: {len(categories)} kategori, {len(RULES)} iş kuralı, {len(processes)} süreç.")
     finally:
         session.close()
 

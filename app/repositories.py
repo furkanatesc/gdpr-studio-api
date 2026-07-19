@@ -9,6 +9,8 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from legal_core.models import ProcessRecord
+
 from .models import (
     BusinessRule,
     Category,
@@ -18,6 +20,7 @@ from .models import (
     Invitation,
     Membership,
     Organization,
+    Process,
     User,
 )
 
@@ -44,6 +47,48 @@ class PostgresBusinessRuleRepository:
             BusinessRule.dokuman_turu.in_(["Tümü", doc_type])
         )
         return [r[0] for r in self._session.execute(stmt).all()]
+
+
+class PostgresProcessRepository:
+    """legal_core.ProcessRepository — süreç şablonlarını Postgres'ten sunar (global veri)."""
+
+    def __init__(self, session: Session) -> None:
+        self._s = session
+
+    def by_sector_and_group(self, sector: str, kisi_grubu: str | None) -> list[ProcessRecord]:
+        stmt = select(Process).where(Process.sector == sector)
+        if kisi_grubu is not None:
+            stmt = stmt.where(Process.kisi_grubu == kisi_grubu)
+        stmt = stmt.order_by(Process.departman, Process.is_sureci, Process.alt_surec)
+        rows = self._s.scalars(stmt)
+        return [self._to_record(r) for r in rows]
+
+    def person_groups(self, sector: str) -> list[str]:
+        rows = self._s.scalars(
+            select(Process.kisi_grubu).where(Process.sector == sector).distinct()
+        )
+        # Codepoint sıralaması Türkçe harfleri (Ç, Ş, İ ...) yanlış sıraya koyar
+        # (ör. 'Z' < 'Ç'); NFKD anahtarı temel harfe göre sıralar (Ç → C + ¸).
+        return sorted(set(rows), key=lambda s: unicodedata.normalize("NFKD", s))
+
+    @staticmethod
+    def _to_record(row: Process) -> ProcessRecord:
+        d = row.data or {}
+        return ProcessRecord(
+            departman=row.departman, is_sureci=row.is_sureci,
+            alt_surec=row.alt_surec, kisi_grubu=row.kisi_grubu,
+            kategoriler=list(d.get("kategoriler", [])),
+            veri_turleri=list(d.get("veri_turleri", [])),
+            amaclar=list(d.get("amaclar", [])),
+            hukuki_sebepler=list(d.get("hukuki_sebepler", [])),
+            dayanaklar=list(d.get("dayanaklar", [])),
+            saklama_sureleri=list(d.get("saklama_sureleri", [])),
+            islem=list(d.get("islem", [])),
+            ortam_format=list(d.get("ortam_format", [])),
+            konum=list(d.get("konum", [])),
+            idari_tedbirler=list(d.get("idari_tedbirler", [])),
+            teknik_tedbirler=list(d.get("teknik_tedbirler", [])),
+        )
 
 
 class AccountRepository:
