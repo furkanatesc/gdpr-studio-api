@@ -43,10 +43,12 @@ def generate_document(
     tags = list(request.veriler)
 
     inventory = grounding.inventory_rules(tags)
+    measures = grounding.measures()
     rules = GLOBAL_RULES + rules_repo.business_rules(doc_type)
     processes = grounding.process_rules(sector, kisi_grubu)
     prompt = build_prompt(
-        doc_type, _user_input(request), inventory, rules, processes=processes, process_cap=process_cap
+        doc_type, _user_input(request), inventory, rules,
+        processes=processes, process_cap=process_cap, measures=measures,
     )
 
     result = provider.generate(prompt, max_tokens=max_tokens)
@@ -84,10 +86,12 @@ def generate_document_stream(
     inventory = grounding.inventory_rules(tags)
     yield ("grounding", [r.to_grounding() for r in inventory])
 
+    measures = grounding.measures()
     rules = GLOBAL_RULES + rules_repo.business_rules(doc_type)
     processes = grounding.process_rules(sector, kisi_grubu)
     prompt = build_prompt(
-        doc_type, _user_input(request), inventory, rules, processes=processes, process_cap=process_cap
+        doc_type, _user_input(request), inventory, rules,
+        processes=processes, process_cap=process_cap, measures=measures,
     )
 
     chunks: list[str] = []

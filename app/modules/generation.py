@@ -35,6 +35,7 @@ from ..repositories import (
     GeneratedDocumentRepository,
     PostgresBusinessRuleRepository,
     PostgresCategoryRepository,
+    PostgresMeasureRepository,
     PostgresProcessRepository,
 )
 from ..semantic import PostgresSemanticMatcher, get_embedder
@@ -48,10 +49,11 @@ def _build_grounding(session: Session, settings) -> Grounding:
     Süreç repo'su her zaman enjekte edilir; sektör yoksa process_rules boş döner (fallback)."""
     repo = PostgresCategoryRepository(session)
     process_repo = PostgresProcessRepository(session)
+    measure_repo = PostgresMeasureRepository(session)
     if settings.semantic_fallback_enabled:
         matcher = PostgresSemanticMatcher(session, get_embedder(settings), settings.semantic_threshold)
-        return Grounding(repo, matcher=matcher, process_repo=process_repo)
-    return Grounding(repo, process_repo=process_repo)
+        return Grounding(repo, matcher=matcher, process_repo=process_repo, measure_repo=measure_repo)
+    return Grounding(repo, process_repo=process_repo, measure_repo=measure_repo)
 
 
 def _resolve_api_key(x_anthropic_key: str | None) -> str:

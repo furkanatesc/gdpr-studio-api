@@ -46,6 +46,16 @@ class DictBusinessRuleRepository:
         return list(self._rules.get("Tümü", [])) + list(self._rules.get(doc_type, []))
 
 
+class DictMeasureRepository:
+    """Bellek-içi tedbir listesi (test/masaüstü)."""
+
+    def __init__(self, items: list[str]) -> None:
+        self._items = list(items)
+
+    def all_measures(self) -> list[str]:
+        return list(self._items)
+
+
 class DictProcessRepository:
     """Bellek-içi süreç listesi (test/masaüstü). Öğeler processes.json şeklindedir."""
 

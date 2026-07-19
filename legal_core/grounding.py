@@ -69,6 +69,13 @@ class ProcessRepository(Protocol):
     def by_sector_and_group(self, sector: str, kisi_grubu: str | None) -> list[ProcessRecord]: ...
 
 
+@runtime_checkable
+class MeasureRepository(Protocol):
+    """Global standart güvenlik tedbirleri (KVKK m.12)."""
+
+    def all_measures(self) -> list[str]: ...
+
+
 class Grounding:
     """Etiket -> kategori çözümleme + envanter kaydı getirme."""
 
@@ -78,11 +85,13 @@ class Grounding:
         synonyms: dict[str, str] | None = None,
         matcher: SemanticMatcher | None = None,
         process_repo: ProcessRepository | None = None,
+        measure_repo: MeasureRepository | None = None,
     ) -> None:
         self._repo = repo
         self._synonyms = synonyms if synonyms is not None else TAG_SYNONYMS
         self._matcher = matcher
         self._process_repo = process_repo
+        self._measure_repo = measure_repo
 
     def resolve_categories(self, tags: list[str]) -> set[str]:
         """Gelen etiketleri gerçek envanter kategorilerine eşler.
@@ -167,3 +176,7 @@ class Grounding:
         if not sector or self._process_repo is None:
             return []
         return self._process_repo.by_sector_and_group(sector, kisi_grubu)
+
+    def measures(self) -> list[str]:
+        """Global standart tedbirler; repo enjekte edilmediyse boş (regresyon yok)."""
+        return list(self._measure_repo.all_measures()) if self._measure_repo is not None else []

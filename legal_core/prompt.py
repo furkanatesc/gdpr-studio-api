@@ -23,6 +23,9 @@ DISCLAIMER_MARKER = "avukat incelemesine tabi"
 # format_processes'in varsayılan kırpma tavanı (build_prompt ile paylaşılır).
 DEFAULT_PROCESS_CAP = 60
 
+# Tedbir bloğunun basılacağı doküman türleri (tedbirler bölümü olanlar).
+MEASURE_DOC_TYPES = frozenset({"kayit", "dpia", "ihlal"})
+
 
 def format_inventory(records: list[InventoryRecord]) -> str:
     """Envanter kayıtlarını prompt'a gömülecek bağlayıcı metne dönüştürür."""
@@ -93,6 +96,16 @@ def format_processes(records: list[ProcessRecord], cap: int = DEFAULT_PROCESS_CA
     return out
 
 
+def format_measures(measures: list[str]) -> str:
+    """Global tedbirleri prompt bloğuna çevirir. Boşsa boş string."""
+    if not measures:
+        return ""
+    out = "\n"
+    for m in measures:
+        out += f"- {m}\n"
+    return out
+
+
 def build_prompt(
     doc_type: str,
     user_input: dict,
@@ -100,6 +113,7 @@ def build_prompt(
     rules: list[str],
     processes: list[ProcessRecord] | None = None,
     process_cap: int = DEFAULT_PROCESS_CAP,
+    measures: list[str] | None = None,
 ) -> str:
     """Tam üretim prompt'unu kurar (model-agnostik).
 
@@ -117,6 +131,15 @@ def build_prompt(
             + "\n"
         )
 
+    tedbir_metni = ""
+    if measures and doc_type in MEASURE_DOC_TYPES:
+        tedbir_metni = (
+            "## TEKNİK VE İDARİ TEDBİRLER (KVKK m.12 — org geneli standart liste; "
+            "belgenin tedbirler bölümünde bunları kullan, UYDURMA)\n"
+            + format_measures(measures)
+            + "\n"
+        )
+
     is_mantigi = "## BAĞLAYICI İŞ KURALLARI (HARFİYEN UY)\n"
     for i, br in enumerate(rules, 1):
         is_mantigi += f"{i}. {br}\n"
@@ -127,6 +150,7 @@ dışına çıkma; kendi kafandan hukuki prosedür, dayanak, süre veya şablon 
 
 {is_mantigi}
 {surec_metni}
+{tedbir_metni}
 {kurallar_metni}
 
 ## KULLANICI GİRDİLERİ
