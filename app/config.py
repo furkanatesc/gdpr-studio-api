@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from pydantic import field_validator
+import re
+
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from .semantic_config import DEFAULT_SEMANTIC_MODEL
@@ -16,12 +18,18 @@ def normalize_pg_url(url: str) -> str:
     return url
 
 
+def _swap_userinfo(url: str, user: str, password: str) -> str:
+    return re.sub(r"://[^@/]+@", f"://{user}:{password}@", url, count=1)
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_prefix="", extra="ignore")
 
     # Veritabanı / altyapı
     database_url: str = "postgresql+psycopg://kvkk:kvkk@localhost:5432/kvkk"
     redis_url: str = "redis://localhost:6379/0"
+    # Prod'da uygulama bu role (kvkk_app) düşürülür → RLS zorlanır (kullanıcı+şifre = bu değer).
+    app_db_role: str = ""
 
     # Managed mod sunucu anahtarı (web). Boşsa yalnızca BYOK çalışır.
     managed_anthropic_api_key: str = ""
@@ -83,6 +91,12 @@ class Settings(BaseSettings):
     @classmethod
     def _normalize_database_url(cls, v: str) -> str:
         return normalize_pg_url(v)
+
+    @model_validator(mode="after")
+    def _force_app_role(self) -> Settings:
+        if self.app_db_role:
+            self.database_url = _swap_userinfo(self.database_url, self.app_db_role, self.app_db_role)
+        return self
 
     @property
     def cors_origins(self) -> list[str]:
