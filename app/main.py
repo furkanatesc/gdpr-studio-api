@@ -13,10 +13,12 @@ from .db import get_engine
 from .modules import (
     accounts,
     billing,
+    clients,
     compliance,
     generation,
     grounding,
     health,
+    inventory,
     invitations,
     memberships,
     processes,
@@ -73,6 +75,8 @@ app.include_router(grounding.router)
 app.include_router(generation.router)
 app.include_router(compliance.router)
 app.include_router(processes.router)
+app.include_router(clients.router)
+app.include_router(inventory.router)
 
 
 @app.get("/")
