@@ -42,8 +42,8 @@ REQUIREMENTS: list[dict] = [
      "description": "İşlemeler m.5/2'deki sebeplere (sözleşme, hukuki yükümlülük, meşru menfaat vb.) dayandırılmalı; hiçbiri yoksa açık rıza alınmalıdır.",
      "source_type": "manual", "auto_signal": None, "sort_order": 40},
     {"key": "acik_riza_yonetimi", "title": "Açık rıza gerektiren işlemler için rıza alınıyor ve kayıtlanıyor",
-     "madde_ref": "KVKK m.5/1, m.6/2", "group": "Hukuki Sebep ve Rıza",
-     "description": "Açık rıza; belirli bir konuya ilişkin, bilgilendirmeye dayalı ve özgür iradeyle olmalı; geri alınabilmeli ve ispatı için kayıt altına alınmalıdır. Açık rıza bir hizmet şartına bağlanamaz.",
+     "madde_ref": "KVKK m.3 (tanım), m.5/1, m.6/2", "group": "Hukuki Sebep ve Rıza",
+     "description": "Açık rıza (m.3 tanımı) belirli bir konuya ilişkin, bilgilendirmeye dayalı ve özgür iradeyle olmalı; geri alınabilmeli ve ispatı için kayıt altına alınmalıdır. Açık rıza bir hizmet şartına bağlanamaz.",
      "source_type": "manual", "auto_signal": None, "sort_order": 50},
     {"key": "ozel_nitelikli_veri", "title": "Özel nitelikli veriler için ek şartlar sağlanıyor",
      "madde_ref": "KVKK m.6", "group": "Hukuki Sebep ve Rıza",
@@ -126,17 +126,17 @@ REQUIREMENTS: list[dict] = [
 
     # — Aktarım ve Sözleşmeler (m.8, m.9) —
     {"key": "veri_isleyen_sozlesmeleri", "title": "Veri işleyenlerle KVKK sözleşmeleri imzalandı",
-     "madde_ref": "KVKK m.12/2", "group": "Aktarım ve Sözleşmeler",
-     "description": "Tedarikçi/veri işleyenlerle güvenlik yükümlülüklerini içeren yazılı sözleşme (DPA) yapılmalı; veri işleyen sorumlulukla müştereken yükümlüdür.",
+     "madde_ref": "KVKK m.12/2 · Kurul Rehberi", "group": "Aktarım ve Sözleşmeler",
+     "description": "Tedarikçi/veri işleyenlerle güvenlik yükümlülüklerini içeren yazılı sözleşme (DPA) yapılmalı; veri işleyen, güvenlik tedbirlerinin alınmasında sorumlulukla müştereken yükümlüdür (m.12/2). Yazılılık Kurul rehber/uygulamasından türer.",
      "source_type": "auto", "auto_signal": "doc_generated:dpa", "sort_order": 230},
     {"key": "yurtdisi_aktarim", "title": "Yurt dışı aktarımlar mevzuata uygun yapılıyor",
      "madde_ref": "KVKK m.9", "group": "Aktarım ve Sözleşmeler",
      "description": "Yurt dışına aktarımda uygun güvence (yeterlilik kararı, standart sözleşme/bağlayıcı kurallar veya açık rıza) sağlanmalı ve gerekli bildirimler yapılmalıdır. Yurt dışı aktarım yoksa 'uygulanmaz'.",
      "source_type": "manual", "auto_signal": None, "sort_order": 240},
     {"key": "dpia", "title": "Yüksek riskli işlemler için etki değerlendirmesi yapıldı",
-     "madde_ref": "Kurul Rehberi (DPIA)", "group": "Aktarım ve Sözleşmeler",
-     "description": "Yeni teknoloji, profilleme veya büyük ölçekli özel nitelikli veri işleme gibi yüksek riskli faaliyetlerde veri koruma etki değerlendirmesi önerilir.",
-     "source_type": "auto", "auto_signal": "doc_generated:dpia", "sort_order": 250},
+     "madde_ref": "Kurul Rehberi (DPIA)", "group": "Veri Güvenliği — İdari",
+     "description": "Yeni teknoloji, profilleme veya büyük ölçekli özel nitelikli veri işleme gibi yüksek riskli faaliyetlerde veri koruma etki değerlendirmesi (DPIA) önerilir. KVKK'da zorunlu değildir; iyi uygulamadır.",
+     "source_type": "auto", "auto_signal": "doc_generated:dpia", "sort_order": 135},
 
     # — İhlal Yönetimi (m.12/5) —
     {"key": "ihlal_mudahale_plani", "title": "Veri ihlali müdahale planı hazır",
