@@ -65,6 +65,26 @@ def test_seed_replaces_previous_content():
     assert {r.key for r in s.query(ComplianceRequirement).all()} == {"k1"}
 
 
-def test_module_requirements_is_empty_pending_t7():
-    # T7 BLOKLU: içerik gelene dek boş kalmalı (uydurma yok).
-    assert REQUIREMENTS == []
+_VALID_DOC_TYPES = {"aydinlatma", "cerez", "kayit", "dpa", "dpia", "ihlal"}
+
+
+def test_requirements_iyi_bicimli():
+    assert len(REQUIREMENTS) >= 20, "uyum listesi dolu olmalı"
+    keys = [r["key"] for r in REQUIREMENTS]
+    assert len(keys) == len(set(keys)), "anahtarlar benzersiz olmalı"
+    for r in REQUIREMENTS:
+        assert set(r) == {"key", "title", "madde_ref", "description", "group",
+                          "source_type", "auto_signal", "sort_order"}, f"{r['key']} şema hatalı"
+        assert r["source_type"] in ("manual", "auto"), r["key"]
+        assert r["title"] and r["madde_ref"] and r["description"] and r["group"], f"{r['key']} boş alan"
+
+
+def test_auto_kalemler_gecerli_dokuman_sinyaline_bagli():
+    """auto_signal 'doc_generated:<tür>' formatında ve tür gerçek bir doküman türü olmalı."""
+    for r in REQUIREMENTS:
+        if r["source_type"] == "auto":
+            assert r["auto_signal"] and r["auto_signal"].startswith("doc_generated:"), r["key"]
+            tur = r["auto_signal"].split(":", 1)[1]
+            assert tur in _VALID_DOC_TYPES, f"{r['key']}: bilinmeyen doküman türü {tur}"
+        else:
+            assert r["auto_signal"] is None, f"{r['key']}: manual kalemde auto_signal olmamalı"

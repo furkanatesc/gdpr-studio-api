@@ -17,6 +17,7 @@ from sqlalchemy import delete
 
 from .db import get_sessionmaker
 from .models import BusinessRule, Category, Measure, Process
+from .seed_compliance import REQUIREMENTS, seed_compliance_requirements
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 CATEGORIES_PATH = DATA_DIR / "categories.json"
@@ -86,7 +87,8 @@ def seed() -> None:
         # Idempotent: temizle + yeniden yükle.
         session.execute(delete(Category))
         session.execute(delete(BusinessRule))
-        session.execute(delete(Process))
+        # YALNIZ global grounding'i sil — müvekkil envanterine (org_id/client_id dolu) dokunma.
+        session.execute(delete(Process).where(Process.org_id.is_(None), Process.client_id.is_(None)))
         session.execute(delete(Measure))
         session.add_all(Category(name=name, data=data) for name, data in categories.items())
         session.add_all(BusinessRule(dokuman_turu=t, kural_metni=m) for t, m in RULES)
@@ -96,8 +98,10 @@ def seed() -> None:
             for p in processes
         )
         session.add_all(Measure(tedbir=t) for t in measures)
+        n_req = seed_compliance_requirements(session, REQUIREMENTS)
         session.commit()
-        print(f"Seed tamam: {len(categories)} kategori, {len(RULES)} iş kuralı, {len(processes)} süreç, {len(measures)} tedbir.")
+        print(f"Seed tamam: {len(categories)} kategori, {len(RULES)} iş kuralı, {len(processes)} süreç, "
+              f"{len(measures)} tedbir, {n_req} uyum gereksinimi.")
     finally:
         session.close()
 
