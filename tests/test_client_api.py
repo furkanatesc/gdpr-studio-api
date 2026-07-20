@@ -26,3 +26,16 @@ def test_import_to_client(client_fresh):
 def test_grounding_options_endpoint(client_fresh):
     client_fresh.post("/api/auth/bootstrap", json={"orgName": "Büro"})
     assert "Kimlik" in client_fresh.get("/api/grounding/options").json()["kategoriler"]
+
+
+def test_patch_clears_explicit_null_but_keeps_omitted(client_fresh):
+    """PATCH semantiği: acikca null gonderilen alan temizlenir, gonderilmeyen korunur."""
+    client_fresh.post("/api/auth/bootstrap", json={"orgName": "Büro"})
+    cid = client_fresh.post("/api/clients", json={"name": "Otel", "sector": "otel"}).json()["id"]
+    client_fresh.patch(f"/api/clients/{cid}", json={"kep": "a@hs01.kep.tr", "mersis": "123"})
+
+    client_fresh.patch(f"/api/clients/{cid}", json={"kep": None})
+    body = client_fresh.get(f"/api/clients/{cid}").json()
+    assert body["kep"] is None, "acikca null gonderilen alan temizlenmeli"
+    assert body["mersis"] == "123", "gonderilmeyen alan korunmali"
+    assert body["name"] == "Otel", "gonderilmeyen ad korunmali"

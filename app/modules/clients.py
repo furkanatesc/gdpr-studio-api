@@ -84,7 +84,8 @@ def get_client(client_id: uuid.UUID, identity: Identity = Depends(get_current_id
 def update_client(client_id: uuid.UUID, body: ClientProfileUpdate,
                   identity: Identity = Depends(require_role("yonetici")),
                   session: Session = Depends(tenant_session)) -> ClientOut:
-    c = ClientRepository(session).update_profile(identity.org_id, client_id, **body.model_dump(exclude_none=True))
+    # exclude_unset: gönderilmeyen alan korunur, açıkça null gönderilen alan temizlenir (PATCH semantiği).
+    c = ClientRepository(session).update_profile(identity.org_id, client_id, **body.model_dump(exclude_unset=True))
     if c is None:
         raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
     session.commit()
