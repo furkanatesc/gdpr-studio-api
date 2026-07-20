@@ -105,8 +105,11 @@ async def import_inventory(client_id: uuid.UUID, file: UploadFile,
         raise HTTPException(status_code=422, detail=str(e)) from e
     repo = PostgresProcessRepository(session)
     repo.replace_client(identity.org_id, client_id, rows)
+    # Özet commit'ten ÖNCE okunmalı: app.current_org_id transaction-local, commit'te sıfırlanır
+    # ve RLS satırları gizler → "başarılı ama 0 kayıt".
+    summary = _summary(repo.client_processes(client_id))
     session.commit()
-    return _summary(repo.client_processes(client_id))
+    return summary
 
 
 @router.get("/{client_id}/inventory/summary")
