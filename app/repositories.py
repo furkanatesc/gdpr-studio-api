@@ -6,7 +6,7 @@ import unicodedata
 import uuid
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from legal_core.models import ProcessRecord
@@ -14,6 +14,7 @@ from legal_core.models import ProcessRecord
 from .models import (
     BusinessRule,
     Category,
+    Client,
     ComplianceRequirement,
     ComplianceStatus,
     GeneratedDocument,
@@ -57,12 +58,30 @@ class PostgresProcessRepository:
         self._s = session
 
     def by_sector_and_group(self, sector: str, kisi_grubu: str | None) -> list[ProcessRecord]:
-        stmt = select(Process).where(Process.sector == sector)
+        stmt = select(Process).where(
+            Process.sector == sector, Process.org_id.is_(None), Process.client_id.is_(None)
+        )
         if kisi_grubu is not None:
             stmt = stmt.where(Process.kisi_grubu == kisi_grubu)
         stmt = stmt.order_by(Process.departman, Process.is_sureci, Process.alt_surec)
         rows = self._s.scalars(stmt)
         return [self._to_record(r) for r in rows]
+
+    def client_processes(self, client_id: uuid.UUID) -> list[ProcessRecord]:
+        rows = self._s.scalars(
+            select(Process).where(Process.client_id == client_id)
+            .order_by(Process.departman, Process.is_sureci, Process.alt_surec)
+        )
+        return [self._to_record(r) for r in rows]
+
+    def replace_client(self, org_id: uuid.UUID, client_id: uuid.UUID, rows: list[dict]) -> int:
+        self._s.execute(delete(Process).where(Process.client_id == client_id))
+        objs = [Process(sector=r["sector"], kisi_grubu=r["kisi_grubu"], departman=r["departman"],
+                        is_sureci=r["is_sureci"], alt_surec=r["alt_surec"], data=r["data"],
+                        org_id=org_id, client_id=client_id) for r in rows]
+        self._s.add_all(objs)
+        self._s.flush()
+        return len(objs)
 
     def person_groups(self, sector: str) -> list[str]:
         rows = self._s.scalars(
@@ -266,3 +285,32 @@ class GeneratedDocumentRepository:
             select(GeneratedDocument.doc_type).where(GeneratedDocument.org_id == org_id)
         )
         return set(rows)
+
+
+class ClientRepository:
+    _FIELDS = ("name", "sector", "legal_name", "mersis", "vergi_dairesi", "vergi_no", "kep", "adres", "eposta", "telefon")
+
+    def __init__(self, session: Session) -> None:
+        self._s = session
+
+    def create(self, org_id: uuid.UUID, name: str, sector: str | None = None) -> Client:
+        c = Client(org_id=org_id, name=name, sector=sector)
+        self._s.add(c)
+        self._s.flush()
+        return c
+
+    def list(self, org_id: uuid.UUID) -> list[Client]:
+        return list(self._s.scalars(select(Client).where(Client.org_id == org_id).order_by(Client.created_at)))
+
+    def get(self, org_id: uuid.UUID, client_id: uuid.UUID) -> Client | None:
+        return self._s.scalar(select(Client).where(Client.org_id == org_id, Client.id == client_id))
+
+    def update_profile(self, org_id: uuid.UUID, client_id: uuid.UUID, **fields) -> Client | None:
+        c = self.get(org_id, client_id)
+        if c is None:
+            return None
+        for k, v in fields.items():
+            if k in self._FIELDS:
+                setattr(c, k, v)
+        self._s.flush()
+        return c
