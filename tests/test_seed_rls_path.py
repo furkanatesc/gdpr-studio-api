@@ -47,8 +47,8 @@ def test_apply_seed_kvkk_app_rolunde_global_yazar_muvekkili_korur():
         session.execute(text("INSERT INTO clients (id, org_id, name, created_at) VALUES (:i,:o,'M',now())"),
                         {"i": str(client), "o": str(org)})
         session.execute(text(
-            "INSERT INTO processes (id, sector, kisi_grubu, departman, is_sureci, alt_surec, data, org_id, client_id) "
-            "VALUES (gen_random_uuid(),'otel','Ziyaretçi','Güvenlik','Kamera','Kayıt','{}'::jsonb,:o,:c)"),
+            "INSERT INTO processes (sector, kisi_grubu, departman, is_sureci, alt_surec, data, org_id, client_id) "
+            "VALUES ('otel','Ziyaretçi','Güvenlik','Kamera','Kayıt','{}'::jsonb,:o,:c)"),
             {"o": str(org), "c": str(client)})
         session.commit()
 
