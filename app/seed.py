@@ -15,8 +15,10 @@ from pathlib import Path
 
 from sqlalchemy import delete
 
+from .auth.tenant_session import begin_provisioning
 from .db import get_sessionmaker
 from .models import BusinessRule, Category, Measure, Process
+from .seed_compliance import REQUIREMENTS, seed_compliance_requirements
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 CATEGORIES_PATH = DATA_DIR / "categories.json"
@@ -75,6 +77,32 @@ RULES: list[tuple[str, str]] = [
 ]
 
 
+def apply_seed(session, *, categories: dict, rules: list, processes: list,
+               measures: list, requirements: list) -> dict:
+    """Referans veriyi idempotent yükler (commit ETMEZ — çağıran commit'ler).
+
+    processes RLS'li (0010) ve seed kvkk_app rolüyle koşar → global satır yazımı/silimi
+    için bypass şart; transaction-local, commit'e kadar açık kalır. YALNIZ global
+    grounding silinir — müvekkil envanteri (org_id/client_id dolu) korunur.
+    """
+    begin_provisioning(session)
+    session.execute(delete(Category))
+    session.execute(delete(BusinessRule))
+    session.execute(delete(Process).where(Process.org_id.is_(None), Process.client_id.is_(None)))
+    session.execute(delete(Measure))
+    session.add_all(Category(name=name, data=data) for name, data in categories.items())
+    session.add_all(BusinessRule(dokuman_turu=t, kural_metni=m) for t, m in rules)
+    session.add_all(
+        Process(sector=p["sector"], kisi_grubu=p["kisi_grubu"], departman=p["departman"],
+                is_sureci=p["is_sureci"], alt_surec=p["alt_surec"], data=p["data"])
+        for p in processes
+    )
+    session.add_all(Measure(tedbir=t) for t in measures)
+    n_req = seed_compliance_requirements(session, requirements)
+    return {"kategori": len(categories), "kural": len(rules), "surec": len(processes),
+            "tedbir": len(measures), "uyum": n_req}
+
+
 def seed() -> None:
     raw = json.loads(CATEGORIES_PATH.read_text(encoding="utf-8"))
     categories = {unicodedata.normalize("NFC", k): v for k, v in raw.items()}
@@ -83,21 +111,11 @@ def seed() -> None:
 
     session = get_sessionmaker()()
     try:
-        # Idempotent: temizle + yeniden yükle.
-        session.execute(delete(Category))
-        session.execute(delete(BusinessRule))
-        session.execute(delete(Process))
-        session.execute(delete(Measure))
-        session.add_all(Category(name=name, data=data) for name, data in categories.items())
-        session.add_all(BusinessRule(dokuman_turu=t, kural_metni=m) for t, m in RULES)
-        session.add_all(
-            Process(sector=p["sector"], kisi_grubu=p["kisi_grubu"], departman=p["departman"],
-                    is_sureci=p["is_sureci"], alt_surec=p["alt_surec"], data=p["data"])
-            for p in processes
-        )
-        session.add_all(Measure(tedbir=t) for t in measures)
+        c = apply_seed(session, categories=categories, rules=RULES, processes=processes,
+                       measures=measures, requirements=REQUIREMENTS)
         session.commit()
-        print(f"Seed tamam: {len(categories)} kategori, {len(RULES)} iş kuralı, {len(processes)} süreç, {len(measures)} tedbir.")
+        print(f"Seed tamam: {c['kategori']} kategori, {c['kural']} iş kuralı, {c['surec']} süreç, "
+              f"{c['tedbir']} tedbir, {c['uyum']} uyum gereksinimi.")
     finally:
         session.close()
 
