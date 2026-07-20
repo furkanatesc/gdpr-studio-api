@@ -52,9 +52,52 @@ class ClientProfileUpdate(BaseModel):
     telefon: str | None = None
 
 
+_LIST_FIELDS = ("kategoriler", "veri_turleri", "amaclar", "hukuki_sebepler", "dayanaklar",
+                "saklama_sureleri", "islem", "ortam_format", "konum",
+                "idari_tedbirler", "teknik_tedbirler")
+
+
+class InventoryRow(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    departman: str = ""
+    is_sureci: str = ""
+    alt_surec: str = ""
+    kisi_grubu: str = Field(min_length=1, max_length=255)
+    kategoriler: list[str] = Field(default_factory=list)
+    veri_turleri: list[str] = Field(default_factory=list)
+    amaclar: list[str] = Field(default_factory=list)
+    hukuki_sebepler: list[str] = Field(default_factory=list)
+    dayanaklar: list[str] = Field(default_factory=list)
+    saklama_sureleri: list[str] = Field(default_factory=list)
+    islem: list[str] = Field(default_factory=list)
+    ortam_format: list[str] = Field(default_factory=list)
+    konum: list[str] = Field(default_factory=list)
+    idari_tedbirler: list[str] = Field(default_factory=list)
+    teknik_tedbirler: list[str] = Field(default_factory=list)
+
+
+class InventoryReplace(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    rows: list[InventoryRow]
+
+
 def _summary(recs) -> dict:
     return {"count": len(recs), "kisiGruplari": sorted({r.kisi_grubu for r in recs}),
             "departmanlar": sorted({r.departman for r in recs if r.departman})}
+
+
+def _record_to_row(r) -> dict:
+    row = {"departman": r.departman, "is_sureci": r.is_sureci,
+           "alt_surec": r.alt_surec, "kisi_grubu": r.kisi_grubu}
+    for f in _LIST_FIELDS:
+        row[f] = list(getattr(r, f))
+    return row
+
+
+def _row_to_replace_dict(row: InventoryRow, sector: str) -> dict:
+    return {"sector": sector, "kisi_grubu": row.kisi_grubu, "departman": row.departman,
+            "is_sureci": row.is_sureci, "alt_surec": row.alt_surec,
+            "data": {f: getattr(row, f) for f in _LIST_FIELDS}}
 
 
 @router.post("", response_model=ClientOut)
@@ -118,3 +161,28 @@ def inventory_summary(client_id: uuid.UUID, identity: Identity = Depends(get_cur
     if ClientRepository(session).get(identity.org_id, client_id) is None:
         raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
     return _summary(PostgresProcessRepository(session).client_processes(client_id))
+
+
+@router.get("/{client_id}/inventory")
+def get_inventory(client_id: uuid.UUID, identity: Identity = Depends(get_current_identity),
+                  session: Session = Depends(tenant_session)) -> dict:
+    if ClientRepository(session).get(identity.org_id, client_id) is None:
+        raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
+    recs = PostgresProcessRepository(session).client_processes(client_id)
+    return {"rows": [_record_to_row(r) for r in recs]}
+
+
+@router.put("/{client_id}/inventory")
+def replace_inventory(client_id: uuid.UUID, body: InventoryReplace,
+                      identity: Identity = Depends(get_current_identity),
+                      session: Session = Depends(tenant_session)) -> dict:
+    client = ClientRepository(session).get(identity.org_id, client_id)
+    if client is None:
+        raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
+    sector = client.sector or "sirket"
+    rows = [_row_to_replace_dict(r, sector) for r in body.rows]
+    repo = PostgresProcessRepository(session)
+    repo.replace_client(identity.org_id, client_id, rows)
+    summary = _summary(repo.client_processes(client_id))
+    session.commit()
+    return summary

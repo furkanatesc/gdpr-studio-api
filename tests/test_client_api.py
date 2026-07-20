@@ -39,3 +39,39 @@ def test_patch_clears_explicit_null_but_keeps_omitted(client_fresh):
     assert body["kep"] is None, "acikca null gonderilen alan temizlenmeli"
     assert body["mersis"] == "123", "gonderilmeyen alan korunmali"
     assert body["name"] == "Otel", "gonderilmeyen ad korunmali"
+
+
+def test_inventory_get_and_put_roundtrip(client_fresh):
+    client_fresh.post("/api/auth/bootstrap", json={"orgName": "Büro"})
+    cid = client_fresh.post("/api/clients", json={"name": "Otel", "sector": "otel"}).json()["id"]
+
+    rows = [
+        {"departman": "İK", "is_sureci": "Özlük", "alt_surec": "Bordro", "kisi_grubu": "Çalışan",
+         "kategoriler": ["Kimlik", "Finans"], "amaclar": ["Bordro"], "saklama_sureleri": ["10 yıl"]},
+        {"departman": "Güvenlik", "is_sureci": "Kamera", "alt_surec": "Kayıt", "kisi_grubu": "Ziyaretçi",
+         "kategoriler": ["Görsel Ve İşitsel Kayıtlar"]},
+    ]
+    r = client_fresh.put(f"/api/clients/{cid}/inventory", json={"rows": rows})
+    assert r.status_code == 200, r.text
+    assert r.json()["count"] == 2
+
+    got = client_fresh.get(f"/api/clients/{cid}/inventory").json()["rows"]
+    assert len(got) == 2
+    ik = next(x for x in got if x["kisi_grubu"] == "Çalışan")
+    assert ik["kategoriler"] == ["Kimlik", "Finans"]
+    assert ik["saklama_sureleri"] == ["10 yıl"]
+
+    # elle düzenleme: bir satır sil, birine kategori ekle → PUT replace
+    got[0]["kategoriler"] = got[0]["kategoriler"] + ["İletişim"]
+    r2 = client_fresh.put(f"/api/clients/{cid}/inventory", json={"rows": [got[0]]})
+    assert r2.json()["count"] == 1
+    again = client_fresh.get(f"/api/clients/{cid}/inventory").json()["rows"]
+    assert len(again) == 1
+
+
+def test_inventory_put_bos_kisi_grubu_reddedilir(client_fresh):
+    client_fresh.post("/api/auth/bootstrap", json={"orgName": "Büro"})
+    cid = client_fresh.post("/api/clients", json={"name": "Otel", "sector": "otel"}).json()["id"]
+    r = client_fresh.put(f"/api/clients/{cid}/inventory",
+                         json={"rows": [{"departman": "İK", "kisi_grubu": ""}]})
+    assert r.status_code == 422, "kişi grubu zorunlu (sorgu ekseni)"

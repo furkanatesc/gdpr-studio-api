@@ -717,6 +717,131 @@
         "title": "IdentityOut",
         "type": "object"
       },
+      "InventoryReplace": {
+        "additionalProperties": false,
+        "properties": {
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/InventoryRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "rows"
+        ],
+        "title": "InventoryReplace",
+        "type": "object"
+      },
+      "InventoryRow": {
+        "additionalProperties": false,
+        "properties": {
+          "alt_surec": {
+            "default": "",
+            "title": "Alt Surec",
+            "type": "string"
+          },
+          "amaclar": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Amaclar",
+            "type": "array"
+          },
+          "dayanaklar": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Dayanaklar",
+            "type": "array"
+          },
+          "departman": {
+            "default": "",
+            "title": "Departman",
+            "type": "string"
+          },
+          "hukuki_sebepler": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Hukuki Sebepler",
+            "type": "array"
+          },
+          "idari_tedbirler": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Idari Tedbirler",
+            "type": "array"
+          },
+          "is_sureci": {
+            "default": "",
+            "title": "Is Sureci",
+            "type": "string"
+          },
+          "islem": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Islem",
+            "type": "array"
+          },
+          "kategoriler": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Kategoriler",
+            "type": "array"
+          },
+          "kisi_grubu": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Kisi Grubu",
+            "type": "string"
+          },
+          "konum": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Konum",
+            "type": "array"
+          },
+          "ortam_format": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ortam Format",
+            "type": "array"
+          },
+          "saklama_sureleri": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Saklama Sureleri",
+            "type": "array"
+          },
+          "teknik_tedbirler": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Teknik Tedbirler",
+            "type": "array"
+          },
+          "veri_turleri": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Veri Turleri",
+            "type": "array"
+          }
+        },
+        "required": [
+          "kisi_grubu"
+        ],
+        "title": "InventoryRow",
+        "type": "object"
+      },
       "InviteOut": {
         "properties": {
           "email": {
@@ -1368,6 +1493,104 @@
           }
         },
         "summary": "Update Client",
+        "tags": [
+          "clients"
+        ]
+      }
+    },
+    "/api/clients/{client_id}/inventory": {
+      "get": {
+        "operationId": "get_inventory_api_clients__client_id__inventory_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Inventory Api Clients  Client Id  Inventory Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Inventory",
+        "tags": [
+          "clients"
+        ]
+      },
+      "put": {
+        "operationId": "replace_inventory_api_clients__client_id__inventory_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InventoryReplace"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Replace Inventory Api Clients  Client Id  Inventory Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Replace Inventory",
         "tags": [
           "clients"
         ]
