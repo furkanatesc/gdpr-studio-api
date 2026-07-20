@@ -70,6 +70,27 @@ class Organization(Base):
     sector: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
 
+class Client(Base):
+    """Müvekkil — hukuk bürosunun (org) hizmet verdiği şirket. Sektör/envanter/veri sorumlusu buraya bağlı."""
+
+    __tablename__ = "clients"
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    sector: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    legal_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    mersis: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    vergi_dairesi: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    vergi_no: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    kep: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    adres: Mapped[str | None] = mapped_column(Text, nullable=True)
+    eposta: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    telefon: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class User(Base):
     __tablename__ = "users"
     id: Mapped[uuid.UUID] = _uuid_pk()
@@ -223,10 +244,12 @@ class Process(Base):
     __tablename__ = "processes"
     __table_args__ = (
         UniqueConstraint(
-            "sector", "departman", "is_sureci", "alt_surec", "kisi_grubu",
+            "client_id", "sector", "departman", "is_sureci", "alt_surec", "kisi_grubu",
             name="uq_processes_identity",
         ),
         Index("ix_processes_sector_group", "sector", "kisi_grubu"),
+        Index("ix_processes_client", "client_id"),
+        Index("ix_processes_org", "org_id"),
     )
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     sector: Mapped[str] = mapped_column(String(50), nullable=False)
@@ -234,6 +257,12 @@ class Process(Base):
     departman: Mapped[str] = mapped_column(String(150), nullable=False, default="")
     is_sureci: Mapped[str] = mapped_column(String(255), nullable=False, default="")
     alt_surec: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    org_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True
+    )
+    client_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("clients.id", ondelete="CASCADE"), nullable=True
+    )
     data: Mapped[dict] = mapped_column(_JSON, nullable=False, default=dict)
 
 
