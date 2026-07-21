@@ -31,7 +31,7 @@ def test_canonicalize_yakin_ama_norm_esit_degil_ham_kalir(c: Canonicalizer):
     assert c.canonicalize("Ad soyad", "veri_turleri") == "Ad soyad"
 
 
-def test_difflib_esik_altinda_ham_doner(c: Canonicalizer):
+def test_eslesmeyen_deger_ham_doner(c: Canonicalizer):
     value = "Filanca alakasiz deger"
     assert c.canonicalize(value, "veri_turleri") == value
 
