@@ -517,6 +517,138 @@
         "title": "DocType",
         "type": "string"
       },
+      "DocxIn": {
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "DocxIn",
+        "type": "object"
+      },
+      "EnrichedSectionOut": {
+        "additionalProperties": false,
+        "properties": {
+          "aktarim": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Aktarim",
+            "type": "array"
+          },
+          "amaclar": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Amaclar",
+            "type": "array"
+          },
+          "hukukiSebepler": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Hukukisebepler",
+            "type": "array"
+          },
+          "isSureci": {
+            "title": "Issureci",
+            "type": "string"
+          },
+          "kategoriler": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Kategoriler",
+            "type": "array"
+          },
+          "kisiGruplari": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Kisigruplari",
+            "type": "array"
+          },
+          "oneriler": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "default": {},
+            "title": "Oneriler",
+            "type": "object"
+          },
+          "saklamaSureleri": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Saklamasureleri",
+            "type": "array"
+          },
+          "toplama": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Toplama",
+            "type": "array"
+          },
+          "veriTurleri": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Veriturleri",
+            "type": "array"
+          }
+        },
+        "required": [
+          "isSureci"
+        ],
+        "title": "EnrichedSectionOut",
+        "type": "object"
+      },
+      "GenerateIn": {
+        "additionalProperties": false,
+        "properties": {
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/SectionIn"
+            },
+            "minItems": 1,
+            "title": "Sections",
+            "type": "array"
+          }
+        },
+        "required": [
+          "sections"
+        ],
+        "title": "GenerateIn",
+        "type": "object"
+      },
       "GenerateRequest": {
         "additionalProperties": false,
         "properties": {
@@ -937,6 +1069,41 @@
         "title": "OrgUpdate",
         "type": "object"
       },
+      "PrepareIn": {
+        "additionalProperties": false,
+        "properties": {
+          "targetGroups": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Targetgroups",
+            "type": "array"
+          }
+        },
+        "required": [
+          "targetGroups"
+        ],
+        "title": "PrepareIn",
+        "type": "object"
+      },
+      "PrepareOut": {
+        "additionalProperties": false,
+        "properties": {
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/EnrichedSectionOut"
+            },
+            "title": "Sections",
+            "type": "array"
+          }
+        },
+        "required": [
+          "sections"
+        ],
+        "title": "PrepareOut",
+        "type": "object"
+      },
       "RoleUpdate": {
         "additionalProperties": false,
         "properties": {
@@ -949,6 +1116,84 @@
           "role"
         ],
         "title": "RoleUpdate",
+        "type": "object"
+      },
+      "SectionIn": {
+        "additionalProperties": false,
+        "properties": {
+          "aktarim": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Aktarim",
+            "type": "array"
+          },
+          "amaclar": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Amaclar",
+            "type": "array"
+          },
+          "hukukiSebepler": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Hukukisebepler",
+            "type": "array"
+          },
+          "isSureci": {
+            "title": "Issureci",
+            "type": "string"
+          },
+          "kategoriler": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Kategoriler",
+            "type": "array"
+          },
+          "kisiGruplari": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Kisigruplari",
+            "type": "array"
+          },
+          "saklamaSureleri": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Saklamasureleri",
+            "type": "array"
+          },
+          "toplama": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Toplama",
+            "type": "array"
+          },
+          "veriTurleri": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Veriturleri",
+            "type": "array"
+          }
+        },
+        "required": [
+          "isSureci"
+        ],
+        "title": "SectionIn",
         "type": "object"
       },
       "StatusUpdate": {
@@ -1495,6 +1740,194 @@
         "summary": "Update Client",
         "tags": [
           "clients"
+        ]
+      }
+    },
+    "/api/clients/{client_id}/aydinlatma/docx": {
+      "post": {
+        "operationId": "docx_api_clients__client_id__aydinlatma_docx_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocxIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Docx",
+        "tags": [
+          "aydinlatma"
+        ]
+      }
+    },
+    "/api/clients/{client_id}/aydinlatma/generate": {
+      "post": {
+        "description": "Onaylı envanter bölümlerinden Aydınlatma Metni akışı (SSE).",
+        "operationId": "generate_api_clients__client_id__aydinlatma_generate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Anthropic-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Anthropic-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Generate",
+        "tags": [
+          "aydinlatma"
+        ]
+      }
+    },
+    "/api/clients/{client_id}/aydinlatma/prepare": {
+      "post": {
+        "operationId": "prepare_api_clients__client_id__aydinlatma_prepare_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrepareIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrepareOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prepare",
+        "tags": [
+          "aydinlatma"
         ]
       }
     },

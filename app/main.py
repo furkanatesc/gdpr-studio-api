@@ -12,6 +12,7 @@ from .config import get_settings
 from .db import get_engine
 from .modules import (
     accounts,
+    aydinlatma,
     billing,
     clients,
     compliance,
@@ -76,6 +77,7 @@ app.include_router(generation.router)
 app.include_router(compliance.router)
 app.include_router(processes.router)
 app.include_router(clients.router)
+app.include_router(aydinlatma.router)
 app.include_router(inventory.router)
 
 
