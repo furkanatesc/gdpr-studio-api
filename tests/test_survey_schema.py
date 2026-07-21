@@ -2,10 +2,10 @@
 from app.survey_schema import load_survey_schema
 
 
-def test_departmanlar_13_adet_ve_sekil_dogru():
+def test_departmanlar_12_adet_ve_sekil_dogru():
     schema = load_survey_schema()
     departments = schema["departments"]
-    assert len(departments) == 13
+    assert len(departments) == 12
     for dept in departments:
         assert "key" in dept
         assert "label" in dept
@@ -13,6 +13,13 @@ def test_departmanlar_13_adet_ve_sekil_dogru():
         for bolum in dept["bolumler"]:
             assert "label" in bolum
             assert "sorular" in bolum
+
+
+def test_entegrasyonlar_departmanlarda_yok():
+    schema = load_survey_schema()
+    departments = schema["departments"]
+    assert not any(d["key"].startswith("14-") for d in departments)
+    assert not any(d["label"] == "Entegrasyonlar" for d in departments)
 
 
 def test_en_az_bir_bolumun_sorulari_bos_degil():
@@ -50,5 +57,5 @@ def test_hukuki_sebep_acik_riza_ile_baslayan_deger_icerir():
 def test_endpoint_survey_schema_dondurur(client_fresh):
     client_fresh.post("/api/auth/bootstrap", json={"orgName": "Büro"})
     body = client_fresh.get("/api/inventory/survey-schema").json()
-    assert len(body["departments"]) == 13
+    assert len(body["departments"]) == 12
     assert "kisiGrubu" in body["vocab"]
