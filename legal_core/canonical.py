@@ -1,18 +1,17 @@
-"""Kanonik eslestirme: norm-exact -> synonym -> difflib (>=CUTOFF) -> ham fallback.
+"""Kanonik eslestirme: norm-exact -> synonym -> ham fallback.
 
-Uydurma yasagi: bilinmeyen deger ve esik-alti difflib eslesmesi HAM kalir.
+Uydurma yasagi: bilinmeyen deger HAM kalir. Fuzzy eslestirme yok (anlamsal
+yanlis eslesme riski nedeniyle kaldirildi).
 """
 
 from __future__ import annotations
 
-import difflib
 import json
 from pathlib import Path
 
 from legal_core.normalize import norm
 
 FIELDS = ("veri_turleri", "kategoriler", "kisi_gruplari")
-CUTOFF = 0.86
 
 _DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "canonical"
 
@@ -41,10 +40,6 @@ class Canonicalizer:
             synonyms = self._synonyms[field]
             if n in synonyms:
                 return synonyms[n]
-
-            matches = difflib.get_close_matches(n, list(norm_map.keys()), n=1, cutoff=CUTOFF)
-            if matches:
-                return norm_map[matches[0]]
 
             return value
         except Exception:

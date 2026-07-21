@@ -72,10 +72,10 @@ def test_prepare_eslesen_envanter_200(client_fresh):
 
 
 def test_prepare_gurultulu_veri_turu_kanoniklesir(client_fresh):
-    """veri_turleri'nde gurultulu varyant ('ad soyad') gercek kanonik forma donmeli.
+    """veri_turleri'nde gurultulu varyant ('AD-SOYAD') gercek kanonik forma donmeli.
 
     data/canonical/veri_turleri.json'da kanonik deger "Ad-soyad"; envanterdeki
-    ham deger difflib esigi ustunde eslesmeli (norm-exact degil).
+    ham deger buyuk harfli ama norm-exact eslesir (norm("AD-SOYAD")==norm("Ad-soyad")).
     """
     cid = _bootstrap_client(client_fresh)
     _put_inventory(
@@ -84,7 +84,7 @@ def test_prepare_gurultulu_veri_turu_kanoniklesir(client_fresh):
         [
             {
                 "departman": "IK", "is_sureci": "Ozluk", "kisi_grubu": "Calisan",
-                "kategoriler": ["Kimlik"], "veri_turleri": ["ad soyad"],
+                "kategoriler": ["Kimlik"], "veri_turleri": ["AD-SOYAD"],
             }
         ],
     )

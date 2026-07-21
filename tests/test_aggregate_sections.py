@@ -165,7 +165,7 @@ def test_aggregate_sections_with_canonicalizer_canonicalizes_output():
             is_sureci="Ise Giris Islemleri",
             kisi_grubu="Calisan",
             kategoriler=["kimlik bilgisi"],
-            veri_turleri=["Ad soyad"],
+            veri_turleri=["ad-soyad"],
         ),
     ]
 

@@ -1,4 +1,4 @@
-"""Canonicalizer birim testleri: norm-exact -> synonym -> difflib -> ham fallback."""
+"""Canonicalizer birim testleri: norm-exact -> synonym -> ham fallback."""
 
 from __future__ import annotations
 
@@ -27,8 +27,8 @@ def test_synonym(c: Canonicalizer):
     assert c.canonicalize("TCKN", "veri_turleri") == "T.C. kimlik no"
 
 
-def test_difflib_yakin_esik_ustu(c: Canonicalizer):
-    assert c.canonicalize("Ad soyad", "veri_turleri") == "Ad-soyad"
+def test_canonicalize_yakin_ama_norm_esit_degil_ham_kalir(c: Canonicalizer):
+    assert c.canonicalize("Ad soyad", "veri_turleri") == "Ad soyad"
 
 
 def test_difflib_esik_altinda_ham_doner(c: Canonicalizer):
@@ -45,7 +45,7 @@ def test_bos_deger(c: Canonicalizer):
 
 
 def test_canonicalize_list_dedup_sira_ve_bos_atma(c: Canonicalizer):
-    result = c.canonicalize_list(["AD-SOYAD", "Ad soyad", ""], "veri_turleri")
+    result = c.canonicalize_list(["AD-SOYAD", "ad-soyad", ""], "veri_turleri")
     assert result == ["Ad-soyad"]
 
 
