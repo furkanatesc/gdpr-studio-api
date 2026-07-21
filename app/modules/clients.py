@@ -13,6 +13,7 @@ from ..auth.identity import Identity, get_current_identity, require_role
 from ..auth.tenant_session import tenant_session
 from ..inventory_import import InventoryImportError, parse_inventory_xlsx
 from ..repositories import ClientRepository, PostgresProcessRepository
+from ..workbook_import import WorkbookImportError, parse_workbook_xlsx
 
 router = APIRouter(prefix="/api/clients", tags=["clients"])
 
@@ -54,7 +55,7 @@ class ClientProfileUpdate(BaseModel):
 
 _LIST_FIELDS = ("kategoriler", "veri_turleri", "amaclar", "hukuki_sebepler", "dayanaklar",
                 "saklama_sureleri", "islem", "ortam_format", "konum",
-                "idari_tedbirler", "teknik_tedbirler")
+                "idari_tedbirler", "teknik_tedbirler", "aktarim", "toplama")
 
 
 class InventoryRow(BaseModel):
@@ -74,6 +75,8 @@ class InventoryRow(BaseModel):
     konum: list[str] = Field(default_factory=list)
     idari_tedbirler: list[str] = Field(default_factory=list)
     teknik_tedbirler: list[str] = Field(default_factory=list)
+    aktarim: list[str] = Field(default_factory=list)
+    toplama: list[str] = Field(default_factory=list)
 
 
 class InventoryReplace(BaseModel):
@@ -150,6 +153,25 @@ async def import_inventory(client_id: uuid.UUID, file: UploadFile,
     repo.replace_client(identity.org_id, client_id, rows)
     # Özet commit'ten ÖNCE okunmalı: app.current_org_id transaction-local, commit'te sıfırlanır
     # ve RLS satırları gizler → "başarılı ama 0 kayıt".
+    summary = _summary(repo.client_processes(client_id))
+    session.commit()
+    return summary
+
+
+@router.post("/{client_id}/inventory/import-workbook")
+async def import_workbook(client_id: uuid.UUID, file: UploadFile,
+                          identity: Identity = Depends(get_current_identity),
+                          session: Session = Depends(tenant_session)) -> dict:
+    client = ClientRepository(session).get(identity.org_id, client_id)
+    if client is None:
+        raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
+    try:
+        parsed = parse_workbook_xlsx(await file.read(), sector=client.sector or "sirket")
+    except WorkbookImportError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    repo = PostgresProcessRepository(session)
+    repo.replace_client(identity.org_id, client_id, parsed["processes"])
+    # Özet commit'ten ÖNCE okunmalı: bkz. import_inventory yorumu (#22).
     summary = _summary(repo.client_processes(client_id))
     session.commit()
     return summary

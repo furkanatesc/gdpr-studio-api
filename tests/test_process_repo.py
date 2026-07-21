@@ -52,6 +52,40 @@ def test_person_groups_sorted_and_distinct():
     assert PostgresProcessRepository(s).person_groups("sirket") == ["Çalışan", "Ziyaretçi"]
 
 
+def test_to_record_derives_aktarim_toplama_from_verbis_fields():
+    s = _session()
+    _add(s, "sirket", "Çalışan", data={
+        "kaynak": "İlgili kişinin kendisi",
+        "alici_grubu": ["SGK"],
+        "aktarim_metodu": "Elektronik",
+        "yurtdisi_aktarim": "Evet",
+    })
+    s.commit()
+    rec = PostgresProcessRepository(s).by_sector_and_group("sirket", "Çalışan")[0]
+    assert rec.toplama == ["İlgili kişinin kendisi"]
+    assert "SGK" in rec.aktarim
+    assert "Elektronik" in rec.aktarim
+    assert "Yurt dışına aktarım" in rec.aktarim
+
+
+def test_to_record_derives_aktarim_toplama_from_anket_fields():
+    s = _session()
+    _add(s, "sirket", "Çalışan", data={"aktarim": ["X"], "toplama": ["Y"]})
+    s.commit()
+    rec = PostgresProcessRepository(s).by_sector_and_group("sirket", "Çalışan")[0]
+    assert rec.aktarim == ["X"]
+    assert rec.toplama == ["Y"]
+
+
+def test_to_record_derives_empty_aktarim_toplama_when_no_data():
+    s = _session()
+    _add(s, "sirket", "Çalışan", data={})
+    s.commit()
+    rec = PostgresProcessRepository(s).by_sector_and_group("sirket", "Çalışan")[0]
+    assert rec.aktarim == []
+    assert rec.toplama == []
+
+
 def test_processes_json_is_valid_and_seedable():
     """Commit'li şablon kütüphanesi: geçerli JSON + şema + kanonik kişi grubu."""
     from pathlib import Path

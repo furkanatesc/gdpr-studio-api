@@ -51,6 +51,47 @@ class PostgresBusinessRuleRepository:
         return [r[0] for r in self._session.execute(stmt).all()]
 
 
+def _aslist(v) -> list[str]:
+    if not v:
+        return []
+    items = v if isinstance(v, list) else [v]
+    out = []
+    for x in items:
+        s = unicodedata.normalize("NFC", str(x)).strip()
+        if s:
+            out.append(s)
+    return out
+
+
+def _dedup(items: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out = []
+    for x in items:
+        if x not in seen:
+            seen.add(x)
+            out.append(x)
+    return out
+
+
+def _derive_toplama(d: dict) -> list[str]:
+    return _aslist(d.get("toplama")) or _aslist(d.get("kaynak"))
+
+
+def _derive_aktarim(d: dict) -> list[str]:
+    direct = _aslist(d.get("aktarim"))
+    if direct:
+        return _dedup(direct)
+    parts = (
+        _aslist(d.get("alici_grubu"))
+        + _aslist(d.get("alici"))
+        + _aslist(d.get("aktarim_metodu"))
+        + _aslist(d.get("ulke"))
+    )
+    if str(d.get("yurtdisi_aktarim", "")).strip() == "Evet":
+        parts.append("Yurt dışına aktarım")
+    return _dedup(parts)
+
+
 class PostgresProcessRepository:
     """legal_core.ProcessRepository — süreç şablonlarını Postgres'ten sunar (global veri)."""
 
@@ -108,6 +149,8 @@ class PostgresProcessRepository:
             konum=list(d.get("konum", [])),
             idari_tedbirler=list(d.get("idari_tedbirler", [])),
             teknik_tedbirler=list(d.get("teknik_tedbirler", [])),
+            aktarim=_derive_aktarim(d),
+            toplama=_derive_toplama(d),
         )
 
 

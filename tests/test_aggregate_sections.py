@@ -88,6 +88,29 @@ def test_aggregate_sections_filters_groups_and_merges():
     assert second.kategoriler == ["Finans"]
 
 
+def test_aggregate_sections_merges_dedup_aktarim_toplama_from_records():
+    records = [
+        _record(
+            is_sureci="Ise Giris Islemleri",
+            kisi_grubu="Calisan",
+            aktarim=["SGK", "Elektronik"],
+            toplama=["Ilgili kisinin kendisi"],
+        ),
+        _record(
+            is_sureci="Ise Giris Islemleri",
+            kisi_grubu="Calisan Adayi",
+            aktarim=["Elektronik", "Yurt disina aktarim"],
+            toplama=["Ilgili kisinin kendisi", "Ucuncu taraf"],
+        ),
+    ]
+
+    result = aggregate_sections(records, ["Calisan", "Calisan Adayi"])
+
+    assert len(result) == 1
+    assert result[0].aktarim == ["SGK", "Elektronik", "Yurt disina aktarim"]
+    assert result[0].toplama == ["Ilgili kisinin kendisi", "Ucuncu taraf"]
+
+
 def test_aggregate_sections_empty_when_no_matching_group():
     records = [_record(kisi_grubu="Calisan")]
     assert aggregate_sections(records, ["Ziyaretci"]) == []

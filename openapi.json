@@ -67,6 +67,20 @@
         "title": "Body_import_inventory_api_clients__client_id__inventory_import_post",
         "type": "object"
       },
+      "Body_import_workbook_api_clients__client_id__inventory_import_workbook_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_import_workbook_api_clients__client_id__inventory_import_workbook_post",
+        "type": "object"
+      },
       "BootstrapRequest": {
         "additionalProperties": false,
         "properties": {
@@ -869,6 +883,13 @@
       "InventoryRow": {
         "additionalProperties": false,
         "properties": {
+          "aktarim": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Aktarim",
+            "type": "array"
+          },
           "alt_surec": {
             "default": "",
             "title": "Alt Surec",
@@ -958,6 +979,13 @@
               "type": "string"
             },
             "title": "Teknik Tedbirler",
+            "type": "array"
+          },
+          "toplama": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Toplama",
             "type": "array"
           },
           "veri_turleri": {
@@ -2084,6 +2112,61 @@
         ]
       }
     },
+    "/api/clients/{client_id}/inventory/import-workbook": {
+      "post": {
+        "operationId": "import_workbook_api_clients__client_id__inventory_import_workbook_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_import_workbook_api_clients__client_id__inventory_import_workbook_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Import Workbook Api Clients  Client Id  Inventory Import Workbook Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Import Workbook",
+        "tags": [
+          "clients"
+        ]
+      }
+    },
     "/api/clients/{client_id}/inventory/summary": {
       "get": {
         "operationId": "inventory_summary_api_clients__client_id__inventory_summary_get",
@@ -2388,6 +2471,25 @@
           }
         },
         "summary": "Template",
+        "tags": [
+          "inventory"
+        ]
+      }
+    },
+    "/api/inventory/workbook-template": {
+      "get": {
+        "operationId": "workbook_template_api_inventory_workbook_template_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Workbook Template",
         "tags": [
           "inventory"
         ]

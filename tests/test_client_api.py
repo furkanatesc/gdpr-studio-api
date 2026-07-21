@@ -1,5 +1,53 @@
 # tests/test_client_api.py
+import io
+
+from openpyxl import Workbook
+
 from app.inventory_template import build_template_xlsx
+
+_WORKBOOK_HEADER = [
+    "No", "Bölüm", "Soru / Süreç", "Zorunlu?", "Cevap / Açıklama",
+    "İşlenen Kişisel Veri", "İlgili Kişi Grubu", "Veri Kaynağı",
+    "Kullanılan Sistem", "Veri Alıcısı", "Yurtdışı Aktarım",
+    "Hukuki Sebep (KVKK → GDPR)", "Saklama Süresi", "Mevcut Doküman",
+    "Kanıt Belgesi", "Risk / Not", "Sorumlu", "Durum",
+]
+
+
+def _build_survey_workbook() -> bytes:
+    wb = Workbook()
+    genel = wb.active
+    genel.title = "01-Genel-Sirket"
+
+    ik = wb.create_sheet("02-İnsan Kaynakları")
+    ik.append(["Sayfa Başlığı"])
+    ik.append(_WORKBOOK_HEADER)
+    ik.append([
+        1, "İşe Alım", "Özgeçmiş toplama", "Evet", "-",
+        "Kimlik, İletişim", "Çalışan Adayı", "Kariyer Sitesi",
+        "İK Sistemi", "", "Hayır",
+        "Açık Rıza", "2 yıl", "-", "-", "-", "İK Md.", "Tamamlandı",
+    ])
+    ik.append([
+        2, "Bordro", "Maaş ödemesi", "Evet", "-",
+        "Kimlik, Banka Hesabı", "Çalışan", "Çalışandan",
+        "Muhasebe Yazılımı", "Banka", "Evet",
+        "Sözleşme", "10 yıl", "-", "-", "-", "Muhasebe Md.", "Tamamlandı",
+    ])
+    ik.append([
+        3, "Genel", "Şirket kaç şubede faaliyet gösteriyor?", "Evet", "5",
+        "", "", "", "", "", "",
+        "", "", "-", "-", "-", "İK Md.", "Tamamlandı",
+    ])
+    ik.append([
+        4, "İzin Takibi", "İzin talebi", "Hayır", "-",
+        "Kimlik", "Çalışan", "Formdan", "-", "", "Hayır",
+        "Sözleşme", "-", "-", "-", "-", "İK Md.", "Uygulanamaz",
+    ])
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
 
 
 def test_client_crud(client_fresh):
@@ -47,7 +95,8 @@ def test_inventory_get_and_put_roundtrip(client_fresh):
 
     rows = [
         {"departman": "İK", "is_sureci": "Özlük", "alt_surec": "Bordro", "kisi_grubu": "Çalışan",
-         "kategoriler": ["Kimlik", "Finans"], "amaclar": ["Bordro"], "saklama_sureleri": ["10 yıl"]},
+         "kategoriler": ["Kimlik", "Finans"], "amaclar": ["Bordro"], "saklama_sureleri": ["10 yıl"],
+         "aktarim": ["SGK", "Yurt dışına aktarım"], "toplama": ["İlgili kişinin kendisi"]},
         {"departman": "Güvenlik", "is_sureci": "Kamera", "alt_surec": "Kayıt", "kisi_grubu": "Ziyaretçi",
          "kategoriler": ["Görsel Ve İşitsel Kayıtlar"]},
     ]
@@ -60,6 +109,8 @@ def test_inventory_get_and_put_roundtrip(client_fresh):
     ik = next(x for x in got if x["kisi_grubu"] == "Çalışan")
     assert ik["kategoriler"] == ["Kimlik", "Finans"]
     assert ik["saklama_sureleri"] == ["10 yıl"]
+    assert ik["aktarim"] == ["SGK", "Yurt dışına aktarım"]
+    assert ik["toplama"] == ["İlgili kişinin kendisi"]
 
     # elle düzenleme: bir satır sil, birine kategori ekle → PUT replace
     got[0]["kategoriler"] = got[0]["kategoriler"] + ["İletişim"]
@@ -75,3 +126,37 @@ def test_inventory_put_bos_kisi_grubu_reddedilir(client_fresh):
     r = client_fresh.put(f"/api/clients/{cid}/inventory",
                          json={"rows": [{"departman": "İK", "kisi_grubu": ""}]})
     assert r.status_code == 422, "kişi grubu zorunlu (sorgu ekseni)"
+
+
+def test_import_workbook_to_client(client_fresh):
+    client_fresh.post("/api/auth/bootstrap", json={"orgName": "Büro"})
+    cid = client_fresh.post("/api/clients", json={"name": "Otel", "sector": "otel"}).json()["id"]
+    content = _build_survey_workbook()
+    r = client_fresh.post(f"/api/clients/{cid}/inventory/import-workbook",
+                          files={"file": ("anket.xlsx", content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["count"] == 2, "teşhis satırı ve Uygulanamaz satırı atlanmalı"
+    assert sorted(body["kisiGruplari"]) == ["Çalışan", "Çalışan Adayı"]
+
+    rows = client_fresh.get(f"/api/clients/{cid}/inventory").json()["rows"]
+    bordro = next(x for x in rows if x["kisi_grubu"] == "Çalışan")
+    assert "Banka" in bordro["aktarim"]
+    assert "Yurt dışına aktarım" in bordro["aktarim"]
+    assert bordro["toplama"] == ["Çalışandan"]
+
+
+def test_import_workbook_olmayan_client_404(client_fresh):
+    client_fresh.post("/api/auth/bootstrap", json={"orgName": "Büro"})
+    content = _build_survey_workbook()
+    r = client_fresh.post("/api/clients/00000000-0000-0000-0000-000000000000/inventory/import-workbook",
+                          files={"file": ("anket.xlsx", content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")})
+    assert r.status_code == 404
+
+
+def test_import_workbook_gecersiz_dosya_422(client_fresh):
+    client_fresh.post("/api/auth/bootstrap", json={"orgName": "Büro"})
+    cid = client_fresh.post("/api/clients", json={"name": "Otel", "sector": "otel"}).json()["id"]
+    r = client_fresh.post(f"/api/clients/{cid}/inventory/import-workbook",
+                          files={"file": ("e.xlsx", b"notxlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")})
+    assert r.status_code == 422
