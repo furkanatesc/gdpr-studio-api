@@ -869,6 +869,13 @@
       "InventoryRow": {
         "additionalProperties": false,
         "properties": {
+          "aktarim": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Aktarim",
+            "type": "array"
+          },
           "alt_surec": {
             "default": "",
             "title": "Alt Surec",
@@ -958,6 +965,13 @@
               "type": "string"
             },
             "title": "Teknik Tedbirler",
+            "type": "array"
+          },
+          "toplama": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Toplama",
             "type": "array"
           },
           "veri_turleri": {

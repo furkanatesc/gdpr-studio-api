@@ -47,7 +47,8 @@ def test_inventory_get_and_put_roundtrip(client_fresh):
 
     rows = [
         {"departman": "İK", "is_sureci": "Özlük", "alt_surec": "Bordro", "kisi_grubu": "Çalışan",
-         "kategoriler": ["Kimlik", "Finans"], "amaclar": ["Bordro"], "saklama_sureleri": ["10 yıl"]},
+         "kategoriler": ["Kimlik", "Finans"], "amaclar": ["Bordro"], "saklama_sureleri": ["10 yıl"],
+         "aktarim": ["SGK", "Yurt dışına aktarım"], "toplama": ["İlgili kişinin kendisi"]},
         {"departman": "Güvenlik", "is_sureci": "Kamera", "alt_surec": "Kayıt", "kisi_grubu": "Ziyaretçi",
          "kategoriler": ["Görsel Ve İşitsel Kayıtlar"]},
     ]
@@ -60,6 +61,8 @@ def test_inventory_get_and_put_roundtrip(client_fresh):
     ik = next(x for x in got if x["kisi_grubu"] == "Çalışan")
     assert ik["kategoriler"] == ["Kimlik", "Finans"]
     assert ik["saklama_sureleri"] == ["10 yıl"]
+    assert ik["aktarim"] == ["SGK", "Yurt dışına aktarım"]
+    assert ik["toplama"] == ["İlgili kişinin kendisi"]
 
     # elle düzenleme: bir satır sil, birine kategori ekle → PUT replace
     got[0]["kategoriler"] = got[0]["kategoriler"] + ["İletişim"]

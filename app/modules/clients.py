@@ -54,7 +54,7 @@ class ClientProfileUpdate(BaseModel):
 
 _LIST_FIELDS = ("kategoriler", "veri_turleri", "amaclar", "hukuki_sebepler", "dayanaklar",
                 "saklama_sureleri", "islem", "ortam_format", "konum",
-                "idari_tedbirler", "teknik_tedbirler")
+                "idari_tedbirler", "teknik_tedbirler", "aktarim", "toplama")
 
 
 class InventoryRow(BaseModel):
@@ -74,6 +74,8 @@ class InventoryRow(BaseModel):
     konum: list[str] = Field(default_factory=list)
     idari_tedbirler: list[str] = Field(default_factory=list)
     teknik_tedbirler: list[str] = Field(default_factory=list)
+    aktarim: list[str] = Field(default_factory=list)
+    toplama: list[str] = Field(default_factory=list)
 
 
 class InventoryReplace(BaseModel):
