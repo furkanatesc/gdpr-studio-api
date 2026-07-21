@@ -10,9 +10,16 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Any
 
+from .aggregate_sections import Section
 from .grounding import Grounding
-from .models import GenerateRequest, GenerateResponse, Usage
-from .prompt import DEFAULT_PROCESS_CAP, DISCLAIMER, build_prompt, ensure_disclaimer
+from .models import ClientProfile, GenerateRequest, GenerateResponse, GroundingRecord, Usage
+from .prompt import (
+    DEFAULT_PROCESS_CAP,
+    DISCLAIMER,
+    build_aydinlatma_envanter_prompt,
+    build_prompt,
+    ensure_disclaimer,
+)
 from .provider import DEFAULT_MAX_TOKENS, ModelProvider
 from .rules import GLOBAL_RULES, BusinessRuleRepository
 
@@ -93,6 +100,60 @@ def generate_document_stream(
         doc_type, _user_input(request), inventory, rules,
         processes=processes, process_cap=process_cap, measures=measures,
     )
+
+    chunks: list[str] = []
+    for delta in provider.stream(prompt, max_tokens=max_tokens):
+        chunks.append(delta)
+        yield ("delta", delta)
+
+    streamed = "".join(chunks)
+    final_text = ensure_disclaimer(streamed)
+    if final_text != streamed:
+        yield ("delta", final_text[len(streamed):])
+
+    last = getattr(provider, "last_result", None)
+    yield (
+        "done",
+        {
+            "model": getattr(provider, "model", "") or "",
+            "disclaimer": DISCLAIMER,
+            "usage": (
+                {"inputTokens": last.input_tokens, "outputTokens": last.output_tokens}
+                if last
+                else None
+            ),
+        },
+    )
+
+
+def _section_to_grounding(section: Section) -> GroundingRecord:
+    return GroundingRecord(
+        kategori=section.is_sureci,
+        veri_turleri=section.veri_turleri,
+        amaclar=section.amaclar,
+        hukuki_sebepler=section.hukuki_sebepler,
+        kisi_gruplari=section.kisi_gruplari,
+        saklama_sureleri=section.saklama_sureleri,
+    )
+
+
+def generate_aydinlatma_envanter_stream(
+    sections: list[Section],
+    boilerplate: dict,
+    profile: ClientProfile,
+    *,
+    provider: Any,  # stream() metoduna sahip bir ModelProvider (duck-typed)
+    max_tokens: int = DEFAULT_MAX_TOKENS,
+) -> Iterator[tuple[str, Any]]:
+    """Onaylı envanter bölümlerinden Aydınlatma Metni üretir — aydinlatma-envanter modu.
+
+    generate_document_stream'in olay desenini birebir taklit eder: ('grounding', records) →
+    ('delta', text)* → ('done', meta). Fark: prompt build_aydinlatma_envanter_prompt'tan
+    gelir (m.10'un altı başlığı koşulsuz basan mod).
+    """
+    yield ("grounding", [_section_to_grounding(s) for s in sections])
+
+    prompt = build_aydinlatma_envanter_prompt(sections, boilerplate, profile)
 
     chunks: list[str] = []
     for delta in provider.stream(prompt, max_tokens=max_tokens):

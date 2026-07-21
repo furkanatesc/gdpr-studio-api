@@ -98,6 +98,24 @@ class InventoryRecord:
 
 
 @dataclass(frozen=True)
+class ClientProfile:
+    """Aydinlatma metninin veri sorumlusu kimlik bloguna girecek musteri profili.
+
+    T6'da DB Client'tan eslenir: ad<-name, unvan<-legal_name, digerleri ayni ad.
+    """
+
+    ad: str | None = None
+    unvan: str | None = None
+    adres: str | None = None
+    mersis: str | None = None
+    vergi_dairesi: str | None = None
+    vergi_no: str | None = None
+    kep: str | None = None
+    eposta: str | None = None
+    telefon: str | None = None
+
+
+@dataclass(frozen=True)
 class ProcessRecord:
     """Tek işleme faaliyeti (VERBİS satırı) — kendi hukuki sebebi ve saklama süresiyle.
 

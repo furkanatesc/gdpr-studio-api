@@ -8,7 +8,12 @@ from __future__ import annotations
 
 import json
 
-from .models import InventoryRecord, ProcessRecord
+from .aggregate_sections import Section
+from .models import ClientProfile, InventoryRecord, ProcessRecord
+
+# Bir bolum alani (ornegin saklama suresi) envanterde bulunamadigi durumda
+# koşulsuz basilan yer tutucu (spec: hicbir m.10 basligi sessizce dusmemeli).
+ONAY_BEKLEYEN_PLACEHOLDER = "[Avukat tarafından doldurulacak]"
 
 # Her çıktının en altına eklenen zorunlu uyarı (hooks.json playbook'u ile uyumlu).
 DISCLAIMER = (
@@ -167,3 +172,104 @@ def ensure_disclaimer(text: str) -> str:
     if DISCLAIMER_MARKER in text:
         return text
     return text.rstrip() + "\n\n---\n" + DISCLAIMER
+
+
+def _field_or_placeholder(values: list[str]) -> str:
+    """Dolu ise virgullu birlestirir; bossa KOŞULSUZ placeholder doner (asla atlanmaz)."""
+    return ", ".join(values) if values else ONAY_BEKLEYEN_PLACEHOLDER
+
+
+def _profile_line(label: str, value: str | None) -> str:
+    return f"- {label}: {value if value else ONAY_BEKLEYEN_PLACEHOLDER}\n"
+
+
+def _format_client_profile(profile: ClientProfile) -> str:
+    out = _profile_line("Ad/Unvan", profile.ad)
+    out += _profile_line("Unvan", profile.unvan)
+    out += _profile_line("Adres", profile.adres)
+    out += _profile_line("MERSİS No", profile.mersis)
+    out += _profile_line("Vergi Dairesi", profile.vergi_dairesi)
+    out += _profile_line("Vergi No", profile.vergi_no)
+    out += _profile_line("KEP Adresi", profile.kep)
+    out += _profile_line("E-posta", profile.eposta)
+    out += _profile_line("Telefon", profile.telefon)
+    return out
+
+
+def _format_aydinlatma_section(section: Section) -> str:
+    kisi_gruplari = ", ".join(section.kisi_gruplari) if section.kisi_gruplari else ONAY_BEKLEYEN_PLACEHOLDER
+    veriler = _field_or_placeholder(section.kategoriler + section.veri_turleri)
+    return f"""
+### {section.is_sureci}
+(İlgili kişi grupları: {kisi_gruplari})
+- İşlenen kişisel veriler: {veriler}
+- İşleme amaçları: {_field_or_placeholder(section.amaclar)}
+- Hukuki sebep: {_field_or_placeholder(section.hukuki_sebepler)}
+- Saklama süresi: {_field_or_placeholder(section.saklama_sureleri)}
+- Aktarım: {_field_or_placeholder(section.aktarim)}
+- Toplama yöntemi: {_field_or_placeholder(section.toplama)}
+"""
+
+
+def build_aydinlatma_envanter_prompt(
+    sections: list[Section], boilerplate: dict, profile: ClientProfile,
+) -> str:
+    """Onaylı envanter bölümlerinden KVKK m.10 Aydınlatma Metni prompt'unu kurar.
+
+    Mevcut build_prompt'tan farkı: her iş süreci bölümünde m.10'un ALTI başlığı
+    KOŞULSUZ basılır (boşsa placeholder) — sahada gözlenen sessiz düşme hatasının
+    çözümü budur (bkz. dosya başlığı brief).
+    """
+    if sections:
+        surecler_metni = "".join(_format_aydinlatma_section(s) for s in sections)
+    else:
+        surecler_metni = (
+            "\n(UYARI: Seçilen hedef gruplar için envanterde iş süreci bulunamadı — "
+            "aşağıda örnek bir bölüm İSKELET olarak yer almaz; bu durumu belgede "
+            f"açıkça belirt ve ilgili alanları {ONAY_BEKLEYEN_PLACEHOLDER} olarak bırak.)\n"
+        )
+
+    return f"""Sen KVKK (6698) uzmanı hukuk asistanısın. Aşağıdaki yapılandırılmış envanter
+bölümlerinden KVKK m.10 kapsamında tek bir Aydınlatma Metni üret.
+
+Yalnız aşağıda verilen değerleri kullan; hukuki sebep, saklama süresi, amaç veya
+aktarım UYDURMA.
+
+Her iş süreci bölümünde şu ALTI başlığın HEPSİ eksiksiz yer alacak: İşlenen kişisel
+veriler, İşleme amaçları, Hukuki sebep, Saklama süresi, Aktarım, Toplama yöntemi.
+Hiçbirini atlama, sırasını koru.
+
+Bir başlığın değeri "{ONAY_BEKLEYEN_PLACEHOLDER}" ise onu AYNEN o şekilde yaz; boş
+bırakma, uydurma, atlama.
+
+Hukuki sebep değerlerindeki KVKK madde atıflarını (ör. m.5/2, m.6, açık rıza)
+OLDUĞU GİBİ koru; yeni madde numarası ekleme/uydurma.
+
+## VERİ SORUMLUSU KİMLİĞİ
+{_format_client_profile(profile)}
+
+## STANDART BÖLÜMLER (AYNEN KULLAN, DEĞİŞTİRME)
+
+### Tanımlar
+{boilerplate["tanimlar"]}
+
+### Veri Toplama Kaynakları
+{boilerplate["kaynaklar"]}
+
+### Ortak Hükümler
+{boilerplate["ortak_hukumler"]}
+
+## İŞ SÜREÇLERİ BÖLÜMLERİ
+{surecler_metni}
+
+## İLGİLİ KİŞİNİN HAKLARI (m.11)
+{boilerplate["haklar_m11"]}
+
+## BAŞVURU USULÜ
+{boilerplate["basvuru_usulu"]}
+
+Yukarıdaki bilgilere KESİNLİKLE bağlı kalarak eksiksiz ve Markdown formatında bir
+Aydınlatma Metni üret. Belgenin EN ALTINA aşağıdaki uyarıyı aynen ekle:
+
+{DISCLAIMER}
+"""
