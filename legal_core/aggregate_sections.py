@@ -1,9 +1,8 @@
 """Sure toplayici: envanter kayitlarini hedef kisi gruplarina gore suzup
 is_sureci bazinda bolumlere toplar. Saf, deterministik; AI/DB yok.
 
-aktarim ve toplama alanlari bilincli olarak her zaman bos doner: ProcessRecord'da
-bu iki alan icin sadik bir kaynak yok, konum/ortam_format'i bunlara eslemek
-uydurma yasagini ihlal eder (bkz. T2 brief KARAR).
+aktarim ve toplama alanlari ProcessRecord'dan (data JSONB'den turetilmis) merge+dedup
+edilir; kanonik tablo olmadigindan canonicalize edilmez.
 """
 
 from __future__ import annotations
@@ -79,8 +78,8 @@ def aggregate_sections(
                 amaclar=_merge_dedup(*(r.amaclar for r in group_records)),
                 hukuki_sebepler=_merge_dedup(*(r.hukuki_sebepler for r in group_records)),
                 saklama_sureleri=_merge_dedup(*(r.saklama_sureleri for r in group_records)),
-                aktarim=[],
-                toplama=[],
+                aktarim=_merge_dedup(*(r.aktarim for r in group_records)),
+                toplama=_merge_dedup(*(r.toplama for r in group_records)),
             )
         )
     return sections

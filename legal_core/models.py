@@ -138,3 +138,5 @@ class ProcessRecord:
     konum: list[str] = field(default_factory=list)
     idari_tedbirler: list[str] = field(default_factory=list)
     teknik_tedbirler: list[str] = field(default_factory=list)
+    aktarim: list[str] = field(default_factory=list)
+    toplama: list[str] = field(default_factory=list)
