@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 
 from legal_core.aggregate_sections import Section, aggregate_sections
 from legal_core.boilerplate import load_boilerplate
+from legal_core.canonical import load_canonicalizer
 from legal_core.generate import generate_aydinlatma_envanter_stream
 from legal_core.models import ClientProfile, DocType
 from legal_core.provider import AnthropicProvider
@@ -41,6 +42,7 @@ from .generation import _claim_idempotency, _resolve_api_key, _sse
 
 router = APIRouter(prefix="/api/clients", tags=["aydinlatma"])
 _log = logging.getLogger("app.aydinlatma")
+_CANON = load_canonicalizer()
 
 
 class _Camel(BaseModel):
@@ -144,14 +146,16 @@ def prepare(
         raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
 
     records = PostgresProcessRepository(session).client_processes(client_id)
-    sections = aggregate_sections(records, body.target_groups)
+    sections = aggregate_sections(records, body.target_groups, canonicalizer=_CANON)
     if not sections:
         raise HTTPException(
             status_code=422,
             detail="Seçilen hedef gruplar için envanterde iş süreci bulunamadı.",
         )
 
-    enriched = enrich_sections(sections, client.sector or "sirket", PostgresProcessRepository(session))
+    enriched = enrich_sections(
+        sections, client.sector or "sirket", PostgresProcessRepository(session), canonicalizer=_CANON
+    )
     return PrepareOut(sections=[_enriched_to_out(e) for e in enriched])
 
 
