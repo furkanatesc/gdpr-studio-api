@@ -53,11 +53,13 @@ def _is_department_sheet(name: str) -> bool:
 
 
 def _header_map(sheet) -> dict[str, int]:
-    header_row = next(sheet.iter_rows(min_row=2, max_row=2))
+    header_row = next(sheet.iter_rows(min_row=2, max_row=2, values_only=True), None)
+    if header_row is None:
+        return {}
     return {
-        str(cell.value).strip(): idx
-        for idx, cell in enumerate(header_row)
-        if cell.value is not None and str(cell.value).strip()
+        str(value).strip(): idx
+        for idx, value in enumerate(header_row)
+        if value is not None and str(value).strip()
     }
 
 
@@ -162,10 +164,15 @@ def parse_workbook_xlsx(content: bytes, sector: str) -> dict:
     except (InvalidFileException, zipfile.BadZipFile, KeyError, OSError) as e:
         raise WorkbookImportError("Bozuk veya geçersiz .xlsx dosyası.") from e
 
-    if not _looks_like_survey_workbook(wb):
-        raise WorkbookImportError("Bu bir KVKK anket çalışma kitabı değil.")
+    try:
+        if not _looks_like_survey_workbook(wb):
+            raise WorkbookImportError("Bu bir KVKK anket çalışma kitabı değil.")
 
-    return {
-        "processes": _extract_processes(wb, sector),
-        "profile": _extract_profile(wb),
-    }
+        return {
+            "processes": _extract_processes(wb, sector),
+            "profile": _extract_profile(wb),
+        }
+    except WorkbookImportError:
+        raise
+    except Exception as e:
+        raise WorkbookImportError("Çalışma kitabı beklenmeyen bir yapıda, ayrıştırılamadı.") from e
