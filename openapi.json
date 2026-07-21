@@ -2457,6 +2457,29 @@
         ]
       }
     },
+    "/api/inventory/survey-schema": {
+      "get": {
+        "operationId": "survey_schema_api_inventory_survey_schema_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Survey Schema Api Inventory Survey Schema Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Survey Schema",
+        "tags": [
+          "inventory"
+        ]
+      }
+    },
     "/api/inventory/template": {
       "get": {
         "operationId": "template_api_inventory_template_get",

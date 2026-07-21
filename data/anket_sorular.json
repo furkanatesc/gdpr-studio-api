@@ -1,0 +1,1273 @@
+{
+  "departments": [
+    {
+      "key": "02-İnsan Kaynakları",
+      "label": "İnsan Kaynakları",
+      "bolumler": [
+        {
+          "label": "İşe Alım",
+          "sorular": [
+            "Aday başvuruları hangi kanallardan alınıyor? (Kariyer.net, LinkedIn, web, referans...)",
+            "İş ilanları hangi platformlarda yayınlanıyor? Platformlarla veri işleme sözleşmesi var mı?",
+            "CV'ler nerede saklanıyor? (ATS yazılımı, e-posta, klasör, fiziki dosya)",
+            "Olumsuz sonuçlanan aday CV'leri ne kadar süre saklanıyor? Aday havuzu var mı?",
+            "Aday havuzunda tutma için adaydan açık rıza alınıyor mu?",
+            "Adaylara aydınlatma metni sunuluyor mu? Hangi aşamada?",
+            "Mülakat notları ve değerlendirme formları tutuluyor mu? Nerede?",
+            "Kişilik envanteri, yetenek testi veya değerlendirme merkezi kullanılıyor mu? Hangi firma?",
+            "Referans kontrolü yapılıyor mu? Adayın bilgisi/rızası dahilinde mi?",
+            "Sosyal medya taraması yapılıyor mu?",
+            "Adli sicil kaydı isteniyor mu? Hangi pozisyonlar için ve hangi dayanakla?",
+            "İşe alım sürecinde dış danışmanlık/headhunter kullanılıyor mu? Sözleşmesi var mı?",
+            "Aday verileri yurt dışı merkezli ATS'de mi tutuluyor? (Workable, Greenhouse vb.)",
+            "Stajyer ve öğrenci başvuruları nasıl yönetiliyor? Veli onayı gereken durumlar var mı?",
+            "Yapay zekâ destekli CV eleme/aday puanlama aracı kullanılıyor mu?"
+          ]
+        },
+        {
+          "label": "Özlük Dosyası",
+          "sorular": [
+            "Özlük dosyasında hangi belgeler tutuluyor? Tam liste verin.",
+            "Özlük dosyaları fiziki mi dijital mi? Nerede ve nasıl saklanıyor?",
+            "Özlük dosyalarına kimler erişebiliyor? Erişim kaydı tutuluyor mu?",
+            "Nüfus cüzdanı/kimlik fotokopisi alınıyor mu? T.C. kimlik no hangi amaçlarla kullanılıyor?",
+            "Çalışanlardan fotoğraf alınıyor mu? Nerelerde kullanılıyor?",
+            "Aile durumu, eş ve çocuk bilgileri (AGİ, BES) hangi amaçla toplanıyor?",
+            "Askerlik durumu belgesi isteniyor mu?",
+            "Eğitim diploması ve sertifikalar saklanıyor mu?",
+            "Banka hesap (IBAN) bilgileri nasıl toplanıp aktarılıyor?",
+            "İşten ayrılan çalışanların özlük dosyaları ne kadar süre saklanıyor?",
+            "İK yazılımı hangisi? Sunucusu nerede? (Logo, SAP HR, Kolay İK, yurtdışı SaaS...)",
+            "Sendika üyeliği bilgisi işleniyor mu? (özel nitelikli veri - m.6)"
+          ]
+        },
+        {
+          "label": "Sağlık Verileri",
+          "sorular": [
+            "İşe giriş sağlık raporu alınıyor mu? Nerede saklanıyor?",
+            "Periyodik sağlık muayeneleri yapılıyor mu? Sonuçlara kim erişiyor?",
+            "İşyeri hekimi var mı? Bordrolu mu OSGB mi? OSGB sözleşmesi var mı?",
+            "Sağlık verileri İK dosyasından ayrı mı tutuluyor? (m.6/3 gereği işyeri hekimi sır saklama)",
+            "Rapor/istirahat belgeleri nasıl işleniyor? SGK bildirimi nasıl yapılıyor?",
+            "Engellilik durumu bilgisi işleniyor mu? (teşvik/kota amaçlı)",
+            "Kan grubu bilgisi toplanıyor mu? Hangi amaçla?",
+            "Hamilelik/doğum bilgileri nasıl işleniyor?",
+            "Özel sağlık sigortası/tamamlayıcı sigorta var mı? Sigorta şirketine hangi veriler gidiyor?",
+            "Pandemi döneminden kalan aşı/test kaydı hâlâ saklanıyor mu?"
+          ]
+        },
+        {
+          "label": "Bordro & Yan Haklar",
+          "sorular": [
+            "Bordro şirket içinde mi hazırlanıyor, dış firmada mı (SMMM/outsource)?",
+            "Bordro yazılımı hangisi? Verileri nerede barındırıyor?",
+            "Maaş bilgilerine kimler erişebiliyor?",
+            "İcra kesintisi ve nafaka bilgileri nasıl işleniyor?",
+            "BES (otomatik katılım) kapsamında hangi veriler hangi şirkete aktarılıyor?",
+            "Yemek kartı firmasına (Multinet, Sodexo, Edenred...) hangi veriler veriliyor?",
+            "Servis/ulaşım hizmeti var mı? Güzergâh listelerinde adres bilgisi kimlerle paylaşılıyor?",
+            "Avans, prim, ikramiye kayıtları nerede tutuluyor?"
+          ]
+        },
+        {
+          "label": "Eğitim & Performans",
+          "sorular": [
+            "Performans değerlendirme sistemi var mı? Hangi yazılımda?",
+            "360 derece değerlendirme yapılıyor mu? Değerlendiren/değerlendirilen verileri nasıl korunuyor?",
+            "Eğitim kayıtları (katılım, sertifika, sınav sonuçları) nerede tutuluyor?",
+            "E-öğrenme platformu kullanılıyor mu? (Udemy Business, LinkedIn Learning...) Yurt dışı aktarım var mı?",
+            "Hedef ve prim hesaplamalarında kişisel performans verileri nasıl işleniyor?",
+            "Yetenek/terfi havuzu değerlendirmeleri kimlerle paylaşılıyor?",
+            "Çalışan memnuniyeti anketleri anonim mi? Hangi platformda?",
+            "Kariyer planlama görüşme notları tutuluyor mu?",
+            "Eğitim videolarında/materyallerinde çalışan görüntüleri kullanılıyor mu?",
+            "Performans iyileştirme planları (PIP) nasıl belgeleniyor?"
+          ]
+        },
+        {
+          "label": "Disiplin & Soruşturma",
+          "sorular": [
+            "Disiplin süreci nasıl işliyor? Savunma ve tutanaklar nerede saklanıyor?",
+            "İç soruşturmalarda hangi veriler inceleniyor? (mail, log, kamera)",
+            "İhbar hattı/etik hattı var mı? Kim işletiyor? Anonim bildirime izin veriyor mu?",
+            "Disiplin cezaları sicile işleniyor mu? Ne kadar süre saklanıyor?",
+            "Mobbing/taciz şikâyetleri nasıl kayıt altına alınıyor? Erişim kısıtı var mı?",
+            "Ceza mahkûmiyeti bilgisi işlenen durum var mı? (m.6 özel nitelikli)",
+            "Soruşturma dosyalarına dış hukuk bürosu erişiyor mu?"
+          ]
+        },
+        {
+          "label": "Çalışan İzleme",
+          "sorular": [
+            "Kartlı geçiş (PDKS) sistemi var mı? Hangi firma? Veriler nerede?",
+            "Giriş-çıkış kayıtları hangi amaçlarla kullanılıyor? (mesai, disiplin, güvenlik)",
+            "PDKS'de biyometrik veri (parmak izi, yüz tanıma) kullanılıyor mu? (m.6 - açık rıza gerekir)",
+            "Kurumsal e-postalar izleniyor/denetleniyor mu? Çalışanlara bildirilmiş mi?",
+            "İnternet kullanımı loglanıyor mu? Politikada açıkça belirtilmiş mi?",
+            "Bilgisayar ekran izleme veya DLP yazılımı var mı? Hangisi?",
+            "Şirket telefonlarında MDM (mobil cihaz yönetimi) var mı? Kişisel cihazlarda da mı (BYOD)?",
+            "Araç takip sistemi var mı? Mesai dışında da konum izleniyor mu?",
+            "Çağrı merkezi/satış görüşmeleri kaydediliyor mu? Çalışan bilgilendirilmiş mi?",
+            "İzleme faaliyetleri için işyeri bildirimi/politikası var mı? (Anayasa m.20, İşK, Kurul kararları)",
+            "Uzaktan çalışanlar için ek izleme aracı kullanılıyor mu?",
+            "İzleme verilerine kimler, hangi süreçle erişebiliyor?"
+          ]
+        },
+        {
+          "label": "Zimmet & Ekipman",
+          "sorular": [
+            "Zimmet formu ve envanteri nasıl tutuluyor?",
+            "Zimmetli cihazlarda hangi kişisel veriler bulunuyor?",
+            "Cihaz iadesinde veri silme prosedürü var mı?",
+            "Şirket aracı tahsisinde ehliyet/ceza puanı bilgisi işleniyor mu?",
+            "SIM kart/hat tahsisi kayıtları nasıl tutuluyor?",
+            "Kayıp/çalıntı cihaz prosedürü var mı? (ihlal bildirimiyle bağlantılı)"
+          ]
+        },
+        {
+          "label": "İşten Ayrılış",
+          "sorular": [
+            "İşten ayrılış prosedürü (offboarding checklist) var mı?",
+            "Ayrılan çalışanın hesapları ne kadar sürede kapatılıyor?",
+            "Ayrılan çalışanın e-postaları ne oluyor? (yönlendirme, arşiv, silme - Kurul kararlarına dikkat)",
+            "İbraname ve çıkış mülakatı kayıtları nerede saklanıyor?",
+            "SGK çıkış bildirimi ve İŞKUR bildirimleri nasıl yapılıyor?",
+            "Ayrılan çalışan hakkında referans bilgisi veriliyor mu? Rıza alınıyor mu?",
+            "Kıdem/ihbar hesap belgeleri ne kadar saklanıyor?",
+            "İşe iade davası riskine karşı hangi veriler, ne kadar süre tutuluyor?",
+            "Ayrılan çalışanın erişim kartı/yetkileri sistemden ne zaman siliniyor?",
+            "Emeklilik işlemlerinde hangi kurumlarla veri paylaşılıyor?"
+          ]
+        },
+        {
+          "label": "Yakın & Acil Durum",
+          "sorular": [
+            "Acil durum kişisi bilgisi toplanıyor mu? (üçüncü kişi verisi - aydınlatma nasıl yapılıyor?)",
+            "Eş/çocuk bilgileri hangi süreçlerde kullanılıyor?",
+            "Çalışan yakınlarına ait sağlık verisi işleniyor mu? (bakım izni vb.)",
+            "Vefat/hastalık durumlarında yakınlarla iletişim kayıtları tutuluyor mu?"
+          ]
+        },
+        {
+          "label": "İSG",
+          "sorular": [
+            "İSG eğitim kayıtları ve tutanakları nerede tutuluyor?",
+            "İş kazası kayıtları ve SGK bildirimleri nasıl yapılıyor?",
+            "Risk değerlendirmelerinde kişisel veri işleniyor mu?",
+            "OSGB firmasıyla veri işleme sözleşmesi var mı?",
+            "Ramak kala olay bildirimlerinde kişi bilgisi kaydediliyor mu?",
+            "Kişisel koruyucu donanım teslim kayıtları tutuluyor mu?",
+            "Acil durum ekip listeleri (yangın, ilkyardım) nerede yayınlanıyor?"
+          ]
+        },
+        {
+          "label": "Yabancı & Stajyer",
+          "sorular": [
+            "Yabancı çalışan var mı? Çalışma izni süreçlerinde hangi veriler işleniyor?",
+            "Stajyer öğrenci bilgileri okullarla nasıl paylaşılıyor?",
+            "18 yaş altı stajyer/çırak var mı? Veli rızası alınıyor mu?",
+            "Alt işveren (taşeron) çalışanlarının verileri işleniyor mu?",
+            "Freelancer/danışman sözleşmelilerin verileri nasıl yönetiliyor?"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "03-Bilgi Teknolojileri",
+      "label": "Bilgi Teknolojileri",
+      "bolumler": [
+        {
+          "label": "Sunucu & Altyapı",
+          "sorular": [
+            "Şirket içi (on-premise) sunucular var mı? Lokasyonları ve üzerindeki sistemler neler?",
+            "Sunucu odasına fiziksel erişim nasıl kontrol ediliyor?",
+            "Veri merkezi (colocation) kullanılıyor mu? Hangi firma, hangi şehir/ülke?",
+            "Sanallaştırma altyapısı nedir? (VMware, Hyper-V, Proxmox...)",
+            "Veri tabanı sistemleri neler? (MSSQL, PostgreSQL, MySQL, Oracle, MongoDB...)",
+            "Hangi veri tabanlarında kişisel veri var? Envanteri çıkarılmış mı?",
+            "Veri tabanlarında şifreleme (at-rest encryption) uygulanıyor mu?",
+            "Dosya sunucusu/paylaşım alanları var mı? Erişim yapısı nasıl?",
+            "Eski/kullanım dışı sunucularda veri kaldı mı? İmha prosedürü uygulandı mı?",
+            "Sunucu bakımını kim yapıyor? Dış firma uzaktan erişiyor mu? Sözleşmesi var mı?",
+            "Test/geliştirme sunucularında gerçek kişisel veri var mı?",
+            "Sunucu envanteri ve ağ topolojisi dokümante edilmiş mi?",
+            "Kesintisiz güç ve iklimlendirme (fiziksel koruma) mevcut mu?",
+            "Sunuculara internet üzerinden doğrudan erişim (RDP/SSH açık port) var mı?",
+            "Veri tabanı yedeklerinin kopyaları nerelerde tutuluyor?"
+          ]
+        },
+        {
+          "label": "Bulut Servisleri",
+          "sorular": [
+            "AWS kullanılıyor mu? Hangi servisler, hangi region? (kişisel veri lokasyonu)",
+            "Azure kullanılıyor mu? Hangi servisler, hangi region?",
+            "Google Cloud kullanılıyor mu? Hangi servisler, hangi region?",
+            "Bulut sağlayıcılarla DPA (veri işleme sözleşmesi) imzalanmış mı?",
+            "Bulutta hangi kişisel veri kategorileri barındırılıyor?",
+            "Bulut hesaplarının root/admin erişimi kimde? MFA açık mı?",
+            "Türkiye region seçeneği değerlendirildi mi? Veri yerelleştirme gereksinimi var mı?",
+            "SaaS uygulamaları envanteri çıkarıldı mı? (gölge BT / shadow IT riski)",
+            "Bulut depolama (S3, Blob, Drive) erişim politikaları nasıl? Public bucket kontrolü yapılıyor mu?",
+            "Bulut maliyet/kullanım raporlarında kişisel veri görünüyor mu?",
+            "Bulut sağlayıcının alt işleyenleri (sub-processor) listesi takip ediliyor mu?",
+            "Buluttan çıkış (exit) stratejisi ve veri iade/silme prosedürü var mı?",
+            "KVKK m.9 kapsamında yurt dışı aktarım için hangi mekanizma kullanılıyor? (standart sözleşme, taahhütname...)",
+            "Standart sözleşme imzalandıysa Kurul'a 5 iş günü içinde bildirim yapıldı mı?",
+            "CDN kullanılıyor mu? (Cloudflare, Akamai...) IP adresleri nasıl işleniyor?"
+          ]
+        },
+        {
+          "label": "Ağ & Güvenlik",
+          "sorular": [
+            "Firewall markası/modeli nedir? Kurallar dokümante edilmiş mi?",
+            "VPN kullanılıyor mu? Kimler erişebiliyor? Loglanıyor mu?",
+            "IDS/IPS veya SIEM çözümü var mı? Hangisi?",
+            "Misafir Wi-Fi ağı kurumsal ağdan ayrık mı? 5651 kapsamında log tutuluyor mu?",
+            "Ağ segmentasyonu var mı? (kişisel veri içeren sistemler ayrık mı?)",
+            "Antivirüs/EDR çözümü nedir? Merkezi yönetiliyor mu?",
+            "E-posta güvenliği (spam/phishing filtresi) var mı?",
+            "DLP (veri sızıntısı önleme) çözümü var mı?",
+            "Zafiyet taraması düzenli yapılıyor mu? Hangi araçla?",
+            "Web uygulama güvenliği (WAF) var mı?",
+            "5651 sayılı Kanun kapsamında erişim logları imzalı/damgalı tutuluyor mu?",
+            "Uzak masaüstü araçları (TeamViewer, AnyDesk) kullanımı kontrol ediliyor mu?"
+          ]
+        },
+        {
+          "label": "Kimlik & Erişim",
+          "sorular": [
+            "Active Directory / Entra ID kullanılıyor mu? Kaç kullanıcı?",
+            "SSO (tek oturum açma) hangi uygulamalarda aktif?",
+            "MFA hangi sistemlerde zorunlu? İstisnalar var mı?",
+            "Yetki matrisi (kim hangi sisteme, hangi rolle) dokümante edilmiş mi?",
+            "Erişim yetkileri düzenli gözden geçiriliyor mu? (access review) Sıklığı?",
+            "Ayrıcalıklı hesaplar (admin) nasıl yönetiliyor? PAM çözümü var mı?",
+            "Ortak/paylaşılan hesaplar var mı? Hangi sistemlerde?",
+            "Servis hesapları ve API anahtarları nasıl saklanıyor? (vault kullanımı)",
+            "İşe girişte hesap açma (provisioning) süreci nasıl? Onay mekanizması var mı?",
+            "İşten ayrılışta hesaplar otomatik mi kapanıyor? SLA nedir?",
+            "Dış danışman/tedarikçilere hesap açılıyor mu? Süreli mi?",
+            "Misafir/stajyer hesapları nasıl yönetiliyor?",
+            "Rol bazlı erişim (RBAC) mi, kişi bazlı mı?",
+            "Kritik sistemlerde görevler ayrılığı (segregation of duties) uygulanıyor mu?",
+            "Veri tabanına doğrudan erişimi olan kaç kişi var?",
+            "Erişim talepleri nasıl kayıt altına alınıyor? (ticket sistemi)",
+            "Uygulama içi yetki seviyeleri (ör. İK modülünde maaş görme) tanımlı mı?",
+            "Eski çalışanların aktif hesabı kalıp kalmadığı en son ne zaman denetlendi?"
+          ]
+        },
+        {
+          "label": "E-posta & Ofis",
+          "sorular": [
+            "E-posta altyapısı nedir? (M365, Google Workspace, yerel Exchange, hosting)",
+            "E-posta verileri hangi ülkede barındırılıyor? (tenant lokasyonu)",
+            "E-posta arşivleme politikası var mı? Ne kadar saklanıyor?",
+            "Grup/ortak posta kutuları (info@, ik@) kimlerce erişiliyor?",
+            "E-posta ile kişisel veri gönderimi kural altına alınmış mı? (şifreli gönderim vb.)",
+            "Otomatik yönlendirme (dış adrese forward) engellenmiş mi?",
+            "OneDrive/SharePoint/Google Drive paylaşım politikaları nasıl? Dış paylaşım açık mı?",
+            "Kişisel e-posta hesaplarının iş için kullanımı yasak mı? Denetleniyor mu?",
+            "E-imza / KEP hesapları kimin adına ve nasıl yönetiliyor?",
+            "Toplantı kayıtları (Teams/Zoom recording) alınıyor mu? Nerede saklanıyor, kimlere duyuruluyor?"
+          ]
+        },
+        {
+          "label": "Log & İzleme",
+          "sorular": [
+            "Hangi sistemlerin logları tutuluyor? Merkezi log yönetimi var mı?",
+            "Loglarda hangi kişisel veriler yer alıyor? (IP, kullanıcı adı, işlem detayı)",
+            "Log saklama süreleri tanımlı mı? Sistemlere göre listeleyin.",
+            "Loglara kimler erişebiliyor? Logların bütünlüğü korunuyor mu?",
+            "Kullanıcı işlem logları (kim hangi kaydı gördü/değiştirdi) tutuluyor mu?",
+            "5651 kapsamındaki loglar ile iç loglar ayrışıyor mu?",
+            "SIEM'e hangi kaynaklar bağlı? Alarm senaryoları tanımlı mı?",
+            "Log analizi/inceleme hangi durumlarda yapılıyor? Yetkilendirme süreci var mı?",
+            "Sistem yöneticilerinin işlemleri de loglanıyor mu?",
+            "Loglar yurt dışı SaaS'a gidiyor mu? (Datadog, Splunk Cloud, New Relic...)",
+            "Log süresi dolunca otomatik siliniyor mu?",
+            "VERBİS'te beyan edilen saklama süreleri log pratiğiyle uyumlu mu?"
+          ]
+        },
+        {
+          "label": "Yedekleme & DR",
+          "sorular": [
+            "Yedekleme politikası var mı? Kapsam, sıklık, saklama süresi nedir?",
+            "Yedekler nerede tutuluyor? (yerel, uzak lokasyon, bulut - ülke belirtin)",
+            "Yedekler şifreleniyor mu?",
+            "Yedekten dönüş (restore) testi yapılıyor mu? Son test ne zaman?",
+            "Silinmesi gereken kişisel veriler yedeklerden de siliniyor mu? Prosedürü var mı?",
+            "Felaket kurtarma (DR) planı var mı? DR sahası nerede?",
+            "İş sürekliliği planı (BCP) dokümante edilmiş mi?",
+            "Yedekleme yazılımı/servisi hangisi? (Veeam, Acronis, bulut yedek...)",
+            "Teyp/harici disk yedekleri var mı? Fiziksel güvenliği nasıl?",
+            "Yedeklere erişim yetkisi kimlerde?",
+            "Arşiv verisi ile aktif veri ayrımı yapılıyor mu?",
+            "Saklama süresi dolan yedekler imha ediliyor mu? Kayıt tutuluyor mu?"
+          ]
+        },
+        {
+          "label": "Uç Nokta & Mobil",
+          "sorular": [
+            "Çalışan bilgisayarları şirket envanterinde mi? Disk şifreleme (BitLocker/FileVault) açık mı?",
+            "Yerel admin yetkisi kimlerde?",
+            "MDM çözümü var mı? Hangi cihazlar kayıtlı?",
+            "BYOD (kişisel cihazla çalışma) politikası var mı?",
+            "Şirket telefonlarında hangi uygulamalar/veriler var?",
+            "Uzaktan silme (remote wipe) yeteneği var mı?",
+            "Ekran kilidi/parola zorunluluğu teknik olarak dayatılıyor mu?",
+            "Cihazlarda yerel klasörlerde kişisel veri birikiyor mu? (masaüstü Excel'leri riski)",
+            "Yazıcı/tarayıcı güvenliği: çıktılar ortada kalıyor mu? Follow-me printing var mı?",
+            "Ekran koruyucu/temiz masa politikası uygulanıyor mu?",
+            "Kiosk/ortak kullanım bilgisayarları var mı? Oturum yönetimi nasıl?",
+            "Ev/uzaktan çalışma ekipmanlarının güvenliği nasıl sağlanıyor?"
+          ]
+        },
+        {
+          "label": "USB & Medya",
+          "sorular": [
+            "USB bellek kullanımı serbest mi, kısıtlı mı, engelli mi?",
+            "USB istisnaları nasıl yönetiliyor? Kayıt tutuluyor mu?",
+            "Harici disklerle veri taşınması kural altına alınmış mı?",
+            "CD/DVD, hafıza kartı gibi medyalar kullanılıyor mu?",
+            "Kullanım dışı medyaların imhası nasıl yapılıyor? (fiziksel imha, tutanak)",
+            "Şifreli USB zorunluluğu var mı?"
+          ]
+        },
+        {
+          "label": "Yapay Zekâ",
+          "sorular": [
+            "Çalışanlar ChatGPT/Claude/Gemini gibi araçları kullanıyor mu? Kurumsal hesap mı bireysel mi?",
+            "AI araçlarına kişisel veri/müşteri verisi girilmesi yasaklanmış mı? Politika var mı?",
+            "Microsoft Copilot kullanılıyor mu? Hangi verilere erişiyor?",
+            "AI kullanım politikası dokümante edilmiş mi?",
+            "API üzerinden LLM entegrasyonu var mı? Hangi veriler gönderiliyor?",
+            "AI sağlayıcılarla veri işleme koşulları (eğitimde kullanım kapatma vb.) kontrol edildi mi?",
+            "AI araçları yurt dışına veri aktarımı oluşturuyor mu? m.9 mekanizması var mı?",
+            "Ürün/hizmet içinde AI özellik var mı? Müşterilere açıklanıyor mu?",
+            "Otomatik karar verme (profilleme) yapan sistem var mı? (GDPR m.22 / KVKK m.11-g)",
+            "AI çıktılarının doğruluğu ve ayrımcılık riski değerlendiriliyor mu?",
+            "Toplantı asistanları (Otter, Fireflies, Teams Copilot) kayıt alıyor mu? Katılımcılar bilgilendiriliyor mu?",
+            "AI aboneliklerinin envanteri (kim, hangi araç, hangi plan) var mı?"
+          ]
+        },
+        {
+          "label": "Geliştirici Araçları",
+          "sorular": [
+            "GitHub/GitLab organizasyon hesabı mı kullanılıyor? Kişisel hesaplarda şirket kodu var mı?",
+            "Repository'ler private mı? Erişim listesi güncel mi?",
+            "Kod içinde/commit geçmişinde gömülü sır (parola, API key) taraması yapılıyor mu?",
+            "CI/CD platformu hangisi? (Jenkins, GitHub Actions, GitLab CI...) Log ve secret yönetimi nasıl?",
+            "Docker/container imajlarında kişisel veri veya sır var mı?",
+            "Container registry nerede? (Docker Hub public risk kontrolü)",
+            "Ayrılan geliştiricilerin repo erişimleri kapatılıyor mu?",
+            "Üçüncü taraf geliştirici/dış yazılım firması repo erişimi var mı? Sözleşmesi var mı?",
+            "Kod inceleme (code review) zorunlu mu?",
+            "Altyapı-kod (IaC) dosyalarında hassas bilgi kontrolü yapılıyor mu?"
+          ]
+        },
+        {
+          "label": "Veri İmha & Donanım",
+          "sorular": [
+            "Hurda bilgisayar/disk imha prosedürü var mı? Tutanak tutuluyor mu?",
+            "Disk imhası nasıl yapılıyor? (fiziksel kırma, degauss, yazılımla silme)",
+            "İmha hizmeti dış firmadan mı alınıyor? Sertifika veriyor mu?",
+            "Kiralık/leasing cihazlar iade edilirken veriler siliniyor mu?",
+            "Yazıcı/fotokopi cihazlarının dahili diskleri imha sürecine dahil mi?",
+            "Periyodik imha süreleri (Yönetmelik: en geç 6 ayda bir) uygulanıyor mu?",
+            "Silme/yok etme/anonim hale getirme kayıtları (imha tutanakları) tutuluyor mu?",
+            "Saklama ve imha politikası dokümante edilmiş mi?"
+          ]
+        },
+        {
+          "label": "Olay Yönetimi",
+          "sorular": [
+            "Bilgi güvenliği olay müdahale planı var mı?",
+            "Veri ihlali tespit edilirse kim, kime, nasıl bildiriyor? (iç eskalasyon zinciri)",
+            "KVKK 72 saat / Kurul bildirimi prosedürü tanımlı mı?",
+            "Geçmişte yaşanan güvenlik olayları/ihlaller var mı? Kayıtları tutuldu mu?",
+            "Fidye yazılımı (ransomware) senaryosuna hazırlık var mı?",
+            "Siber sigorta poliçesi var mı? Kapsamı nedir?",
+            "Olay kayıt defteri (incident register) tutuluyor mu?",
+            "Phishing tatbikatı/farkındalık testi yapılıyor mu?",
+            "Adli bilişim desteği için anlaşmalı firma var mı?",
+            "Olay sonrası kök neden analizi ve iyileştirme yapılıyor mu?"
+          ]
+        },
+        {
+          "label": "Şifre Politikası",
+          "sorular": [
+            "Parola politikası (uzunluk, karmaşıklık, süre) teknik olarak dayatılıyor mu?",
+            "Parola yöneticisi (1Password, Bitwarden...) kurumsal olarak kullanılıyor mu?",
+            "Parolalar dosyada/Excel'de tutuluyor mu? (yaygın risk)",
+            "Varsayılan parolalar değiştiriliyor mu? (cihaz, uygulama kurulumları)",
+            "Parola sıfırlama süreci kimlik doğrulamalı mı?",
+            "Sistemlerde parolalar hash'li mi saklanıyor? Hangi algoritma?",
+            "Hesap kilitleme (brute force koruması) aktif mi?",
+            "Kritik sistem parolaları için kasa/zarf prosedürü var mı?"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "04-Yazılım Geliştirme",
+      "label": "Yazılım Geliştirme",
+      "bolumler": [
+        {
+          "label": "Repository & Kod",
+          "sorular": [
+            "Kaynak kod nerede barındırılıyor? (GitHub, GitLab, Bitbucket, self-hosted)",
+            "Kod tabanında sabit yazılmış (hardcoded) kişisel veri var mı?",
+            "Kod yorumlarında/dokümantasyonda gerçek müşteri verisi geçiyor mu?",
+            "Konfigürasyon dosyalarında bağlantı bilgileri açık mı, vault'ta mı?",
+            "Repo erişim seviyeleri (read/write/admin) tanımlı mı?",
+            "Fork/clone kısıtlamaları var mı? Kod dışarı çıkabilir mi?",
+            "Açık kaynak katkılarında şirket kodu/verisi sızma riski değerlendirildi mi?",
+            "Git geçmişinde daha önce sızmış sır/veri temizliği yapıldı mı?",
+            "Kod sahipliği (CODEOWNERS) ve dal koruma kuralları tanımlı mı?",
+            "Müşteriye özel geliştirmelerde müşteri verisi repoya giriyor mu?"
+          ]
+        },
+        {
+          "label": "Test Verisi",
+          "sorular": [
+            "Test ortamlarında gerçek (production) verisi kullanılıyor mu?",
+            "Test verisi anonimleştirme/maskeleme aracı veya prosedürü var mı?",
+            "Production'dan test'e veri kopyalama kim tarafından, nasıl yapılıyor?",
+            "Sentetik/dummy veri üretimi kullanılıyor mu?",
+            "Test veri tabanlarına erişim production ile aynı kısıtlara mı tabi?",
+            "Test ortamındaki veriler işi bitince siliniyor mu?",
+            "UAT (kullanıcı kabul testi) ortamına müşteri erişiyor mu? Hangi verilerle?",
+            "Demo ortamlarında gerçek kişi verisi var mı?",
+            "Yük/performans testlerinde kullanılan veri setleri neler?",
+            "Hata kayıtlarına (bug ticket) gerçek veri ekran görüntüsü ekleniyor mu?",
+            "Dış test firması/QA outsource kullanılıyor mu? Veri erişimi ve sözleşmesi var mı?",
+            "Mobil uygulama testlerinde (TestFlight vb.) gerçek kullanıcı verisi kullanılıyor mu?"
+          ]
+        },
+        {
+          "label": "Ortamlar",
+          "sorular": [
+            "Ortam ayrımı (dev/staging/prod) net mi? Kim hangi ortama erişiyor?",
+            "Production erişimi kaç kişide? Hangi rollerle?",
+            "Production'a doğrudan müdahale (hotfix, DB update) prosedürü var mı? Loglanıyor mu?",
+            "Staging ortamı internete açık mı? Kimlik doğrulaması var mı?",
+            "Ortamlar arası veri akışı şeması çıkarılmış mı?",
+            "Production veri tabanı yedeklerine geliştiriciler erişebiliyor mu?",
+            "Feature flag/config yönetiminde kişisel veri toplanan özellikler işaretleniyor mu?",
+            "Müşteri bazlı (tenant) veri izolasyonu nasıl sağlanıyor?",
+            "Ortam değişkenlerinde (env) sır yönetimi nasıl?",
+            "Prod verisine erişen destek/bakım ekranları (admin panel) yetki ve log yapısı nasıl?"
+          ]
+        },
+        {
+          "label": "Log & Debug",
+          "sorular": [
+            "Uygulama loglarında hangi kişisel veriler yazılıyor? (e-posta, IP, T.C. no riski)",
+            "Debug modunda hassas veri konsola/dosyaya dökülüyor mu?",
+            "Hata izleme araçları (Sentry, Crashlytics...) kullanılıyor mu? Hangi veriler gidiyor?",
+            "APM araçları (New Relic, Datadog...) kişisel veri topluyor mu? Sunucuları nerede?",
+            "Log maskeleme (PII scrubbing) uygulanıyor mu?",
+            "Uygulama logları ne kadar saklanıyor? Otomatik siliniyor mu?",
+            "Mobil uygulama analitiği (Firebase, Mixpanel...) hangi verileri topluyor?",
+            "Session replay araçları (LogRocket, FullStory...) kullanılıyor mu?",
+            "Loglara geliştiriciler serbestçe erişebiliyor mu?",
+            "Kullanıcı destek taleplerinde log paylaşımı nasıl yapılıyor?"
+          ]
+        },
+        {
+          "label": "API & SDK",
+          "sorular": [
+            "Dışa açık API'lar kişisel veri döndürüyor mu? Endpoint envanteri var mı?",
+            "API kimlik doğrulama/yetkilendirme yöntemi nedir? (OAuth, API key...)",
+            "API rate limiting ve kötüye kullanım koruması var mı?",
+            "Üçüncü taraf API'lara hangi kişisel veriler gönderiliyor? Liste çıkarın.",
+            "Uygulamalara gömülü üçüncü taraf SDK'lar neler? (analitik, reklam, crash)",
+            "SDK'ların veri toplama davranışları incelendi mi? (app store privacy label uyumu)",
+            "API dokümantasyonunda gerçek veri örnekleri kullanılıyor mu?",
+            "Webhook'larla dışarı veri akışı var mı? Alıcılar kimler?",
+            "API loglarında istek/yanıt gövdeleri (kişisel veri dahil) saklanıyor mu?",
+            "Kullanımdan kalkan (deprecated) API'lar kapatılıyor mu?"
+          ]
+        },
+        {
+          "label": "Üçüncü Taraf Kod",
+          "sorular": [
+            "Kullanılan açık kaynak kütüphanelerin envanteri (SBOM) var mı?",
+            "Bağımlılık zafiyet taraması (Dependabot, Snyk...) yapılıyor mu?",
+            "Lisans uyumluluğu (GPL vb.) kontrol ediliyor mu?",
+            "Dış yazılım firmasına geliştirme yaptırılıyor mu? Kod ve veri erişim sözleşmesi var mı?",
+            "Tedarik edilen hazır yazılımların güvenlik değerlendirmesi yapılıyor mu?",
+            "CDN'den yüklenen script'lerin bütünlük kontrolü (SRI) var mı?"
+          ]
+        },
+        {
+          "label": "AI Kod Asistanları",
+          "sorular": [
+            "GitHub Copilot veya benzeri kod asistanı kullanılıyor mu? Kurumsal plan mı?",
+            "Kod asistanına gönderilen bağlamda kişisel veri/sır olabilir mi? Filtre var mı?",
+            "AI asistan telemetri/eğitim verisi paylaşım ayarları kontrol edildi mi?",
+            "AI ile üretilen kodun güvenlik incelemesi yapılıyor mu?",
+            "Şirket kodunun AI araçlarına yüklenmesi (dosya upload) kısıtlanmış mı?",
+            "LLM tabanlı özelliklerde prompt loglama yapılıyor mu? Kişisel veri içeriyor mu?",
+            "Model eğitimi için müşteri verisi kullanılıyor mu? Sözleşmesel dayanağı var mı?",
+            "AI özellikleri için ayrı aydınlatma/şeffaflık bildirimi yapılıyor mu?"
+          ]
+        },
+        {
+          "label": "Versiyon & Süreç",
+          "sorular": [
+            "Sürüm yönetimi ve değişiklik onay süreci (change management) var mı?",
+            "Privacy by design: yeni özellik tasarımında veri koruma değerlendirmesi yapılıyor mu?",
+            "Yeni veri toplayan özellikler için DPIA/etki değerlendirmesi tetikleniyor mu?",
+            "Veri minimizasyonu ilkesi ürün kararlarında gözetiliyor mu?",
+            "Kullanıcı silme talebi geldiğinde tüm sistemlerden silme teknik olarak mümkün mü?",
+            "Veri taşınabilirliği (export) özelliği var mı?",
+            "Saklama sürelerinin otomatik uygulanması (TTL, arşivleme) kodlanmış mı?"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "05-Satış",
+      "label": "Satış",
+      "bolumler": [
+        {
+          "label": "CRM",
+          "sorular": [
+            "Hangi CRM kullanılıyor? Sunucusu/verisi nerede barındırılıyor?",
+            "CRM'de hangi kişisel veri alanları var? (ad, telefon, e-posta, notlar...)",
+            "CRM'e serbest metin not girişi yapılıyor mu? İçerik kuralı var mı?",
+            "CRM erişim yetkileri rol bazlı mı? Tüm satışçılar tüm müşterileri görüyor mu?",
+            "CRM'den toplu veri dışa aktarma (export) kimler yapabiliyor?",
+            "Kaybedilen müşteri/fırsat kayıtları ne kadar saklanıyor?",
+            "CRM mobil uygulaması kullanılıyor mu? Kişisel cihazlarda mı?",
+            "CRM ile e-posta/takvim senkronizasyonu var mı? Hangi veriler akıyor?",
+            "CRM sağlayıcısıyla DPA imzalanmış mı?",
+            "CRM'de görev/aktivite kayıtlarında üçüncü kişi verisi tutuluyor mu?",
+            "Eski/ayrılan satışçının müşteri kayıtları nasıl devrediliyor?",
+            "CRM'deki veriler başka sistemlere (ERP, e-posta aracı) otomatik akıyor mu?"
+          ]
+        },
+        {
+          "label": "Lead & Potansiyel",
+          "sorular": [
+            "Lead'ler hangi kanallardan toplanıyor? (web formu, fuar, satın alınmış liste, LinkedIn)",
+            "Satın alınmış/hazır veri listesi kullanılıyor mu? Kaynağı ve hukuka uygunluğu?",
+            "Lead'lere ilk temas nasıl yapılıyor? (soğuk arama/e-posta - ETK ileti onayı var mı?)",
+            "İYS (İleti Yönetim Sistemi) kaydı var mı? Onaylar İYS'ye aktarılmış mı?",
+            "Lead formlarında aydınlatma metni ve onay kutusu var mı?",
+            "LinkedIn Sales Navigator vb. araçlardan veri aktarımı yapılıyor mu?",
+            "Potansiyel müşteri verileri ne kadar süre tutuluyor? Silme kuralı var mı?",
+            "Lead scoring/otomatik puanlama yapılıyor mu?",
+            "B2B kontaklarda kişi verisi (çalışan adı, kurumsal e-posta) nasıl değerlendiriliyor?",
+            "Yurtdışı lead'ler için GDPR uyumlu süreç işletiliyor mu?"
+          ]
+        },
+        {
+          "label": "Teklif & Sözleşme",
+          "sorular": [
+            "Tekliflerde müşteri tarafı kişi bilgileri nasıl saklanıyor?",
+            "Teklif/sözleşme dosyaları nerede? (CRM, klasör, e-posta)",
+            "Fiyatlama bilgilerine erişim kısıtı var mı?",
+            "E-imza platformu kullanılıyor mu? (DocuSign vb.) Verisi nerede?",
+            "Müşteri sözleşmelerinde KVKK/veri koruma maddeleri standart mı?",
+            "İhale/RFP süreçlerinde referans müşteri bilgisi paylaşılıyor mu? İzinli mi?",
+            "Sözleşme yenileme hatırlatmaları için kişi verisi işleniyor mu?",
+            "Kazanılamayan tekliflere ait veriler siliniyor mu?"
+          ]
+        },
+        {
+          "label": "Demo & POC",
+          "sorular": [
+            "Demo taleplerinde hangi veriler toplanıyor?",
+            "POC sürecinde müşterinin gerçek verisi sisteme yükleniyor mu? Sözleşmesi var mı?",
+            "Demo ortamları POC bitince temizleniyor mu?",
+            "Demo kayıtları (ekran kaydı, katılımcı listesi) saklanıyor mu?",
+            "Deneme (trial) hesaplarındaki veriler süre sonunda siliniyor mu?",
+            "POC için NDA imzalanıyor mu?",
+            "Müşteri verisiyle yapılan demoların kaydı üçüncü kişilere gösteriliyor mu?"
+          ]
+        },
+        {
+          "label": "Etkinlik & Fuar",
+          "sorular": [
+            "Fuarlarda kartvizit toplanıyor mu? Sonrasında ne yapılıyor?",
+            "Kartvizit bilgileri CRM'e girilirken aydınlatma/ileti onayı süreci işletiliyor mu?",
+            "Fuar organizatöründen katılımcı listesi alınıyor mu? Hukuki dayanağı?",
+            "Etkinlik kayıt formları hangi platformda? (yurt dışı form araçları)",
+            "Çekiliş/hediye kampanyalarında toplanan veriler nasıl işleniyor?",
+            "Etkinlik fotoğraf/video çekimlerinde katılımcı aydınlatması yapılıyor mu?",
+            "Badge tarama (lead scanner) uygulamaları kullanılıyor mu?",
+            "Etkinlik sonrası toplu e-posta gönderimi İYS onayına dayanıyor mu?"
+          ]
+        },
+        {
+          "label": "Web Formu & Telefon",
+          "sorular": [
+            "Web sitesindeki iletişim/teklif formları hangi verileri topluyor?",
+            "Form verileri nereye düşüyor? (e-posta, CRM, veri tabanı)",
+            "Formlarda aydınlatma metni linki ve gerekli onay kutuları var mı?",
+            "Formlarda zorunlu alanlar veri minimizasyonuna uygun mu?",
+            "Telefonla gelen taleplerde görüşme kaydı alınıyor mu? Anons var mı?",
+            "Çağrı merkezi hizmeti dışarıdan mı alınıyor? Sözleşmesi var mı?",
+            "Santral sistemi arama kayıtlarını (numara, süre) ne kadar tutuyor?",
+            "WhatsApp üzerinden müşteri iletişimi yapılıyor mu? Kurumsal API mı bireysel mi?",
+            "Canlı destek (chat) aracı var mı? Konuşma kayıtları nerede?",
+            "Chatbot kullanılıyor mu? Toplanan veriler ve aydınlatması?"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "06-Pazarlama",
+      "label": "Pazarlama",
+      "bolumler": [
+        {
+          "label": "Web & Analitik",
+          "sorular": [
+            "Google Analytics kullanılıyor mu? Hangi sürüm (GA4)? IP anonimleştirme açık mı?",
+            "Analytics verileri yurt dışına aktarılıyor mu? m.9 değerlendirmesi yapıldı mı?",
+            "Google Tag Manager'da hangi etiketler aktif? Envanteri var mı?",
+            "Site arama ve davranış verileri kişiyle eşleştiriliyor mu? (user ID takibi)",
+            "Hotjar/Clarity gibi ısı haritası ve oturum kaydı araçları var mı? Maskeleme yapılıyor mu?",
+            "A/B test araçları (Optimizely vb.) kullanılıyor mu?",
+            "Web sitesi hosting'i nerede? Erişim logları kim tarafından tutuluyor?",
+            "Alan adı ve SSL yönetimi kimde?",
+            "Sitede üyelik/hesap sistemi var mı? Üye verileri nerede?",
+            "Site içi arama sorguları loglanıyor mu?",
+            "Blog/bülten yorumlarında kişisel veri işleniyor mu?",
+            "Web sitesi birden fazla dil/ülkeye mi hizmet ediyor? (GDPR kapsam tespiti)"
+          ]
+        },
+        {
+          "label": "Çerezler",
+          "sorular": [
+            "Çerez banner'ı var mı? Onay yönetim platformu (CMP) kullanılıyor mu?",
+            "Çerez envanteri/tarama yapıldı mı? (zorunlu, işlevsel, analitik, pazarlama ayrımı)",
+            "Pazarlama çerezleri onay ALINMADAN yükleniyor mu? (teknik kontrol - Kurul rehberi)",
+            "Çerez politikası yayında mı? Güncel mi?",
+            "Onay reddedildiğinde çerezler gerçekten engelleniyor mu? Test edildi mi?",
+            "Çerez onay kayıtları (kim, ne zaman, neye onay verdi) saklanıyor mu?",
+            "Üçüncü taraf çerezleri hangi alan adlarından geliyor? Liste var mı?",
+            "Mobil uygulamada izleme izinleri (ATT/Android) nasıl yönetiliyor?",
+            "Parmak izi (fingerprinting) tekniği kullanılıyor mu?",
+            "Çerez onayı ile İYS/e-posta onayı ayrışıyor mu? (farklı hukuki rejimler)"
+          ]
+        },
+        {
+          "label": "Piksel & Remarketing",
+          "sorular": [
+            "Meta Pixel kurulu mu? Hangi olaylar (event) gönderiliyor?",
+            "Google Ads remarketing/dönüşüm izleme var mı?",
+            "LinkedIn Insight Tag, TikTok Pixel, X Pixel gibi diğer pikseller var mı?",
+            "Gelişmiş eşleştirme (advanced matching - hash'li e-posta gönderimi) aktif mi?",
+            "Müşteri listeleri (custom audience) reklam platformlarına yükleniyor mu? Hukuki dayanağı?",
+            "Benzer hedef kitle (lookalike) oluşturuluyor mu?",
+            "Reklam platformlarıyla veri paylaşımının aydınlatma metninde karşılığı var mı?",
+            "Server-side tracking (Conversions API) kullanılıyor mu?",
+            "Reklam ajansı piksel/hesaplara erişiyor mu? Sözleşmesi var mı?",
+            "Yurtdışı aktarım açısından piksel veri akışları değerlendirildi mi?"
+          ]
+        },
+        {
+          "label": "E-posta Pazarlama",
+          "sorular": [
+            "Toplu e-posta hangi platformdan gönderiliyor? (Mailchimp, SendGrid, yerli araç...)",
+            "Gönderim listeleri nasıl oluşturuldu? Onay kanıtları var mı?",
+            "İYS entegrasyonu yapılmış mı? Onay/ret senkronizasyonu çalışıyor mu?",
+            "Abonelikten çıkma (opt-out) linki her gönderimde var mı? Talepler işleniyor mu?",
+            "Açılma/tıklama takibi yapılıyor mu? Aydınlatmada belirtiliyor mu?",
+            "Segmentasyon/profilleme yapılıyor mu? Hangi kriterlerle?",
+            "E-posta platformu verileri hangi ülkede tutuyor?",
+            "Eski/etkileşimsiz aboneler siliniyor mu?",
+            "B2B ve B2C gönderim rejimleri ayrıştırılıyor mu? (ETK m.6 istisnası)",
+            "Otomatik akışlar (hoş geldin, sepet hatırlatma) hangi verileri kullanıyor?"
+          ]
+        },
+        {
+          "label": "SMS & WhatsApp",
+          "sorular": [
+            "SMS gönderimi hangi firma üzerinden yapılıyor? İYS uyumlu mu?",
+            "SMS onayları nasıl toplanıyor ve kanıtlanıyor?",
+            "WhatsApp Business API kullanılıyor mu? Onay süreci nasıl?",
+            "WhatsApp verilerinin Meta'ya aktarımı değerlendirildi mi?",
+            "Kişisel telefonlardan müşterilere WhatsApp mesajı atılıyor mu? (yaygın risk)",
+            "Arama kampanyaları (telemarketing) yapılıyor mu? Aranmama talepleri yönetiliyor mu?",
+            "Kısa numara/keyword kampanyaları var mı?",
+            "Bayram/kutlama mesajları hangi listelere gidiyor? Onaylı mı?"
+          ]
+        },
+        {
+          "label": "Pazarlama Araçları",
+          "sorular": [
+            "HubSpot/Marketo gibi otomasyon platformu var mı? Verisi nerede?",
+            "Platformdaki kontak sayısı ve veri alanları neler?",
+            "Form/landing page araçları (Typeform, Unbounce...) kullanılıyor mu?",
+            "Webinar platformları (Zoom Webinar, GoToWebinar...) katılımcı verisi nasıl işliyor?",
+            "Anket araçları (SurveyMonkey, Google Forms...) hangi verileri topluyor?",
+            "URL kısaltıcı/QR kod servisleri tıklama verisi topluyor mu?",
+            "Influencer/ortaklık programlarında kişisel veri paylaşımı var mı?",
+            "Pazarlama araçları arasında otomatik veri senkronizasyonu (Zapier vb.) var mı?",
+            "Ajanslara müşteri/lead listesi paylaşılıyor mu? Sözleşme ve gizlilik hükümleri var mı?",
+            "Basın bültenlerinde/başarı hikâyelerinde müşteri kişi bilgisi kullanılıyor mu? İzinli mi?"
+          ]
+        },
+        {
+          "label": "Etkinlik & Webinar",
+          "sorular": [
+            "Webinar kayıtlarında katılımcı adları/soruları görünüyor mu? Paylaşım öncesi ediliyor mu?",
+            "Etkinlik kayıt platformlarında toplanan veriler sonrasında nasıl kullanılıyor?",
+            "Ödül/çekilişlerde MASAK-Milli Piyango bildirimleri ve veri işleme uyumu sağlanıyor mu?",
+            "Sponsorlarla katılımcı listesi paylaşılıyor mu? Katılımcı onayı var mı?",
+            "Etkinlik uygulamaları (mobil app, networking aracı) kişisel veri işliyor mu?"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "07-Sosyal Medya",
+      "label": "Sosyal Medya",
+      "bolumler": [
+        {
+          "label": "Hesap Yönetimi",
+          "sorular": [
+            "Hangi platformlarda kurumsal hesap var? (Instagram, LinkedIn, YouTube, TikTok, X...)",
+            "Hesapların erişim bilgileri kimde? Ortak parola mı, rol bazlı erişim mi?",
+            "Sosyal medya yönetim aracı (Hootsuite, Buffer...) kullanılıyor mu?",
+            "Ayrılan çalışanların hesap erişimleri kapatılıyor mu?",
+            "Hesaplarda 2FA aktif mi?",
+            "Platform analitiklerinde (takipçi verileri) kişisel veri işleniyor mu?",
+            "Sosyal medya politikası (kurumsal + çalışan kullanımı) var mı?",
+            "Kriz yönetimi/itibar takibi aracı (social listening) kullanılıyor mu?"
+          ]
+        },
+        {
+          "label": "İçerik & Görsel",
+          "sorular": [
+            "Paylaşılan içeriklerde çalışan/müşteri/üçüncü kişi görüntüleri var mı?",
+            "Görsel kullanımı için izin/muvafakat formu alınıyor mu?",
+            "Stok görsel lisansları yönetiliyor mu?",
+            "Müşteri logolarının/isimlerinin kullanımı sözleşmeyle izinli mi?",
+            "Yorum ve mesajlardaki kişisel veriler (şikâyette telefon yazan müşteri) nasıl yönetiliyor?",
+            "İçerik arşivi nerede tutuluyor?",
+            "UGC (kullanıcı içeriği) repost edilirken izin alınıyor mu?",
+            "Çocukların görüntüleri kullanılıyor mu? (kesinlikle veli rızası gerekir)",
+            "Yapay zekâ ile üretilen görsellerde gerçek kişi benzerliği riski değerlendiriliyor mu?",
+            "Eski içeriklerdeki kişilerin silme talepleri nasıl karşılanıyor?"
+          ]
+        },
+        {
+          "label": "Çalışan Görselleri",
+          "sorular": [
+            "Çalışan fotoğraflarının web sitesi/sosyal medyada kullanımı için açık rıza alınıyor mu?",
+            "Rıza geri çekildiğinde içerik kaldırma süreci işliyor mu?",
+            "İşe alım tanıtımlarında (employer branding) çalışan hikâyeleri izinli mi?",
+            "Şirket etkinliklerinde (yılbaşı, piknik) çekilen fotoğrafların paylaşım kuralı var mı?",
+            "Ayrılan çalışanların görselleri yayından kaldırılıyor mu?",
+            "Çalışanların kendi hesaplarından şirket içi görüntü paylaşması düzenlenmiş mi?"
+          ]
+        },
+        {
+          "label": "Etkinlik Çekimleri",
+          "sorular": [
+            "Etkinliklerde fotoğraf/video çekileceği önceden duyuruluyor mu? (aydınlatma)",
+            "Katılımcılara çekim alanı dışında kalma imkânı sunuluyor mu?",
+            "Canlı yayınlarda katılımcı görüntüleri işleniyor mu?",
+            "Çekim yapan ajans/fotoğrafçıyla veri işleme sözleşmesi var mı?",
+            "Ham çekim arşivleri kimde kalıyor? Ne kadar saklanıyor?"
+          ]
+        },
+        {
+          "label": "Ajanslar",
+          "sorular": [
+            "Sosyal medya ajansı var mı? Hangi hesaplara/verilere erişiyor?",
+            "Ajansla NDA ve veri işleme sözleşmesi (m.12) imzalanmış mı?",
+            "Ajans değişiminde erişimler devri/iptali nasıl yapılıyor?",
+            "Ajans alt yüklenici (freelancer) kullanıyor mu? Kontrol ediliyor mu?",
+            "Reklam hesaplarının (Meta Business, Google Ads) sahipliği şirkette mi ajansta mı?",
+            "Ajansın topladığı performans raporlarında kişisel veri var mı?"
+          ]
+        },
+        {
+          "label": "DM & Mesajlaşma",
+          "sorular": [
+            "DM üzerinden müşteri talepleri alınıyor mu? Nasıl kayıt altına alınıyor?",
+            "DM'lerde kimlik/sipariş bilgisi istendiği oluyor mu? Güvenli kanal sunuluyor mu?",
+            "Sosyal medyadan gelen veri sahibi başvuruları (silme talebi) tanınıp işleniyor mu?",
+            "Chatbot/otomatik yanıt DM'lerde kullanılıyor mu?",
+            "Şikâyet platformları (Şikâyetvar vb.) yanıtlarında kişisel veri ifşası kontrol ediliyor mu?"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "08-Muhasebe",
+      "label": "Muhasebe",
+      "bolumler": [
+        {
+          "label": "Fatura & e-Belge",
+          "sorular": [
+            "e-Fatura/e-Arşiv entegratörü hangisi? Sözleşmesi var mı?",
+            "Faturalarda hangi kişisel veriler yer alıyor? (ad, T.C. no, adres)",
+            "Bireysel müşteri faturalarında T.C. kimlik no işleniyor mu? (VUK gereği)",
+            "e-İrsaliye kullanılıyor mu? Teslim alan kişi verileri işleniyor mu?",
+            "Fatura verileri entegratörde ne kadar saklanıyor?",
+            "Kağıt fatura/fiş arşivi var mı? Nerede, nasıl korunuyor?",
+            "Gider pusulası/serbest meslek makbuzunda kişisel veri işleme süreçleri neler?",
+            "Fatura itiraz/iade süreçlerinde ek kişisel veri toplanıyor mu?",
+            "Muhasebe belgeleri VUK gereği 5 yıl / TTK gereği 10 yıl saklama kuralına bağlanmış mı?",
+            "e-Defter beratları ve saklama hizmeti kimden alınıyor?"
+          ]
+        },
+        {
+          "label": "Banka & Ödeme",
+          "sorular": [
+            "Hangi bankalarla çalışılıyor? İnternet bankacılığı yetkilileri kimler?",
+            "Maaş ödeme listeleri bankaya nasıl iletiliyor? (dosya formatı, kanal)",
+            "Müşteri/tedarikçi IBAN bilgileri nerede saklanıyor?",
+            "Sanal POS/ödeme kuruluşu (iyzico, PayTR, Stripe...) kullanılıyor mu? Kart verisi şirkete değiyor mu?",
+            "PCI-DSS kapsaması değerlendirildi mi?",
+            "Çek/senet işlemlerinde kefil ve borçlu verileri nasıl işleniyor?",
+            "Banka ekstrelerinde görünen üçüncü kişi verileri (açıklamadaki isimler) dikkate alınıyor mu?",
+            "Ödeme talimatlarında çift onay (maker-checker) var mı?"
+          ]
+        },
+        {
+          "label": "Bordro Entegrasyon",
+          "sorular": [
+            "Bordro-muhasebe entegrasyonunda maaş verilerine kimler erişiyor?",
+            "SMMM/YMM ile paylaşılan personel verileri neler? Sözleşmesi var mı?",
+            "Muhtasar ve prim hizmet beyannamesi süreçlerinde veri akışı nasıl?",
+            "İcra dosyaları ve maaş haczi yazışmaları nasıl saklanıyor?",
+            "Masraf/harcama beyanlarında (fiş, seyahat) kişisel veri işleniyor mu?",
+            "Harcama yönetim uygulaması kullanılıyor mu? Verisi nerede?"
+          ]
+        },
+        {
+          "label": "Cari & Tedarikçi",
+          "sorular": [
+            "Cari hesap kartlarında gerçek kişi verileri (şahıs firmaları) var mı?",
+            "Tedarikçi yetkililerinin iletişim bilgileri nerede tutuluyor?",
+            "Müşteri risk/limit değerlendirmesinde hangi veriler kullanılıyor?",
+            "Findeks/KKB sorgulaması yapılıyor mu? Hangi dayanakla?",
+            "Tahsilat takibinde (arama, ihtar) işlenen veriler ve kayıtları neler?",
+            "Avukata devredilen alacak dosyalarında hangi veriler paylaşılıyor?",
+            "Mutabakat yazışmaları hangi kanaldan yapılıyor?",
+            "Şahıs şirketi tedarikçilerin T.C. no/vergi no bilgileri korunuyor mu?"
+          ]
+        },
+        {
+          "label": "Vergi & Bildirim",
+          "sorular": [
+            "GİB, SGK, TÜİK gibi kurumlara yapılan bildirimlerde hangi kişisel veriler gidiyor?",
+            "Ba/Bs formlarında gerçek kişi bilgileri bildiriliyor mu?",
+            "Vergi incelemelerinde talep edilen kişisel veriler nasıl paylaşılıyor?",
+            "MASAK yükümlülükleri (şüpheli işlem bildirimi) kapsamında süreç var mı?",
+            "Bağımsız denetim firmasına aktarılan kişisel veriler neler? Sözleşmesi var mı?",
+            "Teşvik/hibe başvurularında personel listeleri paylaşılıyor mu?"
+          ]
+        },
+        {
+          "label": "Arşiv & Saklama",
+          "sorular": [
+            "Muhasebe arşivi (fiziki) nerede? Erişim kontrolü var mı?",
+            "Saklama süresi dolan belgeler imha ediliyor mu? Tutanaklı mı?",
+            "Dış arşiv firması kullanılıyor mu? Sözleşmesi var mı?",
+            "Eski dönem verileri (10+ yıl) hâlâ sistemlerde duruyor mu?",
+            "Tasfiye edilen şirketlere/devirlere ait kişisel veriler ne durumda?"
+          ]
+        },
+        {
+          "label": "Muhasebe Yazılımı",
+          "sorular": [
+            "Muhasebe/ERP yazılımı hangisi? (Logo, Netsis, Mikro, SAP...) Nerede barındırılıyor?",
+            "Yazılım destek firması uzaktan bağlanıyor mu? Sözleşme ve log var mı?",
+            "ERP'de kullanıcı bazlı yetkilendirme ve işlem logu var mı?",
+            "ERP verisi raporlama araçlarına (BI, Excel) aktarılıyor mu? Kontrolü var mı?",
+            "ERP yedekleri BT yedekleme politikasına dahil mi?"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "09-Satın Alma",
+      "label": "Satın Alma",
+      "bolumler": [
+        {
+          "label": "Tedarikçi Yönetimi",
+          "sorular": [
+            "Tedarikçi listesi nerede tutuluyor? Kaç aktif tedarikçi var?",
+            "Tedarikçi kayıt/onboarding sürecinde hangi veriler toplanıyor?",
+            "Tedarikçi değerlendirmesinde kişisel veri (yetkili kişi performansı) işleniyor mu?",
+            "Kişisel veri işleyen tedarikçiler (veri işleyenler) ayrıca işaretleniyor mu?",
+            "Tedarikçi seçiminde veri güvenliği kriterleri soruluyor mu? (anket, denetim)",
+            "Alt yüklenici kullanımı sözleşmelerde düzenleniyor mu?",
+            "Tedarikçi çalışanlarının verileri (saha personeli kimlikleri) işleniyor mu?",
+            "Tek seferlik/küçük tedarikçilerde de sözleşme süreci işletiliyor mu?"
+          ]
+        },
+        {
+          "label": "Sözleşme & NDA/DPA",
+          "sorular": [
+            "Standart tedarikçi sözleşmesinde KVKK maddesi var mı?",
+            "Veri işleyen tedarikçilerle ayrı DPA/veri işleme protokolü imzalanıyor mu?",
+            "NDA'lar tek taraflı mı karşılıklı mı? Standart şablon var mı?",
+            "Mevcut tedarikçilerden kaçıyla DPA imzalı? Eksik listesi var mı?",
+            "Tedarikçinin veri ihlalini bildirme yükümlülüğü sözleşmede var mı?",
+            "Sözleşme sonunda veri iade/silme hükmü var mı?",
+            "Denetim hakkı (audit right) hükümleri var mı?",
+            "Yurt dışı tedarikçilerle aktarım mekanizması (standart sözleşme) kurulmuş mu?",
+            "Sözleşmeler nerede arşivleniyor? Takip sistemi var mı?",
+            "Sözleşme yenileme/fesih tarihleri izleniyor mu?"
+          ]
+        },
+        {
+          "label": "Veri Paylaşımı",
+          "sorular": [
+            "Hangi tedarikçilere düzenli kişisel veri aktarılıyor? Liste çıkarın.",
+            "Veri aktarım yöntemleri neler? (API, SFTP, e-posta, portal)",
+            "E-posta ile tedarikçiye veri gönderiminde şifreleme kullanılıyor mu?",
+            "Tedarikçi portallarına yüklenen dosyalarda kişisel veri var mı?",
+            "Tedarikçinin şirket sistemlerine erişimi var mı? (VPN, hesap)",
+            "Bakım/destek için tedarikçiye verilen erişimler süreli ve loglu mu?",
+            "Tedarikçiden şirkete gelen kişisel veriler (liste, rapor) var mı?",
+            "Tedarikçi değişiminde eski tedarikçideki veriler geri alınıyor/sildiriliyor mu?"
+          ]
+        },
+        {
+          "label": "Kargo & Kurye",
+          "sorular": [
+            "Hangi kargo firmalarıyla çalışılıyor? Sözleşme var mı?",
+            "Kargoya aktarılan veriler neler? (ad, adres, telefon)",
+            "Kargo entegrasyonu API ile mi manuel mi?",
+            "Teslimat bilgileri (imza, fotoğraf) kargo firmasında ne kadar kalıyor?",
+            "Moto kurye/son km teslimat uygulamaları kullanılıyor mu?",
+            "İade süreçlerinde müşteri verisi nasıl işleniyor?"
+          ]
+        },
+        {
+          "label": "Lisans & Bulut Alımı",
+          "sorular": [
+            "Yazılım lisans envanteri var mı? Kim yönetiyor?",
+            "Yeni SaaS/yazılım alımında veri koruma değerlendirmesi (vendor assessment) yapılıyor mu?",
+            "Departmanların BT onayı olmadan satın aldığı araçlar var mı? (gölge BT)",
+            "Deneme sürümü kullanımlarında şirket verisi yükleniyor mu?",
+            "Lisans sözleşmelerinde veri işleme/telemetri hükümleri inceleniyor mu?",
+            "Ücretsiz araçların (free tier) veri politikaları kontrol ediliyor mu?",
+            "Satın alma taleplerinde kişisel veri işleyecek sistemler işaretleniyor mu?",
+            "Donanım alımlarında (ikinci el dahil) veri güvenliği kontrolü var mı?"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "10-Hukuk",
+      "label": "Hukuk",
+      "bolumler": [
+        {
+          "label": "Sözleşme Yönetimi",
+          "sorular": [
+            "Sözleşmeler nerede saklanıyor? (CLM yazılımı, klasör, fiziki)",
+            "Sözleşme takip listesi/veri tabanı var mı? Hangi bilgiler tutuluyor?",
+            "Sözleşmelerdeki gerçek kişi verileri (imza yetkilileri, kefiller) envanterde mi?",
+            "Sözleşme şablonlarında KVKK/veri koruma maddeleri standart mı? Kim güncelliyor?",
+            "İmza süreçleri ıslak mı, e-imza mı, DocuSign benzeri mi?",
+            "Vekâletnameler ve imza sirküleri nasıl arşivleniyor?",
+            "Sona eren sözleşmeler ve ekleri ne kadar saklanıyor?",
+            "Sözleşmelere erişim yetkisi kimlerde?",
+            "Dış hukuk bürolarıyla dosya paylaşımı nasıl yapılıyor? (e-posta, portal)",
+            "Hukuk departmanı yazışmaları için ayrı gizlilik seviyesi tanımlı mı?"
+          ]
+        },
+        {
+          "label": "NDA & DPA",
+          "sorular": [
+            "Şirketin standart NDA şablonu var mı? Karşı taraf NDA'ları kim inceliyor?",
+            "İmzalı NDA'ların kaydı ve süre takibi yapılıyor mu?",
+            "Veri işleme sözleşmesi (DPA) şablonu var mı? (hem veri işleyen hem veri sorumlusu sıfatıyla)",
+            "Müşterilerden gelen DPA taleplerinde standart pozisyon belirli mi?",
+            "Ortak veri sorumluluğu (joint controller) durumları tespit edilmiş mi?",
+            "Yurt dışı aktarım için standart sözleşme/taahhütname süreci tanımlı mı?",
+            "Kurul'a yapılan standart sözleşme bildirimleri kayıt altında mı?",
+            "M&A/yatırım görüşmelerindeki NDA'larda kişisel veri hükümleri var mı?"
+          ]
+        },
+        {
+          "label": "Uyuşmazlık & Dava",
+          "sorular": [
+            "Devam eden davalar var mı? Dava dosyalarında hangi kişisel veriler işleniyor?",
+            "UYAP ve e-Tebligat süreçlerini kim yönetiyor?",
+            "Dava dosyaları (fiziki/dijital) nasıl saklanıyor? Erişim kimde?",
+            "Tanık/bilirkişi bilgileri nasıl işleniyor?",
+            "İş davalarında eski çalışan verileri hangi dayanakla kullanılıyor? (m.5/2-e)",
+            "Delil amaçlı e-posta/log incelemeleri hangi prosedürle yapılıyor?",
+            "Sonuçlanan dava dosyaları ne kadar saklanıyor?",
+            "Sigorta şirketlerine (hukuki koruma) aktarılan dosya verileri var mı?"
+          ]
+        },
+        {
+          "label": "Arabuluculuk & İcra",
+          "sorular": [
+            "Arabuluculuk süreçlerindeki tutanak ve kişisel veriler nasıl saklanıyor?",
+            "İcra takiplerinde borçlu verileri nasıl işleniyor ve paylaşılıyor?",
+            "Alacak tahsili için dış büro/varlık yönetim şirketi kullanılıyor mu?",
+            "Noter işlemlerinde işlenen veriler kayıt altında mı?",
+            "İhtarname süreçlerinde muhatap verileri nasıl yönetiliyor?"
+          ]
+        },
+        {
+          "label": "KVKK Süreçleri",
+          "sorular": [
+            "İlgili kişi başvuruları (m.11/m.13) için kanal ve prosedür tanımlı mı?",
+            "Bugüne kadar gelen başvurular ve yanıtları kayıt altında mı? (30 gün süre takibi)",
+            "Veri ihlali müdahale planında hukukun rolü tanımlı mı?",
+            "Aydınlatma metinleri envanteri (hangi süreç için hangi metin) var mı?",
+            "Açık rıza metinleri ve rıza kayıtları nasıl saklanıyor?",
+            "Saklama ve imha politikası yürürlükte mi? Periyodik imha yapılıyor mu?",
+            "Kurul kararları ve mevzuat değişiklikleri nasıl takip ediliyor?",
+            "Şirketin veri sorumlusu/veri işleyen sıfatları ürün-hizmet bazında netleştirilmiş mi?",
+            "Grup şirketleri için ayrı VERBİS kayıtları gerekli mi? Değerlendirildi mi?"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "11-Yönetim",
+      "label": "Yönetim",
+      "bolumler": [
+        {
+          "label": "YK & Kararlar",
+          "sorular": [
+            "Yönetim kurulu üyelerinin hangi kişisel verileri işleniyor? (kimlik, adres, imza)",
+            "YK karar defterleri ve toplantı tutanakları nerede saklanıyor?",
+            "YK üyelerine ait veriler ticaret sicili dışında kimlerle paylaşılıyor?",
+            "YK iletişimi hangi kanaldan yapılıyor? (kişisel e-posta riski)",
+            "Board portal/karar yönetim yazılımı kullanılıyor mu?",
+            "Yönetici sorumluluk sigortası (D&O) kapsamında sigortacıya veri gidiyor mu?",
+            "Bağımsız YK üyelerinin verileri nasıl yönetiliyor?",
+            "Genel kurul hazirun cetvellerindeki pay sahibi verileri nasıl saklanıyor?"
+          ]
+        },
+        {
+          "label": "Ortaklar & Hisse",
+          "sorular": [
+            "Pay defterindeki ortak bilgileri kimler tarafından görülebiliyor?",
+            "Hissedar sözleşmelerindeki kişisel veriler nasıl korunuyor?",
+            "Kâr payı ödemelerinde ortak banka bilgileri nasıl işleniyor?",
+            "Hisse devirlerinde alıcı/satıcı verileri hangi taraflara gidiyor?",
+            "Çalışan hisse opsiyon planı (ESOP) var mı? Hangi veriler işleniyor?",
+            "Nihai gerçek faydalanıcı bildirimleri (GİB) yapılıyor mu?"
+          ]
+        },
+        {
+          "label": "Yatırımcı & DD",
+          "sorular": [
+            "Yatırım turu süreci var mı/planlanıyor mu? Data room'da kişisel veri paylaşılıyor mu?",
+            "Data room'da çalışan listesi, bordro, sözleşmeler paylaşılırken maskeleme yapılıyor mu?",
+            "Yatırımcılarla NDA imzalanıyor mu?",
+            "Due diligence taleplerinde KVKK filtresi uygulanıyor mu?",
+            "Yatırımcı raporlamalarında (aylık/çeyreklik) kişisel veri gidiyor mu?",
+            "Potansiyel alıcı/yatırımcıya müşteri listesi gösteriliyor mu? Hangi dayanakla?",
+            "M&A senaryosunda veri aktarımı için hukuki değerlendirme yapıldı mı?",
+            "Yabancı yatırımcı varsa veri paylaşımları yurt dışı aktarım rejimine uygun mu?"
+          ]
+        },
+        {
+          "label": "Grup İçi Paylaşım",
+          "sorular": [
+            "Grup şirketleriyle hangi kişisel veriler paylaşılıyor? (İK, müşteri, finans)",
+            "Grup içi paylaşımın hukuki dayanağı belirlenmiş mi? (grup şirketi ayrı veri sorumlusudur)",
+            "Ortak kullanılan sistemlerde (ERP, İK) veri sorumluluğu sınırları net mi?",
+            "Yurt dışı grup şirketine aktarımda m.9 mekanizması (BCR, standart sözleşme) var mı?",
+            "Grup raporlamalarında çalışan/müşteri verileri anonimleştiriliyor mu?",
+            "Grup şirketleri arası personel geçişlerinde özlük verisi devri nasıl yapılıyor?",
+            "Konsolidasyon için mali veri paylaşımında kişisel veri ayıklanıyor mu?"
+          ]
+        },
+        {
+          "label": "Kurumsal Belgeler",
+          "sorular": [
+            "İmza sirküleri ve yetki belgeleri kimlerle paylaşılıyor? (bankalar, tedarikçiler)",
+            "Şirket ana sözleşme değişikliklerinde işlenen kişisel veriler kayıtlı mı?",
+            "Ticaret sicil işlemlerini yürüten dış danışmanla veri paylaşımı sözleşmeli mi?",
+            "Kurumsal kredilerde ortak/yönetici kefaletlerine ait veriler nasıl işleniyor?",
+            "Kamu kurumlarından gelen bilgi/belge taleplerine yanıt prosedürü var mı?",
+            "Şirket değerleme raporlarında kişisel veri kullanılıyor mu?"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "12-Güvenlik",
+      "label": "Güvenlik",
+      "bolumler": [
+        {
+          "label": "Kamera/CCTV",
+          "sorular": [
+            "Kaç kamera var? Yerleşim planı (kapsama alanları) mevcut mu?",
+            "Kameralar hangi alanları görüyor? (ortak alan, çalışma alanı, dinlenme - yasak alan kontrolü)",
+            "Kamera kayıtları ne kadar süre saklanıyor? Otomatik siliniyor mu?",
+            "Kayıtlara kimler erişebiliyor? Erişim loglanıyor mu?",
+            "Kamera aydınlatma metni ve uyarı levhaları asılı mı? (katmanlı aydınlatma)",
+            "Kayıt sistemi (NVR/DVR) nerede? İnternete açık mı? Parolası değiştirilmiş mi?",
+            "Bulut tabanlı kamera sistemi mi? Görüntüler yurt dışına gidiyor mu?",
+            "Ses kaydı alınıyor mu? (orantılılık sorunu - kural olarak alınmamalı)",
+            "Kayıt paylaşımı taleplerinde (kolluk, mahkeme, çalışan) prosedür var mı?",
+            "Kameraların bakımını yapan firma kayıtlara erişebiliyor mu? Sözleşmesi var mı?",
+            "Yüz tanıma veya plaka tanıma (ANPR) özelliği kullanılıyor mu? (m.6 riski)",
+            "Kamera görüntüleri VERBİS'te 'fiziksel mekân güvenliği' kategorisinde beyan edilmiş mi?"
+          ]
+        },
+        {
+          "label": "Kartlı Geçiş",
+          "sorular": [
+            "Kartlı geçiş/turnike sistemi hangi firmadan? Veriler nerede tutuluyor?",
+            "Geçiş kayıtları ne kadar saklanıyor?",
+            "Geçiş verileri mesai kontrolü için de kullanılıyor mu? (amaç bağı - aydınlatmada belirtilmeli)",
+            "Biyometrik geçiş (parmak izi, yüz, avuç içi) var mı? Açık rıza alınmış mı? Alternatif sunuluyor mu?",
+            "Kart basımında fotoğraf kullanılıyor mu?",
+            "Kayıp kart prosedürü var mı?",
+            "Geçiş sistemine BT mi güvenlik mi yönetici? Yetki listesi var mı?",
+            "Otopark plaka kayıtları tutuluyor mu?"
+          ]
+        },
+        {
+          "label": "Ziyaretçi",
+          "sorular": [
+            "Ziyaretçi kaydı nasıl alınıyor? (defter, yazılım, tablet)",
+            "Ziyaretçilerden hangi bilgiler isteniyor? (ad, T.C. no, firma, plaka - minimizasyon)",
+            "Ziyaretçi defteri herkesçe görülebiliyor mu? (önceki ziyaretçilerin verileri riski)",
+            "Ziyaretçilere aydınlatma yapılıyor mu? (tabela, form)",
+            "Ziyaretçi kayıtları ne kadar saklanıyor?",
+            "Kimlik fotokopisi/kimlik bırakma uygulaması var mı? (riskli uygulama)",
+            "Ziyaretçi kartları ve refakat kuralları uygulanıyor mu?",
+            "Ziyaretçi Wi-Fi erişiminde hangi veriler toplanıyor? (5651 uyumu)",
+            "Toplu ziyaretlerde (öğrenci gezisi vb.) katılımcı listeleri nasıl işleniyor?",
+            "Kurye/dağıtıcı girişleri de kayıt altına alınıyor mu?"
+          ]
+        },
+        {
+          "label": "Güvenlik Firması",
+          "sorular": [
+            "Güvenlik hizmeti dış firmadan mı? Sözleşmesinde KVKK hükümleri var mı?",
+            "Güvenlik görevlileri hangi kişisel verilere erişiyor? (kamera, ziyaretçi, geçiş)",
+            "Güvenlik personeline KVKK eğitimi verilmiş mi?",
+            "Olay tutanaklarında (hırsızlık, kavga) kişisel veriler nasıl işleniyor?",
+            "Güvenlik firması değişiminde kayıtların devri/imhası nasıl yapılıyor?",
+            "Devriye/kontrol turlarında mobil uygulama kullanılıyor mu? Konum verisi?"
+          ]
+        },
+        {
+          "label": "Kimlik Kontrol",
+          "sorular": [
+            "Araç ve eşya kontrollerinde kişisel veri işleniyor mu?",
+            "X-ray/üst araması gibi uygulamalar var mı? Hukuki dayanağı?",
+            "Kimlik doğrulamada NFC/QR uygulamaları kullanılıyor mu?",
+            "Kargo/posta kabul kayıtlarında gönderici-alıcı verileri tutuluyor mu?"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "13-Temizlik",
+      "label": "Temizlik",
+      "bolumler": [
+        {
+          "label": "Firma & Sözleşme",
+          "sorular": [
+            "Temizlik hizmeti dış firmadan mı, bordrolu mu?",
+            "Temizlik firmasıyla sözleşmede gizlilik/KVKK hükümleri var mı?",
+            "Temizlik personeli listesi ve SGK bilgileri şirkete iletiliyor mu? (alt işveren yükümlülükleri)",
+            "Personel değişimleri şirkete bildiriliyor mu?",
+            "Temizlik personeline giriş kartı veriliyor mu? Geçiş kayıtları tutuluyor mu?",
+            "Firma değişiminde erişim/anahtar devri prosedürü var mı?",
+            "Temizlik personelinin özlük verilerini kim işliyor? (asıl işveren-alt işveren ilişkisi)",
+            "Mesai dışı temizlik yapılıyorsa gözetim nasıl sağlanıyor?"
+          ]
+        },
+        {
+          "label": "Erişim Alanları",
+          "sorular": [
+            "Temizlik personeli hangi alanlara erişebiliyor? Kısıtlı alan listesi var mı?",
+            "Masalarda/yazıcılarda kalan belgeler riski değerlendirildi mi? (temiz masa politikası)",
+            "Çöpe atılan belgeler nasıl imha ediliyor? Kağıt imha makinesi/konteyner var mı?",
+            "Kilitli dolap/oda temizliği hangi kurala tabi?",
+            "Anahtar/kart yönetimi (hangi personelde hangi erişim) kayıtlı mı?",
+            "Yönetici ofisleri ve İK/muhasebe odaları için özel kural var mı?",
+            "Temizlik saatlerinde refakat uygulaması var mı?",
+            "Toplantı odalarındaki yazı tahtası/flipchart içerikleri siliniyor mu?"
+          ]
+        },
+        {
+          "label": "Arşiv & Sunucu",
+          "sorular": [
+            "Arşiv odasına temizlik personeli giriyor mu? Hangi koşullarda?",
+            "Sunucu odası temizliği kimin gözetiminde yapılıyor?",
+            "Arşiv ve sunucu odası anahtarları kimde?",
+            "İmha edilecek belge kutuları temizlik sürecinden ayrışıyor mu?",
+            "Dış imha firması belge topluyor mu? Sertifikalı imha yapılıyor mu?"
+          ]
+        },
+        {
+          "label": "NDA & Eğitim",
+          "sorular": [
+            "Temizlik personeliyle bireysel gizlilik taahhüdü imzalanıyor mu?",
+            "Temizlik personeline temel veri güvenliği bilgilendirmesi yapılıyor mu?",
+            "Diğer destek hizmetleri (çay ocağı, bahçıvan, teknik servis) için de aynı kurallar geçerli mi?",
+            "Yemekhane hizmetlisi personel listelerine (alerji, diyet) erişiyor mu?"
+          ]
+        }
+      ]
+    }
+  ],
+  "vocab": {
+    "kisiGrubu": [
+      "Çalışan",
+      "Çalışan Adayı",
+      "Stajyer",
+      "Eski Çalışan",
+      "Çalışan Yakını",
+      "Müşteri (Ürün/Hizmet Alan)",
+      "Potansiyel Müşteri",
+      "Müşteri Yetkilisi/Çalışanı",
+      "Tedarikçi Yetkilisi/Çalışanı",
+      "Ziyaretçi",
+      "Web Sitesi Ziyaretçisi",
+      "Kullanıcı (Ürün/Uygulama)",
+      "Hissedar/Ortak",
+      "Yönetim Kurulu Üyesi",
+      "Karma / Birden Fazla Grup",
+      "Diğer",
+      "Bilinmiyor"
+    ],
+    "kaynak": [
+      "İlgili kişinin kendisi",
+      "Başka veri sorumlusu",
+      "Kamu kurumu",
+      "Otomatik sistem / log",
+      "Çerez / izleme teknolojisi",
+      "Üçüncü taraf platform",
+      "Karma / Birden Fazla",
+      "Bilinmiyor"
+    ],
+    "yurtdisi": [
+      "Evet",
+      "Hayır",
+      "Muhtemel (bulut)",
+      "Bilinmiyor"
+    ],
+    "hukukiSebep": [
+      "5/1 Açık Rıza (GDPR 6/1-a)",
+      "5/2-a Kanunlarda Öngörülme (GDPR 6/1-c)",
+      "5/2-b Fiili İmkânsızlık (GDPR 6/1-d)",
+      "5/2-c Sözleşmenin Kurulması/İfası (GDPR 6/1-b)",
+      "5/2-ç Hukuki Yükümlülük (GDPR 6/1-c)",
+      "5/2-d İlgili Kişinin Alenileştirmesi",
+      "5/2-e Hakkın Tesisi/Kullanılması/Korunması (GDPR 6/1-f)",
+      "5/2-f Meşru Menfaat (GDPR 6/1-f)",
+      "m.6 Özel Nitelikli Veri Şartı (GDPR art.9)",
+      "Birden Fazla Sebep (nota yazın)",
+      "Belirlenmedi / Bilinmiyor"
+    ]
+  }
+}

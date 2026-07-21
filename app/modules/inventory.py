@@ -9,6 +9,7 @@ from fastapi.responses import Response
 from ..auth.identity import Identity, get_current_identity
 from ..grounding_options import grounding_options
 from ..inventory_template import build_template_xlsx
+from ..survey_schema import load_survey_schema
 from ..workbook_template import build_workbook_template_xlsx
 
 router = APIRouter(prefix="/api", tags=["inventory"])
@@ -31,3 +32,8 @@ def workbook_template() -> Response:
 @router.get("/grounding/options")
 def options(_: Identity = Depends(get_current_identity)) -> dict:
     return grounding_options()
+
+
+@router.get("/inventory/survey-schema")
+def survey_schema(_: Identity = Depends(get_current_identity)) -> dict:
+    return load_survey_schema()
