@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from legal_core.aggregate_sections import Section, _merge_dedup
+from legal_core.canonical import Canonicalizer
 
 ENRICHABLE = ["kategoriler", "veri_turleri", "amaclar", "hukuki_sebepler", "saklama_sureleri"]
 
@@ -28,25 +29,65 @@ class EnrichedSection:
     oneriler: dict[str, list[str]] = field(default_factory=dict)
 
 
-def enrich_sections(sections: list[Section], sector: str, repo) -> list[EnrichedSection]:
+def enrich_sections(
+    sections: list[Section],
+    sector: str,
+    repo,
+    canonicalizer: Canonicalizer | None = None,
+) -> list[EnrichedSection]:
     result: list[EnrichedSection] = []
     for section in sections:
-        candidates = []
-        for kisi_grubu in section.kisi_gruplari:
-            candidates.extend(repo.by_sector_and_group(sector, kisi_grubu))
+        if canonicalizer is None:
+            candidates = []
+            for kisi_grubu in section.kisi_gruplari:
+                candidates.extend(repo.by_sector_and_group(sector, kisi_grubu))
 
-        if section.kategoriler:
-            target_categories = set(section.kategoriler)
-            candidates = [
-                c for c in candidates if target_categories & set(c.kategoriler)
+            if section.kategoriler:
+                target_categories = set(section.kategoriler)
+                candidates = [
+                    c for c in candidates if target_categories & set(c.kategoriler)
+                ]
+            precise = candidates
+            loose = candidates
+        else:
+            # Kanonik kisi grubu ile GEVSEK aday havuzu (tam-string varyantlarini da kapsar).
+            target_kg = {
+                canonicalizer.canonicalize(kg, "kisi_gruplari")
+                for kg in section.kisi_gruplari
+            }
+            all_g = repo.by_sector_and_group(sector, None)
+            loose = [
+                c
+                for c in all_g
+                if canonicalizer.canonicalize(c.kisi_grubu, "kisi_gruplari") in target_kg
             ]
+
+            # Kanonik kategori kesisimi ile HASSAS aday havuzu.
+            if section.kategoriler:
+                target_cat = {
+                    canonicalizer.canonicalize(k, "kategoriler")
+                    for k in section.kategoriler
+                }
+                precise = [
+                    c
+                    for c in loose
+                    if target_cat
+                    & {canonicalizer.canonicalize(k, "kategoriler") for k in c.kategoriler}
+                ]
+            else:
+                precise = loose
 
         oneriler: dict[str, list[str]] = {}
         for fieldname in ENRICHABLE:
             if getattr(section, fieldname):
                 continue
-            merged = _merge_dedup(*(getattr(c, fieldname) for c in candidates))
+            merged = _merge_dedup(*(getattr(c, fieldname) for c in precise))
+            if not merged:
+                # Hassas kesisim bos birakti; gevsek havuzdan doldur (uydurma yok, ham grounding).
+                merged = _merge_dedup(*(getattr(c, fieldname) for c in loose))
             if merged:
+                if canonicalizer is not None:
+                    merged = canonicalizer.canonicalize_list(merged, fieldname)
                 oneriler[fieldname] = merged
 
         result.append(

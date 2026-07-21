@@ -1,6 +1,7 @@
 import unicodedata
 
 from legal_core.aggregate_sections import Section, aggregate_sections
+from legal_core.canonical import Canonicalizer
 from legal_core.models import ProcessRecord
 
 
@@ -141,3 +142,66 @@ def test_aggregate_sections_target_group_nfc_trim_no_casefold():
     assert len(aggregate_sections(records, [decomposed_target])) == 1
     # case-folding uygulanmamali: farkli case eslesmemeli
     assert aggregate_sections(records, ["çalışan"]) == []
+
+
+def _canonicalizer():
+    return Canonicalizer(
+        {
+            "veri_turleri": {"canonical": ["Ad-soyad"], "synonyms": {}},
+            "kategoriler": {"canonical": ["Kimlik Bilgisi"], "synonyms": {}},
+        }
+    )
+
+
+def test_aggregate_sections_with_canonicalizer_canonicalizes_output():
+    records = [
+        _record(
+            is_sureci="Ise Giris Islemleri",
+            kisi_grubu="Calisan",
+            kategoriler=["Kimlik Bilgisi"],
+            veri_turleri=["AD-SOYAD"],
+        ),
+        _record(
+            is_sureci="Ise Giris Islemleri",
+            kisi_grubu="Calisan",
+            kategoriler=["kimlik bilgisi"],
+            veri_turleri=["ad-soyad"],
+        ),
+    ]
+
+    result = aggregate_sections(records, ["Calisan"], canonicalizer=_canonicalizer())
+
+    assert len(result) == 1
+    assert result[0].veri_turleri == ["Ad-soyad"]
+    assert result[0].kategoriler == ["Kimlik Bilgisi"]
+
+
+def test_aggregate_sections_without_canonicalizer_keeps_raw_values():
+    records = [
+        _record(
+            is_sureci="Ise Giris Islemleri",
+            kisi_grubu="Calisan",
+            kategoriler=["Kimlik Bilgisi"],
+            veri_turleri=["AD-SOYAD"],
+        ),
+    ]
+
+    result = aggregate_sections(records, ["Calisan"])
+
+    assert result[0].veri_turleri == ["AD-SOYAD"]
+    assert result[0].kategoriler == ["Kimlik Bilgisi"]
+
+
+def test_aggregate_sections_with_canonicalizer_unknown_value_stays_raw():
+    records = [
+        _record(
+            is_sureci="Ise Giris Islemleri",
+            kisi_grubu="Calisan",
+            kategoriler=["Kimlik Bilgisi"],
+            veri_turleri=["Bilinmeyen Deger XYZ"],
+        ),
+    ]
+
+    result = aggregate_sections(records, ["Calisan"], canonicalizer=_canonicalizer())
+
+    assert result[0].veri_turleri == ["Bilinmeyen Deger XYZ"]

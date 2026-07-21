@@ -71,6 +71,29 @@ def test_prepare_eslesen_envanter_200(client_fresh):
     assert "oneriler" in s
 
 
+def test_prepare_gurultulu_veri_turu_kanoniklesir(client_fresh):
+    """veri_turleri'nde gurultulu varyant ('AD-SOYAD') gercek kanonik forma donmeli.
+
+    data/canonical/veri_turleri.json'da kanonik deger "Ad-soyad"; envanterdeki
+    ham deger buyuk harfli ama norm-exact eslesir (norm("AD-SOYAD")==norm("Ad-soyad")).
+    """
+    cid = _bootstrap_client(client_fresh)
+    _put_inventory(
+        client_fresh,
+        cid,
+        [
+            {
+                "departman": "IK", "is_sureci": "Ozluk", "kisi_grubu": "Calisan",
+                "kategoriler": ["Kimlik"], "veri_turleri": ["AD-SOYAD"],
+            }
+        ],
+    )
+    r = client_fresh.post(f"/api/clients/{cid}/aydinlatma/prepare", json={"targetGroups": ["Calisan"]})
+    assert r.status_code == 200, r.text
+    s = r.json()["sections"][0]
+    assert s["veriTurleri"] == ["Ad-soyad"]
+
+
 # ---- generate (SSE) — dogrudan cagri (Depends cozulmez) ----------------
 
 def _managed_billing_settings():
