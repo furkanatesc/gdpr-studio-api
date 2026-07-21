@@ -24,10 +24,14 @@ from legal_core.models import ClientProfile, DocType
 from legal_core.provider import AnthropicProvider
 
 from .. import idempotency
-from ..aydinlatma_enrich import EnrichedSection, enrich_sections
 from ..auth.identity import Identity, get_current_identity
 from ..auth.tenant_session import tenant_session
-from ..billing.quota import enforce_generation_quota, reserve_generation_usage, settle_generation_usage
+from ..aydinlatma_enrich import EnrichedSection, enrich_sections
+from ..billing.quota import (
+    enforce_generation_quota,
+    reserve_generation_usage,
+    settle_generation_usage,
+)
 from ..config import get_settings
 from ..docx_export import render_docx
 from ..observability import capture_exception

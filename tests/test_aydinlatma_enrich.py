@@ -1,7 +1,6 @@
+from app.aydinlatma_enrich import EnrichedSection, enrich_sections
 from legal_core.adapters import DictProcessRepository
 from legal_core.aggregate_sections import Section
-
-from app.aydinlatma_enrich import EnrichedSection, enrich_sections
 
 
 def _process(sector="Perakende", kisi_grubu="Calisan", kategoriler=None, **data):

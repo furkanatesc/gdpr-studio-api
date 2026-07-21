@@ -73,8 +73,7 @@ class FakeStreamProvider:
 
     def stream(self, prompt, *, max_tokens=8000):
         self.seen_prompt = prompt
-        for chunk in self.chunks:
-            yield chunk
+        yield from self.chunks
         self.last_result = ProviderResult(
             text="", model=self.model,
             input_tokens=self._input_tokens, output_tokens=self._output_tokens,
