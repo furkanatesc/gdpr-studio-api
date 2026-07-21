@@ -9,7 +9,9 @@ import uuid
 import zipfile
 
 import app.config as config_module
+import app.idempotency as idem
 import app.modules.aydinlatma as aydmod
+import app.redis_client as rc
 from app.auth.identity import Identity
 from app.models import GeneratedDocument
 from app.repositories import ClientRepository
@@ -124,6 +126,65 @@ def test_generate_musvekkil_yok_404(db_session, monkeypatch):
         assert e.status_code == 404
     else:
         raise AssertionError("404 bekleniyordu")
+
+
+class _FakeRedis:
+    """set(nx, ex) + delete destekleyen minimum sahte Redis (TTL simüle edilmez)."""
+
+    def __init__(self) -> None:
+        self.store: dict[str, str] = {}
+
+    def set(self, key: str, value: str, nx: bool = False, ex: int | None = None):
+        if nx and key in self.store:
+            return None
+        self.store[key] = value
+        return True
+
+    def delete(self, key: str) -> int:
+        return 1 if self.store.pop(key, None) is not None else 0
+
+    def ping(self) -> bool:
+        return True
+
+
+def _use_fake_redis(monkeypatch) -> _FakeRedis:
+    fake = _FakeRedis()
+    monkeypatch.setattr(idem, "get_redis", lambda: fake)
+    monkeypatch.setattr(rc, "get_redis", lambda: fake)
+    return fake
+
+
+def test_generate_gecersiz_client_404_idempotency_kilidi_almaz(client, db_session, monkeypatch):
+    """404 (sahiplik), idempotency claim'inden ÖNCE olmalı: kilit hiç alınmamamış olmalı.
+
+    Geçersiz client_id + bir Idempotency-Key ile 404 alan istek kilidi almamalı; aynı
+    anahtarla ARDINDAN gelen GEÇERLİ client_id isteği sahte 409 almamalı.
+    """
+    config_module._settings = config_module.Settings(
+        _env_file=None,
+        managed_anthropic_api_key="sk-managed-test",
+        allowed_origins="http://localhost:3000",
+        redis_url="",
+    )
+    _use_fake_redis(monkeypatch)
+    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream", _fake_stream)
+
+    cid = _make_client(db_session)
+    body = {"sections": [{"isSureci": "Ozluk", "kategoriler": ["Kimlik"]}]}
+    headers = {"Idempotency-Key": "aydinlatma-404-key"}
+
+    r1 = client.post(
+        "/api/clients/00000000-0000-0000-0000-000000000099/aydinlatma/generate",
+        json=body,
+        headers=headers,
+    )
+    assert r1.status_code == 404
+
+    with client.stream(
+        "POST", f"/api/clients/{cid}/aydinlatma/generate", json=body, headers=headers
+    ) as r2:
+        assert r2.status_code != 409
+        "".join(r2.iter_text())
 
 
 def test_generate_olay_sirasi_ve_uyum_kaydi(db_session, monkeypatch):

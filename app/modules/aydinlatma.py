@@ -163,13 +163,16 @@ def generate(
 ) -> StreamingResponse:
     """Onaylı envanter bölümlerinden Aydınlatma Metni akışı (SSE)."""
     settings = get_settings()
-    api_key = _resolve_api_key(x_anthropic_key)
-    _claim_idempotency(identity, idempotency_key)
 
-    # Sahiplik: stream başlamadan (gövde okunurken) — RLS "commit ÖNCESİ oku".
+    # Sahiplik önce: 404 idempotency claim'inden ÖNCE — aksi halde geçersiz client_id +
+    # bir Idempotency-Key ile gelen istek kilidi alır ama hiç bırakmaz (404 generator
+    # dışında fırlar), sonraki geçerli deneme sahte 409 alır.
     client = ClientRepository(session).get(identity.org_id, client_id)
     if client is None:
         raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
+
+    api_key = _resolve_api_key(x_anthropic_key)
+    _claim_idempotency(identity, idempotency_key)
 
     profile = _client_profile(client)
     boilerplate = load_boilerplate()
