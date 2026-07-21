@@ -2407,6 +2407,25 @@
         ]
       }
     },
+    "/api/inventory/workbook-template": {
+      "get": {
+        "operationId": "workbook_template_api_inventory_workbook_template_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Workbook Template",
+        "tags": [
+          "inventory"
+        ]
+      }
+    },
     "/api/invitations": {
       "get": {
         "operationId": "list_invitations_api_invitations_get",
