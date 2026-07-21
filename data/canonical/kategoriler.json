@@ -40,6 +40,8 @@
   "synonyms": {
     "görsel ve işitsel kayitlar": "Görsel ve İşitsel Kayıtlar",
     "sağlik bilgileri": "Sağlık Bilgileri",
-    "çalişan işlem": "Çalışan İşlem"
+    "çalişan işlem": "Çalışan İşlem",
+    "çalişan aday işlem": "Çalışan Adayı İşlem",
+    "fiziksel mekan güvenliği": "Fiziksel Mekân Güvenliği"
   }
 }

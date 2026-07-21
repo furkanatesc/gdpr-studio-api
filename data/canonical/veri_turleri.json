@@ -134,6 +134,18 @@
   "synonyms": {
     "t.c. kimlik no": "T.C. kimlik no",
     "ip adresi": "IP adresi",
-    "ad-soyad": "Ad-soyad"
+    "ad-soyad": "Ad-soyad",
+    "işlemtarihi": "İşlem tarihi",
+    "işlem tariihi": "İşlem tarihi",
+    "cinsiyeti": "Cinsiyet",
+    "e- posta": "E-posta",
+    "mail adresi": "E-posta",
+    "vergi kimlik numarasi": "Vergi Kimlik Numarası (VKN)",
+    "vkn": "Vergi Kimlik Numarası (VKN)",
+    "mesaj içeriği": "Mesaj içerikleri",
+    "telefon numarasi (mobil)": "Telefon numarası",
+    "engel durumu": "Engellilik durumu",
+    "tckn": "T.C. kimlik no",
+    "iban": "Banka hesap / IBAN bilgileri"
   }
 }
