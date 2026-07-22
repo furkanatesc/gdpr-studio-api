@@ -80,6 +80,26 @@ def test_split_cell_multi():
     assert split_cell("") == []
 
 
+def test_parse_worksheet_cell_after_self_closing_empty_not_swallowed():
+    """Bos (self-closing) hucreyi izleyen dolu hucre yutulmamali. PROGSA kiyas Bulgu 1
+    kok nedeni: <c r='Q36' s='12'/> ardindan gelen <c r='R36' t='s'><v>..</v></c>
+    (amac hucresi) eski regexte ilk alternatif tarafindan yutuluyordu."""
+    shared = ["AMAC-DEGERI"]
+    xml = '<row r="36"><c r="Q36" s="12"/><c r="R36" s="11" t="s"><v>0</v></c></row>'
+    rows = parse_worksheet(xml, shared)
+    assert len(rows) == 1
+    row = rows[0]
+    assert row[16] == ""  # Q (bos)
+    assert row[17] == "AMAC-DEGERI"  # R (dolu, yutulmamali)
+
+
+def test_parse_worksheet_normal_cells_unaffected():
+    shared = ["Kimlik", "Ad"]
+    xml = '<row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c></row>'
+    rows = parse_worksheet(xml, shared)
+    assert rows == [["Kimlik", "Ad"]]
+
+
 def test_row_to_record_maps_headers():
     header = ["Kişisel Veri Kategorisi", "Veri Türü", "Azami Süre (Saklama)", "Hukuki Sebep"]
     cells = ["Kimlik", "Ad, Soyad", "10 yıl (VUK)", "5/2ç"]

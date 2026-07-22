@@ -32,7 +32,10 @@ def parse_worksheet(xml: str, shared: list[str]) -> list[list[str]]:
     rows: list[list[str]] = []
     for r in re.findall(r"<row[^>]*>(.*?)</row>", xml, re.S):
         cells: dict[int, str] = {}
-        for c in re.findall(r"<c\b[^>]*>.*?</c>|<c\b[^>]*/>", r, re.S):
+        # Self-closing (boş) hücre alternatifi ÖNCE denenmeli: aksi halde `<c .../>`
+        # açılış etiketi sanılıp `.*?</c>` bir sonraki dolu hücreyi yutar (PROGSA kıyas
+        # Bulgu 1: boş Ülke hücresini izleyen amaç hücresi kayboluyordu).
+        for c in re.findall(r"<c\b[^>]*/>|<c\b[^>]*>.*?</c>", r, re.S):
             ref_m = re.search(r'r="([A-Z]+\d+)"', c)
             col = _col_index(ref_m.group(1)) if ref_m else len(cells)
             t_m = re.search(r't="([^"]+)"', c)
