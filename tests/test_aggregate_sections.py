@@ -70,9 +70,9 @@ def test_aggregate_sections_filters_groups_and_merges():
 
     result = aggregate_sections(records, ["Calisan", "Calisan Adayi"])
 
-    # Bolum etiketi = alt_surec (yoksa is_sureci). Ilk iki kayit ayni (is_sureci, alt_surec)
-    # -> tek bolum; Bordro farkli alt_surec -> ayri bolum.
-    assert [s.is_sureci for s in result] == ["Kimlik teyidi", "Ucret hesaplama"]
+    # 2 distinct is_sureci (Ise Giris + Bordro) -> is_sureci'ye gore gruplanir (alt_surec'e
+    # bolunmez); etiket = is_sureci.
+    assert [s.is_sureci for s in result] == ["Ise Giris Islemleri", "Bordro Islemleri"]
 
     first = result[0]
     assert isinstance(first, Section)
@@ -86,14 +86,14 @@ def test_aggregate_sections_filters_groups_and_merges():
     assert first.toplama == []
 
     second = result[1]
-    assert second.is_sureci == "Ucret hesaplama"
+    assert second.is_sureci == "Bordro Islemleri"
     assert second.kisi_gruplari == ["Calisan"]
     assert second.kategoriler == ["Finans"]
 
 
-def test_aggregate_sections_splits_by_alt_surec_under_same_is_sureci():
-    """PROGSA kiyas Bulgu 2: ayni is_sureci altindaki farkli alt_surec'ler AYRI bolum olur
-    (etiket = alt_surec). Onceki davranis hepsini tek is_sureci bloguna eritiyordu."""
+def test_aggregate_sections_splits_by_alt_surec_when_single_is_sureci():
+    """Akilli gruplama: hedef grup TEK is_sureci'ye sahipse (PROGSA gibi jenerik
+    "Uyelik Islemleri") alt_surec'e bolunur, etiket = alt_surec."""
     records = [
         _record(is_sureci="Uyelik Islemleri", alt_surec="Uye Kayitlari", kisi_grubu="Uye",
                 kategoriler=["Kimlik"], amaclar=["Sozlesme"]),
@@ -104,6 +104,21 @@ def test_aggregate_sections_splits_by_alt_surec_under_same_is_sureci():
     assert [s.is_sureci for s in result] == ["Uye Kayitlari", "Odeme Alinmasi"]
     assert result[0].kategoriler == ["Kimlik"]
     assert result[1].kategoriler == ["Finans"]
+
+
+def test_aggregate_sections_groups_by_is_sureci_when_multiple_is_sureci():
+    """Akilli gruplama: birden fazla is_sureci varsa alt_surec'e BOLUNMEZ (belge patlamaz).
+    Her is_sureci tek bolum; ayni is_sureci altindaki farkli alt_surec'ler birlesir."""
+    records = [
+        _record(is_sureci="Ise Alim", alt_surec="Basvuru", kisi_grubu="Calisan", kategoriler=["Kimlik"]),
+        _record(is_sureci="Ise Alim", alt_surec="Mulakat", kisi_grubu="Calisan", kategoriler=["Iletisim"]),
+        _record(is_sureci="Bordro", alt_surec="Maas Hesabi", kisi_grubu="Calisan", kategoriler=["Finans"]),
+        _record(is_sureci="Bordro", alt_surec="Odeme", kisi_grubu="Calisan", kategoriler=["Finans"]),
+    ]
+    result = aggregate_sections(records, ["Calisan"])
+    # 2 distinct is_sureci -> 2 bolum (4 alt_surec'e patlamaz), etiket = is_sureci
+    assert [s.is_sureci for s in result] == ["Ise Alim", "Bordro"]
+    assert result[0].kategoriler == ["Kimlik", "Iletisim"]
 
 
 def test_aggregate_sections_label_falls_back_to_is_sureci_when_alt_empty():
