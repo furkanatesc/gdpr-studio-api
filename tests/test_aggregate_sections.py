@@ -49,6 +49,7 @@ def test_aggregate_sections_filters_groups_and_merges():
         ),
         _record(
             is_sureci="Bordro Islemleri",
+            alt_surec="Ucret hesaplama",
             kisi_grubu="Calisan",
             kategoriler=["Finans"],
             veri_turleri=["Maas"],
@@ -69,7 +70,9 @@ def test_aggregate_sections_filters_groups_and_merges():
 
     result = aggregate_sections(records, ["Calisan", "Calisan Adayi"])
 
-    assert [s.is_sureci for s in result] == ["Ise Giris Islemleri", "Bordro Islemleri"]
+    # Bolum etiketi = alt_surec (yoksa is_sureci). Ilk iki kayit ayni (is_sureci, alt_surec)
+    # -> tek bolum; Bordro farkli alt_surec -> ayri bolum.
+    assert [s.is_sureci for s in result] == ["Kimlik teyidi", "Ucret hesaplama"]
 
     first = result[0]
     assert isinstance(first, Section)
@@ -83,9 +86,34 @@ def test_aggregate_sections_filters_groups_and_merges():
     assert first.toplama == []
 
     second = result[1]
-    assert second.is_sureci == "Bordro Islemleri"
+    assert second.is_sureci == "Ucret hesaplama"
     assert second.kisi_gruplari == ["Calisan"]
     assert second.kategoriler == ["Finans"]
+
+
+def test_aggregate_sections_splits_by_alt_surec_under_same_is_sureci():
+    """PROGSA kiyas Bulgu 2: ayni is_sureci altindaki farkli alt_surec'ler AYRI bolum olur
+    (etiket = alt_surec). Onceki davranis hepsini tek is_sureci bloguna eritiyordu."""
+    records = [
+        _record(is_sureci="Uyelik Islemleri", alt_surec="Uye Kayitlari", kisi_grubu="Uye",
+                kategoriler=["Kimlik"], amaclar=["Sozlesme"]),
+        _record(is_sureci="Uyelik Islemleri", alt_surec="Odeme Alinmasi", kisi_grubu="Uye",
+                kategoriler=["Finans"], amaclar=["Tahsilat"]),
+    ]
+    result = aggregate_sections(records, ["Uye"])
+    assert [s.is_sureci for s in result] == ["Uye Kayitlari", "Odeme Alinmasi"]
+    assert result[0].kategoriler == ["Kimlik"]
+    assert result[1].kategoriler == ["Finans"]
+
+
+def test_aggregate_sections_label_falls_back_to_is_sureci_when_alt_empty():
+    records = [
+        _record(is_sureci="Ortak Surec", alt_surec="", kisi_grubu="Calisan", kategoriler=["Kimlik"]),
+        _record(is_sureci="Ortak Surec", alt_surec="", kisi_grubu="Musteri", kategoriler=["Iletisim"]),
+    ]
+    result = aggregate_sections(records, ["Calisan", "Musteri"])
+    assert len(result) == 1
+    assert result[0].is_sureci == "Ortak Surec"
 
 
 def test_aggregate_sections_merges_dedup_aktarim_toplama_from_records():
@@ -145,15 +173,15 @@ def test_aggregate_sections_nfc_dedup_and_order():
 
 def test_aggregate_sections_merges_multiple_person_groups_into_one_section():
     records = [
-        _record(is_sureci="Ortak Surec", kisi_grubu="Calisan", kategoriler=["Kimlik"]),
-        _record(is_sureci="Ortak Surec", kisi_grubu="Musteri", kategoriler=["Iletisim"]),
+        _record(is_sureci="Ortak Surec", alt_surec="Ortak Alt", kisi_grubu="Calisan", kategoriler=["Kimlik"]),
+        _record(is_sureci="Ortak Surec", alt_surec="Ortak Alt", kisi_grubu="Musteri", kategoriler=["Iletisim"]),
     ]
 
     result = aggregate_sections(records, ["Calisan", "Musteri"])
 
     assert len(result) == 1
     section = result[0]
-    assert section.is_sureci == "Ortak Surec"
+    assert section.is_sureci == "Ortak Alt"
     assert section.kisi_gruplari == ["Calisan", "Musteri"]
     assert section.kategoriler == ["Kimlik", "Iletisim"]
 
