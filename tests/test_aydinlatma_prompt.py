@@ -132,6 +132,13 @@ def test_prompt_boilerplate_izlerini_icerir():
     assert "AKTARIM-STD-IZ" in p
 
 
+def test_prompt_saklama_arsiv_cerceve_talimati_var():
+    """S1: saklama süresi açıkça yazılır + 'Saklama ve Arşiv Faaliyetleri' çerçevesi (avukat)."""
+    p = build_aydinlatma_envanter_prompt(SECTIONS, BOILERPLATE, PROFILE)
+    assert "Saklama ve\nArşiv Faaliyetlerinin Yürütülmesi" in p or "Saklama ve Arşiv Faaliyetlerinin Yürütülmesi" in p
+    assert "AÇIKÇA yaz" in p
+
+
 def test_prompt_bos_aktarimda_standart_aktarim_talimati_var():
     """PROGSA kiyas Bulgu 4: envanterde aktarim bos olsa da standart aktarim hukumleri
     prompt'ta yer alir ve model bos aktarimda bunu uygulamaya yonlendirilir."""
