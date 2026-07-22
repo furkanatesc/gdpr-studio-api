@@ -79,6 +79,22 @@ def _hnorm(s: str) -> str:
 _HEADER_SINGLE = {_hnorm(k): v for k, v in _SINGLE.items()}
 _HEADER_MULTI = {_hnorm(k): v for k, v in _MULTI.items()}
 
+# Cümleli alanlar: virgül CÜMLE-İÇİ noktalamadır, öğe ayracı değildir. split_cell
+# virgülle de böler (token alanlar için doğru: "Ad, Soyad") — bu alanlarda kullanılırsa
+# "5/2e Bir hakkın tesisi, kullanılması, korunması" anlamsız parçalara bölünür (PROGSA
+# kıyas Bulgu 3). Bunlarda yalnız \n/; ayraçtır (extract_measures ile aynı gerekçe).
+_NARRATIVE_FIELDS = frozenset({
+    "amaclar", "hukuki_sebepler", "dayanaklar", "saklama_sureleri",
+    "idari_tedbirler", "teknik_tedbirler",
+})
+_NARRATIVE_SPLIT = re.compile(r"[\n;]")
+
+
+def _split_narrative(value: str) -> list[str]:
+    if not value:
+        return []
+    return [p.strip() for p in _NARRATIVE_SPLIT.split(value) if p.strip()]
+
 
 def sector_for_filename(name: str) -> str | None:
     low = _hnorm(name)
@@ -107,7 +123,8 @@ def row_to_process(header_row: list[str], cells: list[str]) -> dict | None:
         if h in _HEADER_SINGLE:
             rec[_HEADER_SINGLE[h]] = _norm(val)
         elif h in _HEADER_MULTI:
-            rec[_HEADER_MULTI[h]] = split_cell(val)
+            field = _HEADER_MULTI[h]
+            rec[field] = _split_narrative(val) if field in _NARRATIVE_FIELDS else split_cell(val)
     kg = canonical_kisi_grubu(rec.get("kisi_grubu", ""))
     if not kg:
         return None

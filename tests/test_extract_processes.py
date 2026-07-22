@@ -56,6 +56,41 @@ def test_row_to_process_none_without_kisi_grubu():
     assert row_to_process(header, ["İK", "İşe Alım", ""]) is None
 
 
+def test_row_to_process_narrative_fields_not_split_on_comma():
+    """Hukuki sebep/saklama/amaç/dayanak/tedbir gibi cümleli alanlarda virgül cümle-içi
+    noktalamadır; ayraç DEĞİLDİR (PROGSA kıyas Bulgu 3). Token alanlar (veri türü) böler."""
+    header = [
+        "Veri Konusu Kişi Grubu", "Hukuki Sebep", "Veri Kullanım Amacı",
+        "Azami Süre (Saklama)", "İdari Güvenlik Tedbiri", "Veri Türü",
+    ]
+    cells = [
+        "Çalışan",
+        "5/2e Bir hakkın tesisi, kullanılması, korunması",
+        "İş Faaliyetlerinin Yürütülmesi / Denetimi",
+        "Sözleşme sona erdikten sonra 10 yıl, mevzuat gereği saklanır",
+        "Erişim yetkilendirme, loglama ve şifreleme uygulanır",
+        "Ad, Soyad, Mail",
+    ]
+    rec = row_to_process(header, cells)
+    assert rec["hukuki_sebepler"] == ["5/2e Bir hakkın tesisi, kullanılması, korunması"]
+    assert rec["amaclar"] == ["İş Faaliyetlerinin Yürütülmesi / Denetimi"]
+    assert rec["saklama_sureleri"] == ["Sözleşme sona erdikten sonra 10 yıl, mevzuat gereği saklanır"]
+    assert rec["idari_tedbirler"] == ["Erişim yetkilendirme, loglama ve şifreleme uygulanır"]
+    # Token alan: virgülle bölme KORUNUR
+    assert rec["veri_turleri"] == ["Ad", "Soyad", "Mail"]
+
+
+def test_row_to_process_narrative_fields_still_split_on_semicolon():
+    """Narrative alanda gerçek çoklu değer noktalı virgül/satır sonuyla ayrılır — bunlar böler."""
+    header = ["Veri Konusu Kişi Grubu", "Hukuki Sebep"]
+    cells = ["Çalışan", "5/2c Sözleşmenin ifası; 5/2e Bir hakkın tesisi, kullanılması"]
+    rec = row_to_process(header, cells)
+    assert rec["hukuki_sebepler"] == [
+        "5/2c Sözleşmenin ifası",
+        "5/2e Bir hakkın tesisi, kullanılması",
+    ]
+
+
 def _row(**kw):
     base = {
         "departman": "İK", "is_sureci": "İşe Alım", "alt_surec": "Başvuru", "kisi_grubu": "Çalışan Adayı",
