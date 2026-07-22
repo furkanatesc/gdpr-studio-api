@@ -249,6 +249,10 @@ Bir bölümün Aktarım değeri "{ONAY_BEKLEYEN_PLACEHOLDER}" ise, o bölümde a
 bırakma: aşağıdaki STANDART AKTARIM HÜKÜMLERİ'ni o bölüme uyarla. Envanterde bölüme
 özgü bir alıcı verilmişse onu bu standart hükümlerle birlikte belirt; yeni alıcı uydurma.
 
+Saklama süresini AÇIKÇA yaz (süre değerlerini aynen koru) ve saklamanın "Saklama ve
+Arşiv Faaliyetlerinin Yürütülmesi" amacı kapsamında yapıldığını ifade et. Saklama süresi
+değeri "{ONAY_BEKLEYEN_PLACEHOLDER}" ise süreyi uydurma; yalnız bu çerçeveyi belirt.
+
 ## VERİ SORUMLUSU KİMLİĞİ
 {_format_client_profile(profile)}
 
