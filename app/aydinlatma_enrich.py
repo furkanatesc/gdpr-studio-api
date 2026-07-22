@@ -13,6 +13,9 @@ from legal_core.aggregate_sections import Section, _merge_dedup
 from legal_core.canonical import Canonicalizer
 
 ENRICHABLE = ["kategoriler", "veri_turleri", "amaclar", "hukuki_sebepler", "saklama_sureleri"]
+# Dolu olsa da EK standart oneri sunulan alanlar (avukat S2: birden fazla amac onerisi,
+# ekle/cikar). Digerleri yalniz BOS alanda onerilir.
+ADDITIVE = {"amaclar"}
 
 
 @dataclass(frozen=True)
@@ -79,15 +82,20 @@ def enrich_sections(
 
         oneriler: dict[str, list[str]] = {}
         for fieldname in ENRICHABLE:
-            if getattr(section, fieldname):
+            existing = getattr(section, fieldname)
+            additive = fieldname in ADDITIVE
+            if existing and not additive:
                 continue
             merged = _merge_dedup(*(getattr(c, fieldname) for c in precise))
             if not merged:
                 # Hassas kesisim bos birakti; gevsek havuzdan doldur (uydurma yok, ham grounding).
                 merged = _merge_dedup(*(getattr(c, fieldname) for c in loose))
+            if merged and canonicalizer is not None:
+                merged = canonicalizer.canonicalize_list(merged, fieldname)
+            if additive and existing:
+                # Additive: yalniz mevcut olmayanlari oner (ikisi de _merge_dedup ile NFC'li).
+                merged = [m for m in merged if m not in set(existing)]
             if merged:
-                if canonicalizer is not None:
-                    merged = canonicalizer.canonicalize_list(merged, fieldname)
                 oneriler[fieldname] = merged
 
         result.append(

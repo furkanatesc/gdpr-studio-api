@@ -74,6 +74,25 @@ def test_enrich_does_not_suggest_for_filled_field():
     assert result[0].hukuki_sebepler == ["Mevcut Sebep"]
 
 
+def test_enrich_suggests_additive_amac_even_when_filled():
+    """S2: amaclar DOLU olsa da grounding'den EK standart amac onerisi sunulur (additive;
+    avukat: birden fazla oneri, ekle/cikar). Mevcut degerler oneriden cikarilir."""
+    repo = DictProcessRepository(
+        [_process(kategoriler=["Kimlik"], amaclar=["Ozluk dosyasi", "Saklama ve Arsiv"])]
+    )
+    section = Section(
+        is_sureci="Ise Giris Islemleri",
+        kisi_gruplari=["Calisan"],
+        kategoriler=["Kimlik"],
+        amaclar=["Ozluk dosyasi"],
+    )
+
+    result = enrich_sections([section], "Perakende", repo)
+
+    assert result[0].amaclar == ["Ozluk dosyasi"]  # section degeri korunur
+    assert result[0].oneriler["amaclar"] == ["Saklama ve Arsiv"]  # additive, mevcut haric
+
+
 def test_enrich_never_suggests_aktarim_or_toplama():
     repo = DictProcessRepository(
         [_process(kategoriler=["Kimlik"], saklama_sureleri=["10 yil"])]
