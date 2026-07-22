@@ -154,6 +154,25 @@ def test_aggregate_sections_merges_dedup_aktarim_toplama_from_records():
     assert result[0].toplama == ["Ilgili kisinin kendisi", "Ucuncu taraf"]
 
 
+def test_aggregate_sections_canonicalizes_kisi_grubu_display():
+    """S5a: gorunen kisi grubu standart ada cevrilir (avukat: 'cevrilsin'). A-listesi
+    synonym'i kisi_gruplari.json'da; canonicalizer ile display kanoniklesir."""
+    from legal_core.canonical import load_canonicalizer
+    canon = load_canonicalizer()
+    records = [_record(kisi_grubu="Tedarikçi Yetkilisi")]
+    result = aggregate_sections(records, ["Tedarikçi Yetkilisi"], canonicalizer=canon)
+    assert result[0].kisi_gruplari == ["İş Ortağı / Tedarikçi Yetkilisi"]
+
+
+def test_aggregate_sections_calisan_kisi_grubu_stays_raw():
+    """S5a: 'Çalışan' synonym'i YOK (avukat: hepsi ayni kalmali) -> ham kalir."""
+    from legal_core.canonical import load_canonicalizer
+    canon = load_canonicalizer()
+    records = [_record(kisi_grubu="Çalışan")]
+    result = aggregate_sections(records, ["Çalışan"], canonicalizer=canon)
+    assert result[0].kisi_gruplari == ["Çalışan"]
+
+
 def test_aggregate_sections_empty_when_no_matching_group():
     records = [_record(kisi_grubu="Calisan")]
     assert aggregate_sections(records, ["Ziyaretci"]) == []

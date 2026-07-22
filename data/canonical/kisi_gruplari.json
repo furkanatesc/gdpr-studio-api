@@ -39,6 +39,10 @@
   "synonyms": {
     "aktif çalişan": "Aktif Çalışan",
     "site ziyaretçisi": "Site Ziyaretçisi",
-    "musteri": "Müşteri"
+    "musteri": "Müşteri",
+    "tedarikçi yetkilisi": "İş Ortağı / Tedarikçi Yetkilisi",
+    "ürün veya hizmet alan kişi": "Hizmet Alan Müşteri",
+    "ürün veya hizmet alan şirket yetkilisi": "Kurumsal Müşteri Yetkilisi",
+    "potansiyel ürün veya hizmet alicisi": "Potansiyel Müşteri (Lead)"
   }
 }
