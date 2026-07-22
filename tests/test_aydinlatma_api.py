@@ -65,7 +65,7 @@ def test_prepare_eslesen_envanter_200(client_fresh):
     sections = r.json()["sections"]
     assert len(sections) == 1
     s = sections[0]
-    assert s["isSureci"] == "Ozluk"
+    assert s["isSureci"] == "Bordro"  # bolum etiketi = alt_surec (yoksa is_sureci)
     assert s["kategoriler"] == ["Kimlik", "Finans"]
     assert s["amaclar"] == ["Bordro"]
     assert "oneriler" in s
