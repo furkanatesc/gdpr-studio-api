@@ -76,13 +76,15 @@ def aggregate_sections(
         label = alt_surec_nfc or is_sureci_nfc
         kategoriler = _merge_dedup(*(r.kategoriler for r in group_records))
         veri_turleri = _merge_dedup(*(r.veri_turleri for r in group_records))
+        kisi_gruplari = _merge_dedup([r.kisi_grubu for r in group_records])
         if canonicalizer is not None:
             kategoriler = canonicalizer.canonicalize_list(kategoriler, "kategoriler")
             veri_turleri = canonicalizer.canonicalize_list(veri_turleri, "veri_turleri")
+            kisi_gruplari = canonicalizer.canonicalize_list(kisi_gruplari, "kisi_gruplari")
         sections.append(
             Section(
                 is_sureci=label,
-                kisi_gruplari=_merge_dedup([r.kisi_grubu for r in group_records]),
+                kisi_gruplari=kisi_gruplari,
                 kategoriler=kategoriler,
                 veri_turleri=veri_turleri,
                 amaclar=_merge_dedup(*(r.amaclar for r in group_records)),
