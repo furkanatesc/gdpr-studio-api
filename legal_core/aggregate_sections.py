@@ -52,14 +52,18 @@ def aggregate_sections(
     targets = {_nfc(g) for g in target_groups if _nfc(g)}
     filtered = [r for r in records if _nfc(r.kisi_grubu) in targets]
 
-    # Bolum = (is_sureci, alt_surec). alt_surec bir is_sureci altindaki ayri baglamlari
-    # ( or. PROGSA: tek "Uyelik Islemleri" altinda uye kayit/hesap/odeme/uzman) ayri
-    # bolume boler; boylece her baglamin kendi veri/amac/hukuki sebep kumesi korunur
-    # (PROGSA kiyas Bulgu 2). Etiket = alt_surec (yoksa is_sureci).
+    # Akilli bolum gruplama (PROGSA kiyas Bulgu 2 + oz-denetim duzeltmesi): hedef grup
+    # TEK is_sureci'ye sahipse (PROGSA gibi jenerik "Uyelik Islemleri" — is_sureci baglam
+    # tasimaz), alt_surec'e bolunur ki her baglam ayri bolum olsun. Birden fazla is_sureci
+    # varsa alt_surec'e bolmek belgeyi patlatir (otel/Calisan 38 is_sureci -> 94 bolum);
+    # bu durumda is_sureci grubu yeterli baglami saglar. Etiket = alt_surec (yoksa is_sureci).
+    split_by_alt = len({_nfc(r.is_sureci) for r in filtered}) == 1
+
     order: list[tuple[str, str]] = []
     groups: dict[tuple[str, str], list[ProcessRecord]] = {}
     for record in filtered:
-        key = (_nfc(record.is_sureci), _nfc(record.alt_surec))
+        alt = _nfc(record.alt_surec) if split_by_alt else ""
+        key = (_nfc(record.is_sureci), alt)
         if key not in groups:
             groups[key] = []
             order.append(key)
