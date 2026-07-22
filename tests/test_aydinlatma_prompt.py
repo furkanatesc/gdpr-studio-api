@@ -20,6 +20,7 @@ BOILERPLATE = {
     "ortak_hukumler": "Ortak hukumler metni - ayirt edici ifade ORTAK-HUKUMLER-IZ",
     "haklar_m11": "Haklar m.11 metni - ayirt edici ifade HAKLAR-M11-IZ",
     "basvuru_usulu": "Basvuru usulu metni - ayirt edici ifade BASVURU-USULU-IZ",
+    "aktarim_standart": "Standart aktarim metni - ayirt edici ifade AKTARIM-STD-IZ",
 }
 
 PROFILE = ClientProfile(
@@ -128,6 +129,15 @@ def test_prompt_boilerplate_izlerini_icerir():
     assert "ORTAK-HUKUMLER-IZ" in p
     assert "HAKLAR-M11-IZ" in p
     assert "BASVURU-USULU-IZ" in p
+    assert "AKTARIM-STD-IZ" in p
+
+
+def test_prompt_bos_aktarimda_standart_aktarim_talimati_var():
+    """PROGSA kiyas Bulgu 4: envanterde aktarim bos olsa da standart aktarim hukumleri
+    prompt'ta yer alir ve model bos aktarimda bunu uygulamaya yonlendirilir."""
+    p = build_aydinlatma_envanter_prompt(SECTIONS, BOILERPLATE, PROFILE)
+    assert "AKTARIM-STD-IZ" in p
+    assert "Standart Aktarım" in p
 
 
 def test_prompt_disclaimer_talimati_icerir():

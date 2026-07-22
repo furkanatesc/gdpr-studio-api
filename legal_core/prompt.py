@@ -245,6 +245,10 @@ bırakma, uydurma, atlama.
 Hukuki sebep değerlerindeki KVKK madde atıflarını (ör. m.5/2, m.6, açık rıza)
 OLDUĞU GİBİ koru; yeni madde numarası ekleme/uydurma.
 
+Bir bölümün Aktarım değeri "{ONAY_BEKLEYEN_PLACEHOLDER}" ise, o bölümde aktarımı boş
+bırakma: aşağıdaki STANDART AKTARIM HÜKÜMLERİ'ni o bölüme uyarla. Envanterde bölüme
+özgü bir alıcı verilmişse onu bu standart hükümlerle birlikte belirt; yeni alıcı uydurma.
+
 ## VERİ SORUMLUSU KİMLİĞİ
 {_format_client_profile(profile)}
 
@@ -258,6 +262,9 @@ OLDUĞU GİBİ koru; yeni madde numarası ekleme/uydurma.
 
 ### Ortak Hükümler
 {boilerplate["ortak_hukumler"]}
+
+### Standart Aktarım Hükümleri
+{boilerplate["aktarim_standart"]}
 
 ## İŞ SÜREÇLERİ BÖLÜMLERİ
 {surecler_metni}

@@ -52,10 +52,14 @@ def aggregate_sections(
     targets = {_nfc(g) for g in target_groups if _nfc(g)}
     filtered = [r for r in records if _nfc(r.kisi_grubu) in targets]
 
-    order: list[str] = []
-    groups: dict[str, list[ProcessRecord]] = {}
+    # Bolum = (is_sureci, alt_surec). alt_surec bir is_sureci altindaki ayri baglamlari
+    # ( or. PROGSA: tek "Uyelik Islemleri" altinda uye kayit/hesap/odeme/uzman) ayri
+    # bolume boler; boylece her baglamin kendi veri/amac/hukuki sebep kumesi korunur
+    # (PROGSA kiyas Bulgu 2). Etiket = alt_surec (yoksa is_sureci).
+    order: list[tuple[str, str]] = []
+    groups: dict[tuple[str, str], list[ProcessRecord]] = {}
     for record in filtered:
-        key = _nfc(record.is_sureci)
+        key = (_nfc(record.is_sureci), _nfc(record.alt_surec))
         if key not in groups:
             groups[key] = []
             order.append(key)
@@ -64,6 +68,8 @@ def aggregate_sections(
     sections: list[Section] = []
     for key in order:
         group_records = groups[key]
+        is_sureci_nfc, alt_surec_nfc = key
+        label = alt_surec_nfc or is_sureci_nfc
         kategoriler = _merge_dedup(*(r.kategoriler for r in group_records))
         veri_turleri = _merge_dedup(*(r.veri_turleri for r in group_records))
         if canonicalizer is not None:
@@ -71,7 +77,7 @@ def aggregate_sections(
             veri_turleri = canonicalizer.canonicalize_list(veri_turleri, "veri_turleri")
         sections.append(
             Section(
-                is_sureci=key,
+                is_sureci=label,
                 kisi_gruplari=_merge_dedup([r.kisi_grubu for r in group_records]),
                 kategoriler=kategoriler,
                 veri_turleri=veri_turleri,

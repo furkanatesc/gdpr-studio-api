@@ -1,7 +1,7 @@
 """Aydınlatma metni boilerplate yükleyici.
 
 data/aydinlatma_boilerplate.json içeriği avukat onayına tabi taslak metindir
-(avukata_oneri onay akışına bağlanacaktır). Bu modül yalnızca 5 içerik anahtarını
+(avukata_oneri onay akışına bağlanacaktır). Bu modül yalnızca 6 içerik anahtarını
 okuyup NFC normalize ederek döndürür; JSON'daki `_note` gibi meta anahtarlar
 filtrelenir.
 """
@@ -13,7 +13,7 @@ import unicodedata
 from pathlib import Path
 
 _PATH = Path(__file__).resolve().parent.parent / "data" / "aydinlatma_boilerplate.json"
-_KEYS = ("tanimlar", "kaynaklar", "ortak_hukumler", "haklar_m11", "basvuru_usulu")
+_KEYS = ("tanimlar", "kaynaklar", "ortak_hukumler", "haklar_m11", "basvuru_usulu", "aktarim_standart")
 
 
 def load_boilerplate() -> dict[str, str]:

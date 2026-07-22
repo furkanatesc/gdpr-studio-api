@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from legal_core.boilerplate import load_boilerplate
 
-_KEYS = {"tanimlar", "kaynaklar", "ortak_hukumler", "haklar_m11", "basvuru_usulu"}
+_KEYS = {"tanimlar", "kaynaklar", "ortak_hukumler", "haklar_m11", "basvuru_usulu", "aktarim_standart"}
 
 
-def test_returns_exactly_five_keys():
+def test_returns_exactly_six_keys():
     data = load_boilerplate()
     assert set(data) == _KEYS
 
@@ -58,9 +58,13 @@ def test_no_placeholder_text():
 
 
 def test_no_unapproved_article_numbers():
-    """Brief'te onaylanmayan madde numaraları (ör. m.9, m.20) metinde geçmemeli."""
+    """Brief'te onaylanmayan madde numaraları metinde geçmemeli. m.9 (yurt dışına aktarım)
+    yalnızca aktarım standart hükmünde meşrudur (avukatın PROGSA metni de m.9/4-c kullanıyor);
+    diğer bölümlerde yasaktır."""
     data = load_boilerplate()
-    forbidden = ["m.9", "m.20", "m.21", "m.22"]
+    forbidden_general = ["m.9", "m.20", "m.21", "m.22"]
+    forbidden_aktarim = ["m.20", "m.21", "m.22"]
     for key, value in data.items():
+        forbidden = forbidden_aktarim if key == "aktarim_standart" else forbidden_general
         for bad in forbidden:
             assert bad not in value, f"{key} onaysız madde atfı içeriyor: {bad}"
