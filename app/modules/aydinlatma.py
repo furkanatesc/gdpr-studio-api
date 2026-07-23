@@ -16,14 +16,13 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
-from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from legal_core.aggregate_sections import Section, aggregate_sections
 from legal_core.boilerplate import load_boilerplate
 from legal_core.canonical import load_canonicalizer
 from legal_core.generate import generate_aydinlatma_envanter_stream
-from legal_core.models import ClientProfile, DocType
+from legal_core.models import DocType
 from legal_core.prompt import ensure_disclaimer
 from legal_core.provider import AnthropicProvider
 from legal_core.scoring import completeness_score
@@ -44,11 +43,10 @@ from ..redis_client import generate_rate_limit
 from ..repositories import (
     ClientDocumentRepository,
     ClientRepository,
-    ComplianceRepository,
     GeneratedDocumentRepository,
     PostgresProcessRepository,
 )
-from .compliance_logic import compliance_snapshot_score
+from .document_store import client_profile, store_client_document
 from .generation import _claim_idempotency, _resolve_api_key, _sse
 
 router = APIRouter(prefix="/api/clients", tags=["aydinlatma"])
@@ -149,20 +147,6 @@ def _in_to_section(s: SectionIn) -> Section:
     )
 
 
-def _client_profile(client) -> ClientProfile:
-    return ClientProfile(
-        ad=client.name,
-        unvan=client.legal_name,
-        adres=client.adres,
-        mersis=client.mersis,
-        vergi_dairesi=client.vergi_dairesi,
-        vergi_no=client.vergi_no,
-        kep=client.kep,
-        eposta=client.eposta,
-        telefon=client.telefon,
-    )
-
-
 def _derive_title(sections: list[Section]) -> str:
     seen: list[str] = []
     for s in sections:
@@ -173,22 +157,11 @@ def _derive_title(sections: list[Section]) -> str:
 
 
 def _store_generated_document(session, org_id, client_id, sections, content) -> None:
-    """Best-effort: uretilmis aydinlatmayi + iki puani sakla. Hata akisi BOZMAZ.
-
-    reserve/settle_generation_usage kendi commit'lerini yapar; commit app.current_org_id
-    GUC'sini sifirlar (transaction-local) — bu yuzden okuma+yazimdan ONCE org baglamini
-    burada yeniden kurmak gerekir (bkz. app/modules/clients.py:154).
-    """
-    bind = session.get_bind()
-    if bind is not None and bind.dialect.name == "postgresql":
-        session.execute(text("SELECT set_config('app.current_org_id', :o, true)"), {"o": str(org_id)})
-    statuses = {k: v.status for k, v in ComplianceRepository(session).statuses_for_org(org_id).items()}
-    ClientDocumentRepository(session).upsert(
-        org_id, client_id, "aydinlatma", _derive_title(sections), content,
-        score_completeness=completeness_score(sections),
-        score_compliance=compliance_snapshot_score(statuses, "aydinlatma"),
+    """Best-effort aydinlatma saklama — ortak store_client_document uzerinden (RLS-guvenli)."""
+    store_client_document(
+        session, org_id, client_id, "aydinlatma", _derive_title(sections), content,
+        completeness_score(sections),
     )
-    session.commit()
 
 
 @router.post("/{client_id}/aydinlatma/prepare", response_model=PrepareOut, response_model_by_alias=True)
@@ -239,7 +212,7 @@ def generate(
     api_key = _resolve_api_key(x_anthropic_key)
     _claim_idempotency(identity, idempotency_key)
 
-    profile = _client_profile(client)
+    profile = client_profile(client)
     boilerplate = load_boilerplate()
     sections = [_in_to_section(s) for s in body.sections]
     provider = AnthropicProvider(

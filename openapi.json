@@ -97,6 +97,39 @@
         "title": "BootstrapRequest",
         "type": "object"
       },
+      "CerezGenerateIn": {
+        "additionalProperties": false,
+        "properties": {
+          "cmp": {
+            "default": "yok",
+            "title": "Cmp",
+            "type": "string"
+          },
+          "kategoriler": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Kategoriler",
+            "type": "array"
+          },
+          "site": {
+            "minLength": 1,
+            "title": "Site",
+            "type": "string"
+          },
+          "tools": {
+            "default": "",
+            "title": "Tools",
+            "type": "string"
+          }
+        },
+        "required": [
+          "site"
+        ],
+        "title": "CerezGenerateIn",
+        "type": "object"
+      },
       "ChecklistGroup": {
         "properties": {
           "group": {
@@ -2096,6 +2129,141 @@
         "summary": "Prepare",
         "tags": [
           "aydinlatma"
+        ]
+      }
+    },
+    "/api/clients/{client_id}/cerez/docx": {
+      "post": {
+        "operationId": "docx_api_clients__client_id__cerez_docx_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocxIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Docx",
+        "tags": [
+          "cerez"
+        ]
+      }
+    },
+    "/api/clients/{client_id}/cerez/generate": {
+      "post": {
+        "description": "Muvekkil kimligi + form girdisinden Cerez Politikasi akisi (SSE).",
+        "operationId": "generate_api_clients__client_id__cerez_generate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Anthropic-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Anthropic-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CerezGenerateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Generate",
+        "tags": [
+          "cerez"
         ]
       }
     },

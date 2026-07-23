@@ -1,5 +1,5 @@
 from legal_core.aggregate_sections import Section
-from legal_core.scoring import completeness_score
+from legal_core.scoring import cerez_completeness_score, completeness_score
 
 
 def _full_section():
@@ -33,3 +33,24 @@ def test_completeness_averages_across_sections():
     full = _full_section()
     empty = Section(is_sureci="B")  # 0/6
     assert completeness_score([full, empty]) == 0.5  # (6+0)/12
+
+
+def test_cerez_completeness_full_is_one():
+    assert cerez_completeness_score(True, ["Zorunlu"], "GA", "var-kendi") == 1.0
+
+
+def test_cerez_completeness_cmp_yok_ve_bos_dusuk():
+    # kimlik var (1) + kategori/araç boş + cmp=yok -> 1/4
+    assert cerez_completeness_score(True, [], "", "yok") == 0.25
+
+
+def test_cerez_completeness_cmp_bos_string_eksik_sayilir():
+    assert cerez_completeness_score(True, ["Analitik"], "Meta", "") == 0.75
+
+
+def test_cerez_completeness_kimliksiz():
+    assert cerez_completeness_score(False, ["Zorunlu"], "GA", "var-kendi") == 0.75
+
+
+def test_cerez_completeness_tools_bosluk_bos_sayilir():
+    assert cerez_completeness_score(True, ["Zorunlu"], "   ", "var-kendi") == 0.75
