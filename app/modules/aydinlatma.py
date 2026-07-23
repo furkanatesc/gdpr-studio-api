@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Response
 from fastapi.responses import StreamingResponse
@@ -98,6 +99,24 @@ class EnrichedSectionOut(_Camel):
 
 class PrepareOut(_Camel):
     sections: list[EnrichedSectionOut]
+
+
+class ClientDocumentMetaOut(_Camel):
+    id: uuid.UUID
+    doc_type: str
+    title: str
+    score_completeness: float | None = None
+    score_compliance: float | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class ClientDocumentsOut(_Camel):
+    documents: list[ClientDocumentMetaOut]
+
+
+class ClientDocumentOut(ClientDocumentMetaOut):
+    content: str
 
 
 def _enriched_to_out(es: EnrichedSection) -> EnrichedSectionOut:
@@ -300,3 +319,30 @@ def docx(
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={"Content-Disposition": 'attachment; filename="aydinlatma.docx"'},
     )
+
+
+@router.get("/{client_id}/documents", response_model=ClientDocumentsOut, response_model_by_alias=True)
+def list_documents(
+    client_id: uuid.UUID,
+    identity: Identity = Depends(get_current_identity),
+    session: Session = Depends(tenant_session),
+) -> ClientDocumentsOut:
+    if ClientRepository(session).get(identity.org_id, client_id) is None:
+        raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
+    rows = ClientDocumentRepository(session).list_for_client(identity.org_id, client_id)
+    return ClientDocumentsOut(documents=[ClientDocumentMetaOut.model_validate(r, from_attributes=True) for r in rows])
+
+
+@router.get("/{client_id}/documents/{document_id}", response_model=ClientDocumentOut, response_model_by_alias=True)
+def get_document(
+    client_id: uuid.UUID,
+    document_id: uuid.UUID,
+    identity: Identity = Depends(get_current_identity),
+    session: Session = Depends(tenant_session),
+) -> ClientDocumentOut:
+    if ClientRepository(session).get(identity.org_id, client_id) is None:
+        raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
+    row = ClientDocumentRepository(session).get(identity.org_id, client_id, document_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Belge bulunamadı.")
+    return ClientDocumentOut.model_validate(row, from_attributes=True)
