@@ -253,6 +253,12 @@ Saklama süresini AÇIKÇA yaz (süre değerlerini aynen koru) ve saklamanın "S
 Arşiv Faaliyetlerinin Yürütülmesi" amacı kapsamında yapıldığını ifade et. Saklama süresi
 değeri "{ONAY_BEKLEYEN_PLACEHOLDER}" ise süreyi uydurma; yalnız bu çerçeveyi belirt.
 
+Her işleme amacını, o bölümde verilen hukuki sebeplerden EN UYGUN olanı ile eşleştir ve
+amacın yanında parantez içinde bu eşleştirmenin kısa gerekçesini belirt (ör. "... amacı
+(m.5/2-c — sözleşmenin ifası için zorunlu olduğundan)"). Yalnız o bölümde verilen hukuki
+sebepleri kullan; envanterde bulunmayan yeni bir hukuki sebep ekleme/uydurma. Bölümün
+hukuki sebebi "{ONAY_BEKLEYEN_PLACEHOLDER}" ise eşleştirme yapma, gerekçe uydurma.
+
 ## VERİ SORUMLUSU KİMLİĞİ
 {_format_client_profile(profile)}
 
