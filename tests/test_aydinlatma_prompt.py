@@ -147,6 +147,15 @@ def test_prompt_bos_aktarimda_standart_aktarim_talimati_var():
     assert "Standart Aktarım" in p
 
 
+def test_prompt_amac_hukuki_eslestirme_talimati_var():
+    """S3: her amaci envanterdeki EN UYGUN hukuki sebeple eslestir + parantez ici gerekce;
+    yeni hukuki sebep UYDURMA (avukat: sistem denesin, avukat duzeltir)."""
+    p = build_aydinlatma_envanter_prompt(SECTIONS, BOILERPLATE, PROFILE)
+    assert "eşleştir" in p
+    assert "gerekçe" in p
+    assert "yeni bir hukuki sebep" in p
+
+
 def test_prompt_disclaimer_talimati_icerir():
     p = build_aydinlatma_envanter_prompt(SECTIONS, BOILERPLATE, PROFILE)
     assert DISCLAIMER in p
