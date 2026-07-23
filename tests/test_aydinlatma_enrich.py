@@ -1,4 +1,4 @@
-from app.aydinlatma_enrich import EnrichedSection, enrich_sections
+from app.aydinlatma_enrich import HUKUK_MESRU_MENFAAT, EnrichedSection, enrich_sections
 from legal_core.adapters import DictProcessRepository
 from legal_core.aggregate_sections import Section
 from legal_core.canonical import Canonicalizer
@@ -147,6 +147,56 @@ def test_enrich_merges_candidates_from_multiple_person_groups():
     result = enrich_sections([section], "Perakende", repo)
 
     assert result[0].oneriler["saklama_sureleri"] == ["10 yil", "2 yil"]
+
+
+def test_enrich_hukuk_departman_mesru_menfaat_onerisi_dolu_alanda_da():
+    """S4: departman Hukuk ise, hukuki_sebepler DOLU olsa da m.5/2-f mesru menfaat EK oneri
+    (avukat: hukuk departmaninin tum islemleri bu kapsamdadir; additive, avukat onaylar)."""
+    repo = DictProcessRepository([])
+    section = Section(
+        is_sureci="Sozlesme Yonetimi",
+        departman=["Hukuk Isleri"],
+        kisi_gruplari=["Calisan"],
+        kategoriler=["Kimlik"],
+        hukuki_sebepler=["m.5/2-c Sozlesme"],
+    )
+
+    result = enrich_sections([section], "Perakende", repo)
+
+    assert result[0].hukuki_sebepler == ["m.5/2-c Sozlesme"]  # section degeri korunur
+    assert HUKUK_MESRU_MENFAAT in result[0].oneriler["hukuki_sebepler"]
+
+
+def test_enrich_hukuk_disi_departman_mesru_menfaat_onermez():
+    """S4 negatif: departman Hukuk degilse otomatik mesru menfaat onerisi eklenmez."""
+    repo = DictProcessRepository([])
+    section = Section(
+        is_sureci="Bordro",
+        departman=["Insan Kaynaklari"],
+        kisi_gruplari=["Calisan"],
+        kategoriler=["Kimlik"],
+        hukuki_sebepler=["m.5/2-c Sozlesme"],
+    )
+
+    result = enrich_sections([section], "Perakende", repo)
+
+    assert HUKUK_MESRU_MENFAAT not in result[0].oneriler.get("hukuki_sebepler", [])
+
+
+def test_enrich_hukuk_departman_zaten_mesru_menfaat_varsa_tekrar_onermez():
+    """S4: bolum zaten mesru menfaat atfi tasiyorsa tekrar onerilmez (cift kayit yok)."""
+    repo = DictProcessRepository([])
+    section = Section(
+        is_sureci="Sozlesme Yonetimi",
+        departman=["Hukuk"],
+        kisi_gruplari=["Calisan"],
+        kategoriler=["Kimlik"],
+        hukuki_sebepler=["KVKK m.5/2-f Mesru menfaat"],
+    )
+
+    result = enrich_sections([section], "Perakende", repo)
+
+    assert "hukuki_sebepler" not in result[0].oneriler
 
 
 def _canonicalizer(kisi_gruplari_canonical=None, kisi_gruplari_synonyms=None):
