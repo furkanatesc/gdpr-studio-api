@@ -14,6 +14,7 @@ from .modules import (
     accounts,
     aydinlatma,
     billing,
+    cerez,
     clients,
     compliance,
     generation,
@@ -78,6 +79,7 @@ app.include_router(compliance.router)
 app.include_router(processes.router)
 app.include_router(clients.router)
 app.include_router(aydinlatma.router)
+app.include_router(cerez.router)
 app.include_router(inventory.router)
 
 
