@@ -227,6 +227,25 @@ def test_generate_olay_sirasi_ve_uyum_kaydi(db_session, monkeypatch):
     assert str(rows[0].org_id) == str(IDENT.org_id)
 
 
+def test_generate_belgeyi_saklar_iki_puanla(db_session, monkeypatch):
+    from app.models import ClientDocument
+
+    _managed_billing_settings()
+    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream", _fake_stream)
+    cid = _make_client(db_session)
+
+    resp = _generate(db_session, cid)
+    _consume(resp)  # 'done' tetiklenir -> best-effort saklama + commit
+
+    rows = db_session.query(ClientDocument).filter_by(client_id=cid).all()
+    assert len(rows) == 1
+    assert "metni" in rows[0].content          # _fake_stream delta metni
+    assert rows[0].doc_type == "aydinlatma"
+    assert rows[0].title == "Genel"            # SectionIn kisi_gruplari bos -> Genel
+    assert rows[0].score_completeness is not None   # kategoriler dolu -> >0
+    assert rows[0].score_compliance == 0.0     # org'da hic uyum statusu yok -> 0/6
+
+
 # ---- docx ----------------------------------------------------------------
 
 def test_docx_musvekkil_yok_404(client_fresh):

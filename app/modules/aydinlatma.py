@@ -10,11 +10,13 @@ from __future__ import annotations
 
 import logging
 import uuid
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from legal_core.aggregate_sections import Section, aggregate_sections
@@ -22,7 +24,9 @@ from legal_core.boilerplate import load_boilerplate
 from legal_core.canonical import load_canonicalizer
 from legal_core.generate import generate_aydinlatma_envanter_stream
 from legal_core.models import ClientProfile, DocType
+from legal_core.prompt import ensure_disclaimer
 from legal_core.provider import AnthropicProvider
+from legal_core.scoring import completeness_score
 
 from .. import idempotency
 from ..auth.identity import Identity, get_current_identity
@@ -37,7 +41,14 @@ from ..config import get_settings
 from ..docx_export import render_docx
 from ..observability import capture_exception
 from ..redis_client import generate_rate_limit
-from ..repositories import ClientRepository, GeneratedDocumentRepository, PostgresProcessRepository
+from ..repositories import (
+    ClientDocumentRepository,
+    ClientRepository,
+    ComplianceRepository,
+    GeneratedDocumentRepository,
+    PostgresProcessRepository,
+)
+from .compliance_logic import compliance_snapshot_score
 from .generation import _claim_idempotency, _resolve_api_key, _sse
 
 router = APIRouter(prefix="/api/clients", tags=["aydinlatma"])
@@ -91,6 +102,24 @@ class PrepareOut(_Camel):
     sections: list[EnrichedSectionOut]
 
 
+class ClientDocumentMetaOut(_Camel):
+    id: uuid.UUID
+    doc_type: str
+    title: str
+    score_completeness: float | None = None
+    score_compliance: float | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class ClientDocumentsOut(_Camel):
+    documents: list[ClientDocumentMetaOut]
+
+
+class ClientDocumentOut(ClientDocumentMetaOut):
+    content: str
+
+
 def _enriched_to_out(es: EnrichedSection) -> EnrichedSectionOut:
     return EnrichedSectionOut(
         is_sureci=es.is_sureci,
@@ -132,6 +161,34 @@ def _client_profile(client) -> ClientProfile:
         eposta=client.eposta,
         telefon=client.telefon,
     )
+
+
+def _derive_title(sections: list[Section]) -> str:
+    seen: list[str] = []
+    for s in sections:
+        for kg in s.kisi_gruplari:
+            if kg and kg not in seen:
+                seen.append(kg)
+    return (", ".join(seen))[:255] or "Genel"
+
+
+def _store_generated_document(session, org_id, client_id, sections, content) -> None:
+    """Best-effort: uretilmis aydinlatmayi + iki puani sakla. Hata akisi BOZMAZ.
+
+    reserve/settle_generation_usage kendi commit'lerini yapar; commit app.current_org_id
+    GUC'sini sifirlar (transaction-local) — bu yuzden okuma+yazimdan ONCE org baglamini
+    burada yeniden kurmak gerekir (bkz. app/modules/clients.py:154).
+    """
+    bind = session.get_bind()
+    if bind is not None and bind.dialect.name == "postgresql":
+        session.execute(text("SELECT set_config('app.current_org_id', :o, true)"), {"o": str(org_id)})
+    statuses = {k: v.status for k, v in ComplianceRepository(session).statuses_for_org(org_id).items()}
+    ClientDocumentRepository(session).upsert(
+        org_id, client_id, "aydinlatma", _derive_title(sections), content,
+        score_completeness=completeness_score(sections),
+        score_compliance=compliance_snapshot_score(statuses, "aydinlatma"),
+    )
+    session.commit()
 
 
 @router.post("/{client_id}/aydinlatma/prepare", response_model=PrepareOut, response_model_by_alias=True)
@@ -197,6 +254,7 @@ def generate(
         # Sayım deseni generation.generate_stream ile birebir — bkz. oradaki gerekçe.
         reserved = 0
         started = False
+        full_text = ""
         try:
             for kind, payload in generate_aydinlatma_envanter_stream(
                 sections, boilerplate, profile, provider=provider, max_tokens=settings.max_tokens,
@@ -215,6 +273,7 @@ def generate(
                             model=settings.default_model,
                             byok=byok,
                         )
+                    full_text += payload
                     yield _sse("delta", {"text": payload})
                 elif kind == "done":
                     yield _sse("done", payload)
@@ -229,6 +288,15 @@ def generate(
                         byok=byok,
                         reserved_micros=reserved,
                     )
+                    try:
+                        _store_generated_document(
+                            session, identity.org_id, client_id, sections, ensure_disclaimer(full_text)
+                        )
+                    except Exception as store_err:  # best-effort; uretimi bozma
+                        # PII sizintisi riski: SQL exception string'i belge icerigini (musvekkil PII)
+                        # tasiyabilir, capture_exception frame local'lerini (content, statuses) Sentry'ye
+                        # serilestirir. Bu yuzden yalniz exception TURU + org_id loglanir; string/traceback YOK.
+                        _log.error("belge saklama basarisiz (org=%s): %s", identity.org_id, type(store_err).__name__)
         except Exception as e:
             if not started:
                 idempotency.release(identity.org_id, idempotency_key)
@@ -262,3 +330,30 @@ def docx(
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={"Content-Disposition": 'attachment; filename="aydinlatma.docx"'},
     )
+
+
+@router.get("/{client_id}/documents", response_model=ClientDocumentsOut, response_model_by_alias=True)
+def list_documents(
+    client_id: uuid.UUID,
+    identity: Identity = Depends(get_current_identity),
+    session: Session = Depends(tenant_session),
+) -> ClientDocumentsOut:
+    if ClientRepository(session).get(identity.org_id, client_id) is None:
+        raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
+    rows = ClientDocumentRepository(session).list_for_client(identity.org_id, client_id)
+    return ClientDocumentsOut(documents=[ClientDocumentMetaOut.model_validate(r, from_attributes=True) for r in rows])
+
+
+@router.get("/{client_id}/documents/{document_id}", response_model=ClientDocumentOut, response_model_by_alias=True)
+def get_document(
+    client_id: uuid.UUID,
+    document_id: uuid.UUID,
+    identity: Identity = Depends(get_current_identity),
+    session: Session = Depends(tenant_session),
+) -> ClientDocumentOut:
+    if ClientRepository(session).get(identity.org_id, client_id) is None:
+        raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
+    row = ClientDocumentRepository(session).get(identity.org_id, client_id, document_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Belge bulunamadı.")
+    return ClientDocumentOut.model_validate(row, from_attributes=True)
