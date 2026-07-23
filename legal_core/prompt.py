@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 
-from .aggregate_sections import Section
+from .aggregate_sections import Section, _merge_dedup
 from .models import ClientProfile, InventoryRecord, ProcessRecord
 
 # Bir bolum alani (ornegin saklama suresi) envanterde bulunamadigi durumda
@@ -196,6 +196,18 @@ def _format_client_profile(profile: ClientProfile) -> str:
     return out
 
 
+def _derive_kaynaklar(sections: list[Section], boilerplate: dict) -> str:
+    """Belge-düzeyi Veri Toplama Kaynakları'nı müvekkil envanterinden türetir.
+
+    Avukat: kaynaklar müvekkile göre değişir. Bölümlerin toplama değerlerinin birleşimini
+    liste yapar; hiçbir bölümde toplama yoksa sabit boilerplate'e düşer (uydurma yok).
+    """
+    toplama = _merge_dedup(*(s.toplama for s in sections))
+    if not toplama:
+        return boilerplate["kaynaklar"]
+    return "\n".join(f"- {t}" for t in toplama)
+
+
 def _format_aydinlatma_section(section: Section) -> str:
     kisi_gruplari = ", ".join(section.kisi_gruplari) if section.kisi_gruplari else ONAY_BEKLEYEN_PLACEHOLDER
     veriler = _field_or_placeholder(section.kategoriler + section.veri_turleri)
@@ -268,7 +280,7 @@ hukuki sebebi "{ONAY_BEKLEYEN_PLACEHOLDER}" ise eşleştirme yapma, gerekçe uyd
 {boilerplate["tanimlar"]}
 
 ### Veri Toplama Kaynakları
-{boilerplate["kaynaklar"]}
+{_derive_kaynaklar(sections, boilerplate)}
 
 ### Ortak Hükümler
 {boilerplate["ortak_hukumler"]}

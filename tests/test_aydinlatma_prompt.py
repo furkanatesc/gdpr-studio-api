@@ -156,6 +156,31 @@ def test_prompt_amac_hukuki_eslestirme_talimati_var():
     assert "yeni bir hukuki sebep" in p
 
 
+def test_prompt_kaynaklar_envanter_toplamadan_turer():
+    """kaynaklar müvekkil-özel (avukat: 'kaynaklar müvekkile göre değişir'): toplama dolu
+    bölümler varsa belge-düzeyi Veri Toplama Kaynakları envanterden türer, boilerplate'e düşmez."""
+    sections = [
+        Section(is_sureci="A", toplama=["Web formu", "Cagri merkezi"]),
+        Section(is_sureci="B", toplama=["Web formu", "E-posta"]),
+    ]
+    p = build_aydinlatma_envanter_prompt(sections, BOILERPLATE, PROFILE)
+    assert "Web formu" in p
+    assert "Cagri merkezi" in p
+    assert "E-posta" in p
+    kaynak_idx = p.index("Veri Toplama Kaynakları")
+    ortak_idx = p.index("Ortak Hükümler")
+    assert "KAYNAKLAR-IZ" not in p[kaynak_idx:ortak_idx]
+
+
+def test_prompt_kaynaklar_toplama_bos_ise_boilerplate():
+    """toplama tüm bölümlerde boşsa belge-düzeyi kaynaklar boilerplate'e düşer (uydurma yok)."""
+    sections = [Section(is_sureci="A", toplama=[])]
+    p = build_aydinlatma_envanter_prompt(sections, BOILERPLATE, PROFILE)
+    kaynak_idx = p.index("Veri Toplama Kaynakları")
+    ortak_idx = p.index("Ortak Hükümler")
+    assert "KAYNAKLAR-IZ" in p[kaynak_idx:ortak_idx]
+
+
 def test_prompt_disclaimer_talimati_icerir():
     p = build_aydinlatma_envanter_prompt(SECTIONS, BOILERPLATE, PROFILE)
     assert DISCLAIMER in p
