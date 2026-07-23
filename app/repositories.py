@@ -15,6 +15,7 @@ from .models import (
     BusinessRule,
     Category,
     Client,
+    ClientDocument,
     ComplianceRequirement,
     ComplianceStatus,
     GeneratedDocument,
@@ -357,3 +358,49 @@ class ClientRepository:
                 setattr(c, k, v)
         self._s.flush()
         return c
+
+
+class ClientDocumentRepository:
+    def __init__(self, session: Session) -> None:
+        self._s = session
+
+    def upsert(
+        self, org_id, client_id, doc_type, title, content,
+        score_completeness, score_compliance,
+    ) -> ClientDocument:
+        row = self._s.scalar(
+            select(ClientDocument).where(
+                ClientDocument.org_id == org_id,
+                ClientDocument.client_id == client_id,
+                ClientDocument.doc_type == doc_type,
+                ClientDocument.title == title,
+            )
+        )
+        if row is None:
+            row = ClientDocument(
+                org_id=org_id, client_id=client_id, doc_type=doc_type, title=title,
+            )
+            self._s.add(row)
+        row.content = content
+        row.score_completeness = score_completeness
+        row.score_compliance = score_compliance
+        self._s.flush()
+        return row
+
+    def list_for_client(self, org_id, client_id) -> list[ClientDocument]:
+        return list(
+            self._s.scalars(
+                select(ClientDocument)
+                .where(ClientDocument.org_id == org_id, ClientDocument.client_id == client_id)
+                .order_by(ClientDocument.created_at.desc())
+            )
+        )
+
+    def get(self, org_id, client_id, document_id) -> ClientDocument | None:
+        return self._s.scalar(
+            select(ClientDocument).where(
+                ClientDocument.org_id == org_id,
+                ClientDocument.client_id == client_id,
+                ClientDocument.id == document_id,
+            )
+        )
