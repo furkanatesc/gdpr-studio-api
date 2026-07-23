@@ -23,3 +23,13 @@ def completeness_score(sections: list[Section]) -> float | None:
         filled += bool(s.toplama)
     total = 6 * len(sections)
     return filled / total
+
+
+def cerez_completeness_score(has_identity: bool, kategoriler: list[str], tools: str, cmp: str) -> float:
+    """Cerez politikasinin 4 zorunlu unsurunun girdi tamligi (avukat_bilgilendirme.md madde 10)."""
+    filled = 0
+    filled += bool(has_identity)              # veri sorumlusu kimligi (muvekkil)
+    filled += bool(kategoriler)               # >=1 cerez kategorisi
+    filled += bool(tools.strip())             # 3. taraf araclar/cerezler
+    filled += cmp.strip().lower() not in ("", "yok")  # riza mekanizmasi (CMP)
+    return filled / 4
