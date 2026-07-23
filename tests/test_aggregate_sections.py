@@ -175,6 +175,27 @@ def test_aggregate_sections_canonicalizes_kisi_grubu_display():
     assert result[0].kisi_gruplari == ["İş Ortağı / Tedarikçi Yetkilisi"]
 
 
+def test_aggregate_sections_ziyaretci_site_baglami():
+    """S5b: internet sitesi baglaminda Ziyaretci -> Site Ziyaretcisi (avukat kurali)."""
+    records = [_record(is_sureci="Web Sitesi Ziyareti", alt_surec="", kisi_grubu="Ziyaretçi", konum=["Web Sunucusu"])]
+    result = aggregate_sections(records, ["Ziyaretçi"])
+    assert result[0].kisi_gruplari == ["Site Ziyaretçisi"]
+
+
+def test_aggregate_sections_ziyaretci_ofis_baglami():
+    """S5b: fiziki bina baglaminda Ziyaretci -> Ofis Ziyaretcisi (kamera/giris sinyali)."""
+    records = [_record(is_sureci="Bina Giris Kontrolu", alt_surec="", kisi_grubu="Ziyaretçi", konum=["Kamera Sistemi"])]
+    result = aggregate_sections(records, ["Ziyaretçi"])
+    assert result[0].kisi_gruplari == ["Ofis Ziyaretçisi"]
+
+
+def test_aggregate_sections_ziyaretci_belirsiz_ham_kalir():
+    """S5b: baglam sinyali yoksa (ya da celiskiliyse) Ziyaretci ham kalir (yanlis etiketleme yok)."""
+    records = [_record(is_sureci="Ziyaret Islemleri", alt_surec="", kisi_grubu="Ziyaretçi", konum=[])]
+    result = aggregate_sections(records, ["Ziyaretçi"])
+    assert result[0].kisi_gruplari == ["Ziyaretçi"]
+
+
 def test_aggregate_sections_calisan_kisi_grubu_stays_raw():
     """S5a: 'Çalışan' synonym'i YOK (avukat: hepsi ayni kalmali) -> ham kalir."""
     from legal_core.canonical import load_canonicalizer

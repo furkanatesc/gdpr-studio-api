@@ -12,10 +12,34 @@ from dataclasses import dataclass, field
 
 from legal_core.canonical import Canonicalizer
 from legal_core.models import ProcessRecord
+from legal_core.normalize import norm
+
+# S5b: "Ziyaretci" kisi grubunu baglama gore Site/Ofis Ziyaretcisi'ne ayirmak icin sinyaller
+# (avukat: internet sitesi -> Site Ziyaretcisi, fiziki bina -> Ofis Ziyaretcisi). Sinyaller
+# norm() ciktisi biciminde (Turkce kucuk harf) yazilir. Celiski/yoksa ham kalir.
+_ZIY_SITE_SIGNALS = ("site", "internet", "web", "çevrimiçi", "online", "çerez", "dijital", "e-ticaret")
+_ZIY_OFIS_SIGNALS = ("ofis", "bina", "fiziki", "kamera", "cctv", "güvenlik", "giriş", "resepsiyon", "yerleşke", "tesis")
 
 
 def _nfc(s: str) -> str:
     return unicodedata.normalize("NFC", s).strip()
+
+
+def _is_bare_ziyaretci(value: str) -> bool:
+    """Ham 'Ziyaretci' mi (Site/Ofis on-ekli degil)? ç->c katlamasiyla iki yazimi da yakalar."""
+    return norm(value).replace("ç", "c") == "ziyaretci"
+
+
+def _resolve_ziyaretci(context_text: str) -> str | None:
+    """Baglam metninden (is_sureci + alt_surec + konum) Site/Ofis Ziyaretcisi cikar; net degilse None."""
+    text = norm(context_text)
+    site = any(sig in text for sig in _ZIY_SITE_SIGNALS)
+    ofis = any(sig in text for sig in _ZIY_OFIS_SIGNALS)
+    if site and not ofis:
+        return "Site Ziyaretçisi"
+    if ofis and not site:
+        return "Ofis Ziyaretçisi"
+    return None
 
 
 def _merge_dedup(*lists: list[str]) -> list[str]:
@@ -82,6 +106,16 @@ def aggregate_sections(
             kategoriler = canonicalizer.canonicalize_list(kategoriler, "kategoriler")
             veri_turleri = canonicalizer.canonicalize_list(veri_turleri, "veri_turleri")
             kisi_gruplari = canonicalizer.canonicalize_list(kisi_gruplari, "kisi_gruplari")
+
+        # S5b: baglama gore ham Ziyaretci -> Site/Ofis Ziyaretcisi (canonicalize'dan sonra).
+        ziy = _resolve_ziyaretci(
+            " ".join([is_sureci_nfc, alt_surec_nfc, *(k for r in group_records for k in r.konum)])
+        )
+        if ziy:
+            kisi_gruplari = _merge_dedup(
+                [ziy if _is_bare_ziyaretci(v) else v for v in kisi_gruplari]
+            )
+
         sections.append(
             Section(
                 is_sureci=label,
