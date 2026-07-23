@@ -22,7 +22,9 @@ from legal_core.boilerplate import load_boilerplate
 from legal_core.canonical import load_canonicalizer
 from legal_core.generate import generate_aydinlatma_envanter_stream
 from legal_core.models import ClientProfile, DocType
+from legal_core.prompt import ensure_disclaimer
 from legal_core.provider import AnthropicProvider
+from legal_core.scoring import completeness_score
 
 from .. import idempotency
 from ..auth.identity import Identity, get_current_identity
@@ -37,7 +39,14 @@ from ..config import get_settings
 from ..docx_export import render_docx
 from ..observability import capture_exception
 from ..redis_client import generate_rate_limit
-from ..repositories import ClientRepository, GeneratedDocumentRepository, PostgresProcessRepository
+from ..repositories import (
+    ClientDocumentRepository,
+    ClientRepository,
+    ComplianceRepository,
+    GeneratedDocumentRepository,
+    PostgresProcessRepository,
+)
+from .compliance_logic import compliance_snapshot_score
 from .generation import _claim_idempotency, _resolve_api_key, _sse
 
 router = APIRouter(prefix="/api/clients", tags=["aydinlatma"])
@@ -134,6 +143,26 @@ def _client_profile(client) -> ClientProfile:
     )
 
 
+def _derive_title(sections: list[Section]) -> str:
+    seen: list[str] = []
+    for s in sections:
+        for kg in s.kisi_gruplari:
+            if kg and kg not in seen:
+                seen.append(kg)
+    return (", ".join(seen))[:255] or "Genel"
+
+
+def _store_generated_document(session, org_id, client_id, sections, content) -> None:
+    """Best-effort: uretilmis aydinlatmayi + iki puani sakla. Hata akisi BOZMAZ."""
+    statuses = {k: v.status for k, v in ComplianceRepository(session).statuses_for_org(org_id).items()}
+    ClientDocumentRepository(session).upsert(
+        org_id, client_id, "aydinlatma", _derive_title(sections), content,
+        score_completeness=completeness_score(sections),
+        score_compliance=compliance_snapshot_score(statuses, "aydinlatma"),
+    )
+    session.commit()
+
+
 @router.post("/{client_id}/aydinlatma/prepare", response_model=PrepareOut, response_model_by_alias=True)
 def prepare(
     client_id: uuid.UUID,
@@ -197,6 +226,7 @@ def generate(
         # Sayım deseni generation.generate_stream ile birebir — bkz. oradaki gerekçe.
         reserved = 0
         started = False
+        full_text = ""
         try:
             for kind, payload in generate_aydinlatma_envanter_stream(
                 sections, boilerplate, profile, provider=provider, max_tokens=settings.max_tokens,
@@ -215,6 +245,7 @@ def generate(
                             model=settings.default_model,
                             byok=byok,
                         )
+                    full_text += payload
                     yield _sse("delta", {"text": payload})
                 elif kind == "done":
                     yield _sse("done", payload)
@@ -229,6 +260,13 @@ def generate(
                         byok=byok,
                         reserved_micros=reserved,
                     )
+                    try:
+                        _store_generated_document(
+                            session, identity.org_id, client_id, sections, ensure_disclaimer(full_text)
+                        )
+                    except Exception as store_err:  # best-effort; uretimi bozma
+                        _log.exception("belge saklama hatasi (org=%s)", identity.org_id)
+                        capture_exception(store_err)
         except Exception as e:
             if not started:
                 idempotency.release(identity.org_id, idempotency_key)
