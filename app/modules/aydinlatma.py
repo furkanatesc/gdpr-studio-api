@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from legal_core.aggregate_sections import Section, aggregate_sections
@@ -172,7 +173,15 @@ def _derive_title(sections: list[Section]) -> str:
 
 
 def _store_generated_document(session, org_id, client_id, sections, content) -> None:
-    """Best-effort: uretilmis aydinlatmayi + iki puani sakla. Hata akisi BOZMAZ."""
+    """Best-effort: uretilmis aydinlatmayi + iki puani sakla. Hata akisi BOZMAZ.
+
+    reserve/settle_generation_usage kendi commit'lerini yapar; commit app.current_org_id
+    GUC'sini sifirlar (transaction-local) — bu yuzden okuma+yazimdan ONCE org baglamini
+    burada yeniden kurmak gerekir (bkz. app/modules/clients.py:154).
+    """
+    bind = session.get_bind()
+    if bind is not None and bind.dialect.name == "postgresql":
+        session.execute(text("SELECT set_config('app.current_org_id', :o, true)"), {"o": str(org_id)})
     statuses = {k: v.status for k, v in ComplianceRepository(session).statuses_for_org(org_id).items()}
     ClientDocumentRepository(session).upsert(
         org_id, client_id, "aydinlatma", _derive_title(sections), content,
@@ -284,8 +293,10 @@ def generate(
                             session, identity.org_id, client_id, sections, ensure_disclaimer(full_text)
                         )
                     except Exception as store_err:  # best-effort; uretimi bozma
-                        _log.exception("belge saklama hatasi (org=%s)", identity.org_id)
-                        capture_exception(store_err)
+                        # PII sizintisi riski: SQL exception string'i belge icerigini (musvekkil PII)
+                        # tasiyabilir, capture_exception frame local'lerini (content, statuses) Sentry'ye
+                        # serilestirir. Bu yuzden yalniz exception TURU + org_id loglanir; string/traceback YOK.
+                        _log.error("belge saklama basarisiz (org=%s): %s", identity.org_id, type(store_err).__name__)
         except Exception as e:
             if not started:
                 idempotency.release(identity.org_id, idempotency_key)
