@@ -91,6 +91,17 @@ def test_aggregate_sections_filters_groups_and_merges():
     assert second.kategoriler == ["Finans"]
 
 
+def test_aggregate_sections_section_carries_departman():
+    """S4: Section, grup kayitlarinin departmanlarini tasir (enrich'in hukuk kuralina girdi)."""
+    records = [
+        _record(is_sureci="Sozlesme Yonetimi", departman="Hukuk", kisi_grubu="Calisan"),
+        _record(is_sureci="Sozlesme Yonetimi", departman="Hukuk Isleri", kisi_grubu="Calisan Adayi"),
+    ]
+    result = aggregate_sections(records, ["Calisan", "Calisan Adayi"])
+    assert len(result) == 1
+    assert result[0].departman == ["Hukuk", "Hukuk Isleri"]
+
+
 def test_aggregate_sections_splits_by_alt_surec_when_single_is_sureci():
     """Akilli gruplama: hedef grup TEK is_sureci'ye sahipse (PROGSA gibi jenerik
     "Uyelik Islemleri") alt_surec'e bolunur, etiket = alt_surec."""

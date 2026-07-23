@@ -34,6 +34,7 @@ def _merge_dedup(*lists: list[str]) -> list[str]:
 @dataclass(frozen=True)
 class Section:
     is_sureci: str
+    departman: list[str] = field(default_factory=list)
     kisi_gruplari: list[str] = field(default_factory=list)
     kategoriler: list[str] = field(default_factory=list)
     veri_turleri: list[str] = field(default_factory=list)
@@ -84,6 +85,7 @@ def aggregate_sections(
         sections.append(
             Section(
                 is_sureci=label,
+                departman=_merge_dedup([r.departman for r in group_records]),
                 kisi_gruplari=kisi_gruplari,
                 kategoriler=kategoriler,
                 veri_turleri=veri_turleri,

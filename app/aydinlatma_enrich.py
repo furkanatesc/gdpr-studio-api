@@ -11,16 +11,34 @@ from dataclasses import dataclass, field
 
 from legal_core.aggregate_sections import Section, _merge_dedup
 from legal_core.canonical import Canonicalizer
+from legal_core.normalize import norm
 
 ENRICHABLE = ["kategoriler", "veri_turleri", "amaclar", "hukuki_sebepler", "saklama_sureleri"]
 # Dolu olsa da EK standart oneri sunulan alanlar (avukat S2: birden fazla amac onerisi,
 # ekle/cikar). Digerleri yalniz BOS alanda onerilir.
 ADDITIVE = {"amaclar"}
 
+# S4: hukuk departmani islemleri KVKK m.5/2-f mesru menfaat kapsaminda (avukat:
+# "hukuk departmaninin tum islemleri bu kapsamdadir"). Bolum departmani Hukuk ise
+# bu hukuki sebep EK oneri olarak sunulur (avukat onaylar).
+HUKUK_MESRU_MENFAAT = (
+    "KVKK m.5/2-f — Veri sorumlusunun meşru menfaatleri için veri işlenmesinin zorunlu olması"
+)
+
+
+def _departman_is_hukuk(departmanlar: list[str]) -> bool:
+    return any("hukuk" in norm(d) for d in departmanlar)
+
+
+def _cites_mesru_menfaat(values: list[str]) -> bool:
+    # norm ş->s katlamaz; hem "meşru" hem "mesru" yazimlarini yakalamak icin elle katla.
+    return any("mesru menfaat" in norm(v).replace("ş", "s") for v in values)
+
 
 @dataclass(frozen=True)
 class EnrichedSection:
     is_sureci: str
+    departman: list[str] = field(default_factory=list)
     kisi_gruplari: list[str] = field(default_factory=list)
     kategoriler: list[str] = field(default_factory=list)
     veri_turleri: list[str] = field(default_factory=list)
@@ -98,9 +116,16 @@ def enrich_sections(
             if merged:
                 oneriler[fieldname] = merged
 
+        # S4: hukuk departmani -> m.5/2-f mesru menfaat EK oneri (bolum zaten atif tasimiyorsa).
+        if _departman_is_hukuk(section.departman) and not _cites_mesru_menfaat(section.hukuki_sebepler):
+            hs = oneriler.get("hukuki_sebepler", [])
+            if HUKUK_MESRU_MENFAAT not in hs:
+                oneriler["hukuki_sebepler"] = hs + [HUKUK_MESRU_MENFAAT]
+
         result.append(
             EnrichedSection(
                 is_sureci=section.is_sureci,
+                departman=section.departman,
                 kisi_gruplari=section.kisi_gruplari,
                 kategoriler=section.kategoriler,
                 veri_turleri=section.veri_turleri,
