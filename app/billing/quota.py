@@ -83,6 +83,7 @@ def reserve_generation_usage(
     *,
     model: str,
     byok: bool,
+    max_tokens: int | None = None,
 ) -> int:
     """Akış üretiminde model çağrısı başlar başlamaz sayımı REZERVE eder; rezerve maliyeti döner.
 
@@ -90,17 +91,21 @@ def reserve_generation_usage(
     toplamada çalışır ve o an istek oturumu kapanmış olabilir → oradan yazmak kaybolabilir.
     Sayım bu yüzden akış CANLIYKEN (ilk delta) yazılır; koparan istemci rezervasyonu üstlenir.
 
-    Maliyet, tokenlar daha bilinmediği için en kötü durumdan (tam `max_tokens` çıktı) rezerve
-    edilir; 'done' gelince `settle_generation_usage` gerçek maliyetle mahsuplaşır. Böylece
-    erken kopma maliyet bütçesini atlatmaz — aksine pahalı sayılır (kötüye kullanım teşviki yok).
+    Maliyet, tokenlar daha bilinmediği için en kötü durumdan (tam çıktı tavanı) rezerve edilir;
+    'done' gelince `settle_generation_usage` gerçek maliyetle mahsuplaşır. Böylece erken kopma
+    maliyet bütçesini atlatmaz — aksine pahalı sayılır (kötüye kullanım teşviki yok). Çağıran,
+    üretimde GERÇEKTEN kullanılan tavanı `max_tokens` ile geçmeli (ör. 'kayit' 32000 kullanıyorsa
+    burada da 32000 geçilmeli — aksi halde rezervasyon eksik kalır ve guardrail atlatılabilir).
+    Verilmezse mevcut davranış korunur: `settings.max_tokens` (8000).
     Rezerve maliyet bir guardrail sayacıdır; müşteriye fatura edilmez (Stripe aboneliği faturalar).
     """
+    cap = max_tokens if max_tokens is not None else settings.max_tokens
     set_org_context(session, org_id)
     repo = UsageRepository(session)
     repo.increment(org_id, current_period())  # doküman sayımı (BYOK dahil — mevcut davranış)
     reserved = 0
     if not byok:
-        reserved = cost_micros(model, 0, settings.max_tokens)
+        reserved = cost_micros(model, 0, cap)
         repo.add_cost(org_id, current_period(), 0, 0, reserved)  # token'lar 'done'da yazılır
     session.commit()
     return reserved

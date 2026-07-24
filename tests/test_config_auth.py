@@ -13,3 +13,18 @@ def test_invite_and_email_defaults():
     assert s.invite_ttl_hours == 72
     assert s.email_provider == "log"  # sağlayıcısız varsayılan
     assert s.app_base_url  # boş değil
+
+
+def test_max_tokens_for_kayit_ozel_tavan_kullanir():
+    """VERBIS kaydi surec basina 8 sutunluk blok gerektirir; uzunluk envanterle dogrusal
+    buyur -> 8000 200+ surecli envanterlerde yetmez. Yalniz 'kayit' 32000 kullanmali."""
+    s = Settings(_env_file=None)
+    assert s.max_tokens == 8000
+    assert s.max_tokens_kayit == 32000
+    assert s.max_tokens_for("kayit") == 32000
+
+
+def test_max_tokens_for_diger_turler_degismez():
+    s = Settings(_env_file=None)
+    for doc_type in ("aydinlatma", "cerez", "dpa", "dpia", "ihlal"):
+        assert s.max_tokens_for(doc_type) == 8000

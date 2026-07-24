@@ -364,6 +364,49 @@ def test_kayit_generate_puan_a_cap_ile_tutarli(db_session, monkeypatch):
     assert doc.score_completeness == 1.0
 
 
+def test_kayit_generate_saglayiciya_32000_max_tokens_ile_cagirir(db_session, monkeypatch):
+    """Kayit uretimi settings.max_tokens (8000) DEGIL, kayit'e ozel 32000 tavanini
+    saglayiciya gecirmeli (200+ surecli envanterler 8000'de kesiliyordu)."""
+    _managed_billing_settings()
+    captured = {}
+
+    def _capture_stream(records, profile, measures, rules, **kw):
+        captured["max_tokens"] = kw.get("max_tokens")
+        yield from _fake_stream()
+
+    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream", _capture_stream)
+    cid = _make_client(db_session)
+    _put_inventory(db_session, cid)
+
+    resp = _generate(db_session, cid)
+    _consume(resp)
+
+    assert captured["max_tokens"] == 32000
+
+
+def test_kayit_generate_rezervasyon_32000_uzerinden_hesaplanir(db_session, monkeypatch):
+    """Maliyet rezervasyonu kayit akisinda gercekte kullanilan 32000 tavanini gecirmeli;
+    aksi halde settings.max_tokens (8000) uzerinden eksik rezerve edilir ve maliyet
+    guardrail'i (COST_BUDGET_MICROS) 200+ surecli kayit uretimlerinde atlatilabilir."""
+    _managed_billing_settings()
+    captured = {}
+    real_reserve = kayitmod.reserve_generation_usage
+
+    def _capture_reserve(*a, **kw):
+        captured["max_tokens"] = kw.get("max_tokens")
+        return real_reserve(*a, **kw)
+
+    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream", _fake_stream)
+    monkeypatch.setattr(kayitmod, "reserve_generation_usage", _capture_reserve)
+    cid = _make_client(db_session)
+    _put_inventory(db_session, cid)
+
+    resp = _generate(db_session, cid)
+    _consume(resp)
+
+    assert captured["max_tokens"] == 32000
+
+
 def test_kayit_generate_baska_org_muvekkili_404(db_session, monkeypatch):
     """client_processes(client_id) org filtresi tasimaz; tek savunma ClientRepository.get
     sahiplik kontrolunun envanter okumasindan once gelmesidir. Baska org'un muvekkilinin

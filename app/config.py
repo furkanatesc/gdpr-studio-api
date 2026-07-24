@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     managed_anthropic_api_key: str = ""
     default_model: str = "claude-sonnet-4-6"
     max_tokens: int = 8000
+    # İşleme Kaydı (VERBİS) süreç başına 8 sütunluk blok gerektirir → uzunluk envanterle
+    # doğrusal büyür; 200+ süreçli envanterler 8000'i aşar. Yalnız 'kayit' bu tavanı kullanır.
+    max_tokens_kayit: int = 32000
     # Süreç grounding'i prompt'a kaç süreç bassın (0 = sınırsız). Kırpma sessiz değildir.
     process_cap: int = 60
     # Sağlayıcı dayanıklılığı: sync üretim uçları threadpool'da; timeout/retry olmadan
@@ -126,6 +129,12 @@ class Settings(BaseSettings):
             if p == plan and i == interval:
                 return pid
         return None
+
+    def max_tokens_for(self, doc_type: str) -> int:
+        """Belge türüne göre çıktı tavanı; yalnız 'kayit' özel değer kullanır."""
+        if doc_type == "kayit":
+            return self.max_tokens_kayit
+        return self.max_tokens
 
 
 _settings: Settings | None = None

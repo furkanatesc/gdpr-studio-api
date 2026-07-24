@@ -85,6 +85,28 @@ def test_reserve_and_settle_count_when_billing_disabled(db_session):
     assert repo.get_cost(org_id, current_period()) == cost_micros("claude-sonnet-4-6", 100, 200)
 
 
+def test_reserve_generation_usage_max_tokens_parametresi_kullanilir(db_session):
+    """max_tokens verilmezse settings.max_tokens (8000) kullanilir (mevcut davranis);
+    verilirse (ör. kayit'in 32000'i) rezervasyon o degeri yansitir — aksi halde kayit
+    yolunda maliyet guardrail'i settings'in sabit 8000'i ile eksik rezerve eder."""
+    from app.billing.pricing import cost_micros
+    from app.billing.quota import reserve_generation_usage
+
+    org_id = uuid.UUID("00000000-0000-0000-0000-000000000002")
+    settings = _billing_disabled_settings()
+
+    reserved_default = reserve_generation_usage(
+        db_session, settings, org_id, model="claude-sonnet-4-6", byok=False,
+    )
+    assert reserved_default == cost_micros("claude-sonnet-4-6", 0, settings.max_tokens)
+
+    reserved_kayit = reserve_generation_usage(
+        db_session, settings, org_id, model="claude-sonnet-4-6", byok=False, max_tokens=32000,
+    )
+    assert reserved_kayit == cost_micros("claude-sonnet-4-6", 0, 32000)
+    assert reserved_kayit > reserved_default
+
+
 def test_cost_budget_enforced_when_billing_disabled(client, db_session):
     """Stripe kapalı olsa da managed maliyet bütçesi korur (anahtar harcaması sınırsız kalmaz)."""
     org_id = uuid.UUID("00000000-0000-0000-0000-000000000002")
