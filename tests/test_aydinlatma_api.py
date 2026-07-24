@@ -14,7 +14,8 @@ import app.modules.aydinlatma as aydmod
 import app.redis_client as rc
 from app.auth.identity import Identity
 from app.models import GeneratedDocument
-from app.repositories import ClientRepository
+from app.repositories import ClientRepository, GeneratedDocumentRepository
+from legal_core.models import DocType
 
 IDENT = Identity(
     user_id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
@@ -252,6 +253,131 @@ def test_generate_max_tokensta_saklanmaz_ve_uyari_yayinlanir(db_session, monkeyp
     assert "event: error" not in body
     rows = db_session.query(ClientDocument).filter_by(client_id=cid).all()
     assert len(rows) == 0
+
+
+def test_generate_uyari_donedan_once_gelir(db_session, monkeypatch):
+    """Borc #1: 'warning' 'done'dan ONCE gelmeli — done'u terminal sayan bir tuketici
+    uyariyi kacirmamali; done payload'i da ek sigorta olarak 'incomplete' isaretlenmeli."""
+    import json
+
+    _managed_billing_settings()
+    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream", _fake_stream_truncated)
+    cid = _make_client(db_session)
+
+    resp = _generate(db_session, cid)
+    body = _consume(resp)
+
+    assert "event: warning" in body and "event: done" in body
+    assert body.index("event: warning") < body.index("event: done")
+
+    done_line = [ln for ln in body.splitlines() if ln.startswith("data: ")][-1]
+    done_payload = json.loads(done_line[len("data: "):])
+    assert done_payload["incomplete"] is True
+    assert done_payload["warningMessage"]
+
+
+def test_generate_max_tokensta_uyum_kaydi_geri_alinir(db_session, monkeypatch):
+    """Borc #2: kesmede generated_documents satiri SAYILMAMALI; org'un ONCEKI gecerli
+    kaydi ETKILENMEMELI (yalniz bu kosuya ait satir silinir)."""
+    _managed_billing_settings()
+    GeneratedDocumentRepository(db_session).record(IDENT.org_id, DocType.aydinlatma)
+    db_session.commit()
+
+    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream", _fake_stream_truncated)
+    cid = _make_client(db_session)
+
+    resp = _generate(db_session, cid)
+    _consume(resp)
+
+    rows = db_session.query(GeneratedDocument).filter_by(doc_type="aydinlatma").all()
+    assert len(rows) == 1  # yalniz onceki gecerli kayit kaldi
+
+
+def _fake_stream_with_stop_reason(stop_reason):
+    def _f(*a, **k):
+        yield "grounding", []
+        yield "delta", "Aydinlatma metni"
+        yield "done", {
+            "model": "claude-x",
+            "usage": {"inputTokens": 10, "outputTokens": 20},
+            "stopReason": stop_reason,
+        }
+
+    return _f
+
+
+def test_generate_baglam_penceresi_asildiginda_saklanmaz(db_session, monkeypatch):
+    """Borc #3: yalniz max_tokens degil, model_context_window_exceeded da kesme sayilmali."""
+    from app.models import ClientDocument
+
+    _managed_billing_settings()
+    monkeypatch.setattr(
+        aydmod, "generate_aydinlatma_envanter_stream",
+        _fake_stream_with_stop_reason("model_context_window_exceeded"),
+    )
+    cid = _make_client(db_session)
+
+    resp = _generate(db_session, cid)
+    body = _consume(resp)
+
+    assert "event: warning" in body
+    assert db_session.query(ClientDocument).filter_by(client_id=cid).count() == 0
+    assert db_session.query(GeneratedDocument).filter_by(doc_type="aydinlatma").count() == 0
+
+
+def test_generate_refusal_saklanmaz_ve_farkli_mesaj_gosterilir(db_session, monkeypatch):
+    """Borc #3: refusal da SAKLANMAZ ama mesaji uzunluk-kesme mesajindan FARKLI olmali."""
+    from app.models import ClientDocument
+
+    _managed_billing_settings()
+    monkeypatch.setattr(
+        aydmod, "generate_aydinlatma_envanter_stream",
+        _fake_stream_with_stop_reason("refusal"),
+    )
+    cid = _make_client(db_session)
+
+    resp = _generate(db_session, cid)
+    body = _consume(resp)
+
+    assert "event: warning" in body
+    assert "generation_refused" in body
+    assert "truncated_output_limit" not in body
+    assert db_session.query(ClientDocument).filter_by(client_id=cid).count() == 0
+    assert db_session.query(GeneratedDocument).filter_by(doc_type="aydinlatma").count() == 0
+
+
+def test_generate_end_turn_saklanir_regresyon_kilidi(db_session, monkeypatch):
+    """Regresyon kilidi: stopReason='end_turn' -> belge HALA saklanir (davranis birebir)."""
+    from app.models import ClientDocument
+
+    _managed_billing_settings()
+    monkeypatch.setattr(
+        aydmod, "generate_aydinlatma_envanter_stream",
+        _fake_stream_with_stop_reason("end_turn"),
+    )
+    cid = _make_client(db_session)
+
+    resp = _generate(db_session, cid)
+    body = _consume(resp)
+
+    assert "event: warning" not in body
+    rows = db_session.query(ClientDocument).filter_by(client_id=cid).all()
+    assert len(rows) == 1
+    assert db_session.query(GeneratedDocument).filter_by(doc_type="aydinlatma").count() == 1
+
+
+def test_generate_kesmede_idempotency_kilidi_birakilir(db_session, monkeypatch):
+    """Borc #4: kesmede idempotency kilidi BIRAKILMALI — uyaridaki 'yeniden deneyin'
+    tavsiyesine uyan istemci 409 almamali."""
+    _managed_billing_settings()
+    fake = _use_fake_redis(monkeypatch)
+    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream", _fake_stream_truncated)
+    cid = _make_client(db_session)
+
+    resp = _generate(db_session, cid, idempotency_key="ayd-kesme-1")
+    _consume(resp)
+
+    assert fake.store == {}
 
 
 def test_generate_belgeyi_saklar_iki_puanla(db_session, monkeypatch):
