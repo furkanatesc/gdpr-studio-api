@@ -1,5 +1,10 @@
 from legal_core.aggregate_sections import Section
-from legal_core.scoring import cerez_completeness_score, completeness_score
+from legal_core.models import ProcessRecord
+from legal_core.scoring import (
+    cerez_completeness_score,
+    completeness_score,
+    kayit_completeness_score,
+)
 
 
 def _full_section():
@@ -54,3 +59,39 @@ def test_cerez_completeness_kimliksiz():
 
 def test_cerez_completeness_tools_bosluk_bos_sayilir():
     assert cerez_completeness_score(True, ["Zorunlu"], "   ", "var-kendi") == 0.75
+
+
+def _rec(**ov):
+    base = dict(
+        departman="IK", is_sureci="Ozluk", alt_surec="", kisi_grubu="Calisan",
+        kategoriler=["Kimlik"], veri_turleri=["Ad"], amaclar=["Bordro"],
+        hukuki_sebepler=["m.5/2-c"], saklama_sureleri=["10 yil"], aktarim=["SGK"],
+    )
+    base.update(ov)
+    return ProcessRecord(**base)
+
+
+def test_kayit_completeness_full_row_is_one():
+    assert kayit_completeness_score([_rec()]) == 1.0
+
+
+def test_kayit_completeness_empty_list_is_none():
+    assert kayit_completeness_score([]) is None
+
+
+def test_kayit_completeness_partial_row():
+    # kisi_grubu+veri+amac dolu; hukuki/saklama/aktarim bos -> 3/6
+    r = _rec(hukuki_sebepler=[], saklama_sureleri=[], aktarim=[])
+    assert kayit_completeness_score([r]) == 0.5
+
+
+def test_kayit_completeness_veri_slot_kategori_veya_veri_turu():
+    r = _rec(kategoriler=[], veri_turleri=["Ad"], hukuki_sebepler=[], saklama_sureleri=[], aktarim=[], amaclar=[])
+    # yalniz kisi_grubu(1) + veri(1) = 2/6
+    assert kayit_completeness_score([r]) == 2 / 6
+
+
+def test_kayit_completeness_averages_rows():
+    full = _rec()
+    empty = _rec(kisi_grubu="", kategoriler=[], veri_turleri=[], amaclar=[], hukuki_sebepler=[], saklama_sureleri=[], aktarim=[])
+    assert kayit_completeness_score([full, empty]) == 0.5  # (6+0)/12

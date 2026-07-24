@@ -8,6 +8,7 @@ sayilir -> muvekkile ozgu doluluk sinyalini verir.
 from __future__ import annotations
 
 from legal_core.aggregate_sections import Section
+from legal_core.models import ProcessRecord
 
 
 def completeness_score(sections: list[Section]) -> float | None:
@@ -33,3 +34,19 @@ def cerez_completeness_score(has_identity: bool, kategoriler: list[str], tools: 
     filled += bool(tools.strip())             # 3. taraf araclar/cerezler
     filled += cmp.strip().lower() not in ("", "yok")  # riza mekanizmasi (CMP)
     return filled / 4
+
+
+def kayit_completeness_score(records: list[ProcessRecord]) -> float | None:
+    """Isleme kaydi zorunlu VERBIS alanlarinin envanter satirlarindaki doluluk orani
+    (isleme_envanteri zorunlu unsurlari; avukat_bilgilendirme.md'de belgelenir)."""
+    if not records:
+        return None
+    filled = 0
+    for r in records:
+        filled += bool(r.kisi_grubu)
+        filled += bool(r.kategoriler or r.veri_turleri)
+        filled += bool(r.amaclar)
+        filled += bool(r.hukuki_sebepler)
+        filled += bool(r.saklama_sureleri)
+        filled += bool(r.aktarim)
+    return filled / (6 * len(records))

@@ -302,3 +302,89 @@ Aydınlatma Metni üret. Belgenin EN ALTINA aşağıdaki uyarıyı aynen ekle:
 
 {DISCLAIMER}
 """
+
+
+def _format_kayit_process(record: ProcessRecord) -> str:
+    """Tek VERBİS sürecini kayıt prompt'una çevirir — altı zorunlu slot KOŞULSUZ basılır.
+
+    format_processes'ten farkı: kişi grubu, kategori/veri türü, amaç, hukuki sebep, saklama
+    ve alıcı/aktarım boşsa satır hiç düşmez (C1) — placeholder ile yer tutulur. Bağlamsal
+    alanlar (dayanak/işlem/konum/tedbirler) mevcut koşullu üslupla kalır.
+    """
+    out = f"\n### Süreç: {record.departman} / {record.is_sureci} / {record.alt_surec}\n"
+    out += f"- Veri Konusu Kişi Grubu: {record.kisi_grubu if record.kisi_grubu else ONAY_BEKLEYEN_PLACEHOLDER}\n"
+    out += f"- Kişisel Veri Kategorisi/Türü: {_field_or_placeholder(record.kategoriler + record.veri_turleri)}\n"
+    out += f"- İşleme Amaçları: {_field_or_placeholder(record.amaclar)}\n"
+    out += f"- Hukuki Sebep: {_field_or_placeholder(record.hukuki_sebepler)}\n"
+    out += f"- Saklama Süresi: {_field_or_placeholder(record.saklama_sureleri)}\n"
+    out += f"- Alıcı/Aktarım: {_field_or_placeholder(record.aktarim)}\n"
+    if record.dayanaklar:
+        out += f"- Dayanak: {', '.join(record.dayanaklar)}\n"
+    if record.islem:
+        out += f"- İşlem: {', '.join(record.islem)}\n"
+    if record.konum:
+        out += f"- Konum: {', '.join(record.konum)}\n"
+    if record.idari_tedbirler:
+        out += f"- İdari tedbir: {', '.join(record.idari_tedbirler)}\n"
+    if record.teknik_tedbirler:
+        out += f"- Teknik tedbir: {', '.join(record.teknik_tedbirler)}\n"
+    return out
+
+
+def format_kayit_processes(records: list[ProcessRecord], cap: int = DEFAULT_PROCESS_CAP) -> str:
+    """Kayıt süreçlerini _format_kayit_process ile birleştirir; cap aşılırsa AÇIK not düşer."""
+    if not records:
+        return ""
+    total = len(records)
+    shown = records[:cap] if cap and total > cap else records
+    out = "".join(_format_kayit_process(r) for r in shown)
+    if cap and total > cap:
+        out += f"\n(NOT: {total} süreçten ilk {cap} tanesi gösteriliyor — liste kırpıldı.)\n"
+    return out
+
+
+def build_kayit_envanter_prompt(
+    records: list[ProcessRecord],
+    profile: ClientProfile,
+    measures: list[str],
+    rules: list[str],
+    process_cap: int = DEFAULT_PROCESS_CAP,
+) -> str:
+    """Müvekkil envanterinden VERBİS/RoPA işleme kaydı prompt'u kurar (aydinlatma envanter-modu deseni)."""
+    surecler = (
+        format_kayit_processes(records, cap=process_cap)
+        if records
+        else "\n(Envanterde süreç yok — üretilecek işleme faaliyeti yok.)\n"
+    )
+    tedbir = format_measures(measures)
+    kurallar = ""
+    for i, r in enumerate(rules, 1):
+        kurallar += f"{i}. {r}\n"
+
+    return f"""Sen KVKK (6698) m.16 ve GDPR m.30 uzmanı bir hukuk asistanısın. Aşağıdaki müvekkil
+kimliği ve işleme envanterinden (VERBİS/RoPA) bir Kişisel Veri İşleme Kaydı üret.
+
+Yalnız aşağıda verilen envanter değerlerini kullan; hukuki sebep, saklama süresi, amaç, alıcı veya
+aktarım UYDURMA. Envanterde boş olan bir zorunlu alanı "{ONAY_BEKLEYEN_PLACEHOLDER}" olarak bırak.
+
+Her işleme faaliyetini (süreç) VERBİS sütun mantığıyla ele al: İş Süreci · Veri Konusu Kişi Grubu ·
+Kişisel Veri Kategorisi/Türü · İşleme Amaçları · Hukuki Sebep · Saklama Süresi · Alıcı/Aktarım ·
+Teknik ve İdari Tedbirler. Her sürecin KENDİ hukuki sebebini ve saklama süresini kullan; başka bir
+sürecin değerini bu sürece UYGULAMA.
+
+## VERİ SORUMLUSU KİMLİĞİ
+{_format_client_profile(profile)}
+
+## İŞLEME ENVANTERİ — BAĞLAYICI SÜREÇLER
+{surecler}
+
+## TEKNİK VE İDARİ TEDBİRLER (org geneli standart liste; bunları kullan, UYDURMA)
+{tedbir}
+
+## BAĞLAYICI İŞ KURALLARI (HARFİYEN UY)
+{kurallar}
+Yukarıdaki bilgilere KESİNLİKLE bağlı kalarak eksiksiz ve Markdown formatında bir İşleme Kaydı üret.
+Belgenin EN ALTINA aşağıdaki uyarıyı aynen ekle:
+
+{DISCLAIMER}
+"""

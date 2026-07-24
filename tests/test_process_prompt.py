@@ -20,6 +20,16 @@ def test_format_processes_emits_own_legal_basis_and_retention():
     assert "Çalışan" in out
 
 
+def test_format_processes_does_not_emit_aktarim():
+    """format_processes build_prompt (canlı: /api/generate + cerez) tarafından paylaşılıyor;
+    Alıcı/Aktarım satırı burada basılırsa global sektör şablonlarındaki (client_id yok)
+    gerçek alıcı adları ilgisiz müvekkillerin belgesine sızar (I3 bulgusu). Kayıt yolu
+    aktarımı kendi formatter'ında (build_kayit_envanter_prompt) koşulsuz basıyor."""
+    out = format_processes([_rec(aktarim=["SGK"])])
+    assert "Alıcı/Aktarım" not in out
+    assert "SGK" not in out
+
+
 def test_format_processes_marks_missing_retention_as_do_not_invent():
     out = format_processes([_rec(sak=[])])
     assert "UYDURMA" in out  # boş saklama → uydurma yasağı ibaresi
