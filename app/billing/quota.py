@@ -8,7 +8,7 @@ from fastapi import Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 
 from ..auth.identity import Identity, get_current_identity
-from ..auth.tenant_session import tenant_session
+from ..auth.tenant_session import set_org_context, tenant_session
 from ..config import Settings, get_settings
 from .entitlement import current_period, resolve_entitlement
 from .pricing import cost_budget_for, cost_micros
@@ -24,13 +24,16 @@ def enforce_generation_quota(
 
     tenant_session org RLS bağlamını set eder. BYOK (X-Anthropic-Key) → maliyet
     kontrolü atlanır (bizim maliyetimiz değil); doküman tavanı yine uygulanır.
+
+    Maliyet bütçesi Stripe'tan BAĞIMSIZ uygulanır: managed anahtarın harcaması
+    ödeme sağlayıcısının kurulu olmasına bağlı olamaz. Doküman tavanı ise gelir
+    kapısıdır — yükseltme yolu (checkout) yokken kullanıcıyı engellemek anlamsız,
+    o yüzden billing_enabled'a bağlı kalır.
     """
     settings = get_settings()
-    if not settings.billing_enabled:
-        return identity  # dev/billing-kapalı: enforcement yok
     ent = resolve_entitlement(session, identity.org_id)
-    # (1) Ücretsiz doküman tavanı
-    if ent.quota is not None and ent.used >= ent.quota:
+    # (1) Ücretsiz doküman tavanı — yalnız checkout mümkünken
+    if settings.billing_enabled and ent.quota is not None and ent.used >= ent.quota:
         raise HTTPException(
             status_code=402,
             detail={"code": "quota_exceeded", "plan": ent.plan, "used": ent.used, "quota": ent.quota},
@@ -64,8 +67,7 @@ def record_generation_usage(
     byok: bool,
 ) -> None:
     """Üretimden SONRA (yalnız başarıda): doküman sayacı + (managed ise) maliyet birikimi + commit."""
-    if not settings.billing_enabled:
-        return
+    set_org_context(session, org_id)
     repo = UsageRepository(session)
     repo.increment(org_id, current_period())  # doküman sayımı (BYOK dahil — mevcut davranış)
     if not byok:
@@ -93,8 +95,7 @@ def reserve_generation_usage(
     erken kopma maliyet bütçesini atlatmaz — aksine pahalı sayılır (kötüye kullanım teşviki yok).
     Rezerve maliyet bir guardrail sayacıdır; müşteriye fatura edilmez (Stripe aboneliği faturalar).
     """
-    if not settings.billing_enabled:
-        return 0
+    set_org_context(session, org_id)
     repo = UsageRepository(session)
     repo.increment(org_id, current_period())  # doküman sayımı (BYOK dahil — mevcut davranış)
     reserved = 0
@@ -117,8 +118,10 @@ def settle_generation_usage(
     reserved_micros: int,
 ) -> None:
     """Akış 'done': gerçek token'ları yaz ve rezervasyon farkını düzelt (fark negatif olabilir)."""
-    if not settings.billing_enabled or byok:
+    if byok:
         return
+    # Rezervasyon commit'i app.current_org_id'yi sifirladi — RLS yazimi icin yeniden kur.
+    set_org_context(session, org_id)
     actual = cost_micros(model, input_tokens, output_tokens)
     UsageRepository(session).add_cost(
         org_id,

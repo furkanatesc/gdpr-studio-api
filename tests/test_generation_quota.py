@@ -41,6 +41,65 @@ def test_quota_allows_when_billing_disabled(client, db_session):
     assert r.status_code == 400  # kota değil — anahtarsız üretim hatası (enforcement devre dışı)
 
 
+# --- Sayım/maliyet Stripe'tan BAĞIMSIZ (2026-07-24 kararı) ---
+# Gerekçe: kullanım sayacı ve managed maliyet guardrail'i bir ödeme sağlayıcısının
+# yapılandırılmış olmasına bağlı olamaz. Yalnız DOKÜMAN TAVANI (gelir kapısı)
+# billing_enabled'a bağlıdır — yükseltme yolu yokken engellemek anlamsız.
+
+def _billing_disabled_settings():
+    return config_module.Settings(_env_file=None, stripe_secret_key="")
+
+
+def test_record_usage_increments_when_billing_disabled(db_session):
+    """Stripe kapalıyken de doküman sayılır (aksi halde sayaç canlıda hep 0/5 kalır)."""
+    from app.billing.quota import record_generation_usage
+
+    org_id = uuid.UUID("00000000-0000-0000-0000-000000000002")
+    settings = _billing_disabled_settings()
+    assert settings.billing_enabled is False
+    record_generation_usage(
+        db_session, settings, org_id,
+        model="claude-sonnet-4-6", input_tokens=0, output_tokens=0, byok=False,
+    )
+    assert UsageRepository(db_session).get_count(org_id, current_period()) == 1
+
+
+def test_reserve_and_settle_count_when_billing_disabled(db_session):
+    """Akış yolu (rezerve → mahsuplaş) Stripe kapalıyken de sayar ve maliyeti biriktirir."""
+    from app.billing.pricing import cost_micros
+    from app.billing.quota import reserve_generation_usage, settle_generation_usage
+
+    org_id = uuid.UUID("00000000-0000-0000-0000-000000000002")
+    settings = _billing_disabled_settings()
+    reserved = reserve_generation_usage(
+        db_session, settings, org_id, model="claude-sonnet-4-6", byok=False,
+    )
+    assert reserved > 0
+    settle_generation_usage(
+        db_session, settings, org_id,
+        model="claude-sonnet-4-6", input_tokens=100, output_tokens=200,
+        byok=False, reserved_micros=reserved,
+    )
+    repo = UsageRepository(db_session)
+    assert repo.get_count(org_id, current_period()) == 1
+    assert repo.get_cost(org_id, current_period()) == cost_micros("claude-sonnet-4-6", 100, 200)
+
+
+def test_cost_budget_enforced_when_billing_disabled(client, db_session):
+    """Stripe kapalı olsa da managed maliyet bütçesi korur (anahtar harcaması sınırsız kalmaz)."""
+    org_id = uuid.UUID("00000000-0000-0000-0000-000000000002")
+    # Ücretsiz plan bütçesi tavanda
+    from app.billing.pricing import cost_budget_for
+
+    budget = cost_budget_for("baslangic")
+    assert budget is not None
+    UsageRepository(db_session).add_cost(org_id, current_period(), 0, 0, budget)
+    db_session.commit()
+    r = client.post("/api/generate", json={"type": "aydinlatma"})
+    assert r.status_code == 402
+    assert r.json()["detail"]["code"] == "cost_budget_exceeded"
+
+
 def test_record_usage_increments(db_session):
     from app.billing.quota import record_generation_usage
     org_id = uuid.UUID("00000000-0000-0000-0000-000000000002")
