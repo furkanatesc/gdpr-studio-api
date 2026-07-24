@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Response
 from fastapi.responses import StreamingResponse
@@ -37,7 +37,7 @@ from ..billing.quota import (
     settle_generation_usage,
 )
 from ..config import get_settings
-from ..docx_export import render_docx
+from ..docx_export import render_styled_docx
 from ..observability import capture_exception
 from ..redis_client import generate_rate_limit
 from ..repositories import (
@@ -81,6 +81,7 @@ class GenerateIn(_Camel):
 class DocxIn(_Camel):
     text: str
     title: str | None = None
+    kisi_gruplari: list[str] | None = None
 
 
 class EnrichedSectionOut(_Camel):
@@ -344,9 +345,20 @@ def docx(
     identity: Identity = Depends(get_current_identity),
     session: Session = Depends(tenant_session),
 ) -> Response:
-    if ClientRepository(session).get(identity.org_id, client_id) is None:
+    client = ClientRepository(session).get(identity.org_id, client_id)
+    if client is None:
         raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
-    data = render_docx(body.text, body.title or "Aydınlatma Metni")
+    prof = client_profile(client)
+    data = render_styled_docx(
+        body.text,
+        "aydinlatma",
+        {
+            "veri_sorumlusu": prof.unvan or prof.ad,
+            "ilgili_kisi": ", ".join(body.kisi_gruplari) if body.kisi_gruplari else None,
+            "tarih": date.today().strftime("%d.%m.%Y"),
+            "versiyon": "1.0",
+        },
+    )
     return Response(
         content=data,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",

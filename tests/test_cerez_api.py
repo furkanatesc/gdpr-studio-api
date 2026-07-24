@@ -285,3 +285,25 @@ def test_cerez_generate_belgeyi_saklar_iki_puanla(db_session, monkeypatch):
     # kimlik(1)+kategori(1)+arac(1)=3, cmp=yok -> 3/4
     assert rows[0].score_completeness == 0.75
     assert rows[0].score_compliance == 0.0      # org'da uyum statusu yok
+
+
+def test_cerez_docx_kapak_site(db_session):
+    import io as _io
+
+    import docx as _docx
+
+    from app.repositories import ClientRepository
+
+    _managed_billing_settings()
+    c = ClientRepository(db_session).create(IDENT.org_id, "ACME", "sirket")
+    db_session.commit()
+    resp = cerezmod.docx(
+        client_id=c.id,
+        body=cerezmod.DocxIn(text="## Çerezler\n\nMetin.", site="ornek.com"),
+        identity=IDENT,
+        session=db_session,
+    )
+    doc = _docx.Document(_io.BytesIO(resp.body))
+    t = "\n".join(p.text for p in doc.paragraphs)
+    assert "Site" in t and "ornek.com" in t
+    assert "İlgili Kişi" not in t

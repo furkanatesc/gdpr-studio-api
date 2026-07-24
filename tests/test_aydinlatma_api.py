@@ -443,3 +443,26 @@ def test_docx_uretir(client_fresh):
     assert "attachment" in r.headers["content-disposition"]
     zf = zipfile.ZipFile(io.BytesIO(r.content))
     assert "word/document.xml" in zf.namelist()
+
+
+def test_aydinlatma_docx_kapak_ilgili_kisi(db_session):
+    import io as _io
+
+    import docx as _docx
+
+    from app.repositories import ClientRepository
+
+    _managed_billing_settings()
+    c = ClientRepository(db_session).create(IDENT.org_id, "ACME A.S.", "sirket")
+    db_session.commit()
+    resp = aydmod.docx(
+        client_id=c.id,
+        body=aydmod.DocxIn(text="## 1. Tanımlar\n\nMetin.", kisiGruplari=["Çalışan"]),
+        identity=IDENT,
+        session=db_session,
+    )
+    doc = _docx.Document(_io.BytesIO(resp.body))
+    t = "\n".join(p.text for p in doc.paragraphs)
+    assert "ACME A.S." in t
+    assert "İlgili Kişi" in t and "Çalışan" in t
+    assert "Versiyon" in t and "1.0" in t

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from datetime import date
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Response
 from fastapi.responses import StreamingResponse
@@ -32,7 +33,7 @@ from ..billing.quota import (
     settle_generation_usage,
 )
 from ..config import get_settings
-from ..docx_export import render_docx
+from ..docx_export import render_styled_docx
 from ..observability import capture_exception
 from ..redis_client import generate_rate_limit
 from ..repositories import (
@@ -203,9 +204,19 @@ def docx(
     identity: Identity = Depends(get_current_identity),
     session: Session = Depends(tenant_session),
 ) -> Response:
-    if ClientRepository(session).get(identity.org_id, client_id) is None:
+    client = ClientRepository(session).get(identity.org_id, client_id)
+    if client is None:
         raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
-    data = render_docx(body.text, body.title or "İşleme Kaydı")
+    prof = client_profile(client)
+    data = render_styled_docx(
+        body.text,
+        "kayit",
+        {
+            "veri_sorumlusu": prof.unvan or prof.ad,
+            "tarih": date.today().strftime("%d.%m.%Y"),
+            "versiyon": "1.0",
+        },
+    )
     return Response(
         content=data,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
