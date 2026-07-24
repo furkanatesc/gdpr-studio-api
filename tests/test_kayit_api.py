@@ -22,13 +22,13 @@ def _managed_billing_settings():
     )
 
 
-def _make_client(db_session):
-    c = ClientRepository(db_session).create(IDENT.org_id, "Otel", "otel")
+def _make_client(db_session, org_id=IDENT.org_id):
+    c = ClientRepository(db_session).create(org_id, "Otel", "otel")
     db_session.commit()
     return c.id
 
 
-def _put_inventory(db_session, client_id):
+def _put_inventory(db_session, client_id, org_id=IDENT.org_id):
     # replace_client satir sekli: {sector, kisi_grubu, departman, is_sureci, alt_surec, data:{...}}
     # data JSONB _to_record'un okudugu anahtarlari tasir (kategoriler, veri_turleri, ... aktarim).
     rows = [{
@@ -39,7 +39,7 @@ def _put_inventory(db_session, client_id):
             "hukuki_sebepler": ["m.5/2-c"], "saklama_sureleri": ["10 yil"], "aktarim": ["SGK"],
         },
     }]
-    PostgresProcessRepository(db_session).replace_client(IDENT.org_id, client_id, rows)
+    PostgresProcessRepository(db_session).replace_client(org_id, client_id, rows)
     db_session.commit()
 
 
@@ -108,4 +108,30 @@ def test_kayit_generate_belgeyi_saklar(db_session, monkeypatch):
     assert rows[0].doc_type == "kayit"
     assert rows[0].title == "İşleme Kaydı"
     assert "kaydi." in rows[0].content
-    assert rows[0].score_completeness is not None
+    # kisi_grubu+kategori+amac+hukuki_sebep+saklama+aktarim: 6/6 dolu -> 1.0
+    assert rows[0].score_completeness == 1.0
+    assert rows[0].score_compliance == 0.0  # org'da uyum statusu yok
+
+
+def test_kayit_generate_baska_org_muvekkili_404(db_session, monkeypatch):
+    """client_processes(client_id) org filtresi tasimaz; tek savunma ClientRepository.get
+    sahiplik kontrolunun envanter okumasindan once gelmesidir. Baska org'un muvekkilinin
+    client_id'si mevcut kimlikle 404 vermeli ve envanteri sizdirmamali."""
+    from app.models import ClientDocument
+
+    _managed_billing_settings()
+    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream", _fake_stream)
+    other_org_id = uuid.UUID("00000000-0000-0000-0000-000000000099")
+    other_cid = _make_client(db_session, org_id=other_org_id)
+    _put_inventory(db_session, other_cid, org_id=other_org_id)
+
+    from fastapi import HTTPException
+    try:
+        _generate(db_session, other_cid)
+    except HTTPException as e:
+        assert e.status_code == 404
+    else:
+        raise AssertionError("404 bekleniyordu")
+
+    rows = db_session.query(ClientDocument).filter_by(client_id=other_cid).all()
+    assert len(rows) == 0
