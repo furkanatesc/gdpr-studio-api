@@ -10,16 +10,26 @@ from ..db import get_session
 from .identity import Identity, get_current_identity
 
 
-def tenant_session(
-    session: Session = Depends(get_session),
-    identity: Identity = Depends(get_current_identity),
-) -> Session:
+def set_org_context(session: Session, org_id) -> None:
+    """app.current_org_id'yi (transaction-local) kurar; sqlite'ta no-op.
+
+    set_config(..., true) COMMIT'te sifirlanir: bir istek icinde commit'ten SONRA
+    RLS'li tabloya dokunan her adim bunu YENIDEN cagirmak zorundadir. Akis
+    ureticilerinde (rezervasyon commit'i → mahsuplasma/saklama) tipik tuzak.
+    """
     bind = session.get_bind()
     if bind is not None and bind.dialect.name == "postgresql":
         session.execute(
             text("SELECT set_config('app.current_org_id', :oid, true)"),
-            {"oid": str(identity.org_id)},
+            {"oid": str(org_id)},
         )
+
+
+def tenant_session(
+    session: Session = Depends(get_session),
+    identity: Identity = Depends(get_current_identity),
+) -> Session:
+    set_org_context(session, identity.org_id)
     return session
 
 

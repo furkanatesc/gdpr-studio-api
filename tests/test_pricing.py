@@ -19,7 +19,9 @@ def test_cost_micros_unknown_model_returns_zero_and_warns(caplog):
 
 
 def test_cost_budget_for_known_plans():
-    assert cost_budget_for("baslangic") == 2_000_000
+    # 2026-07-24: 5-dok tavani billing_enabled'a bagli oldugundan ucretsiz planda
+    # baglayici sinir bu backstop; $2 -> $10 yukseltildi.
+    assert cost_budget_for("baslangic") == 10_000_000
     assert cost_budget_for("standart") == 40_000_000
     assert cost_budget_for("premium") == 150_000_000
 

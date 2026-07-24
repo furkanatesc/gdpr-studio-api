@@ -15,7 +15,10 @@ PRICING: dict[str, tuple[float, float]] = {
 
 # Plan → aylık maliyet tavanı (USD micros). 1 USD = 1_000_000 micros.
 COST_BUDGET_MICROS: dict[str, int] = {
-    "baslangic": 2_000_000,    # $2 backstop (zaten 5-dok ile sınırlı)
+    # 5-dok tavanı billing_enabled'a bağlı (Stripe kurulu değilken uygulanmaz), bu yüzden
+    # ücretsiz planda BAĞLAYICI sınır bu backstop'tur. ~$0.13/belge → ~75 belge/ay.
+    # Stripe açılıp doküman tavanı devreye girince $2'ye çekilebilir.
+    "baslangic": 10_000_000,   # $10 backstop
     "standart": 40_000_000,    # $40
     "premium": 150_000_000,    # $150
 }

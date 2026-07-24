@@ -8,10 +8,9 @@ org baglami burada yeniden kurulur (bkz. app/modules/clients.py:154).
 
 from __future__ import annotations
 
-from sqlalchemy import text
-
 from legal_core.models import ClientProfile
 
+from ..auth.tenant_session import set_org_context
 from ..repositories import ClientDocumentRepository, ComplianceRepository
 from .compliance_logic import compliance_snapshot_score
 
@@ -33,9 +32,7 @@ def client_profile(client) -> ClientProfile:
 def store_client_document(
     session, org_id, client_id, doc_type, title, content, score_completeness
 ) -> None:
-    bind = session.get_bind()
-    if bind is not None and bind.dialect.name == "postgresql":
-        session.execute(text("SELECT set_config('app.current_org_id', :o, true)"), {"o": str(org_id)})
+    set_org_context(session, org_id)
     statuses = {k: v.status for k, v in ComplianceRepository(session).statuses_for_org(org_id).items()}
     ClientDocumentRepository(session).upsert(
         org_id, client_id, doc_type, title, content,
