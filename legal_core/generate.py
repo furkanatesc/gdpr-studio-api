@@ -12,11 +12,19 @@ from typing import Any
 
 from .aggregate_sections import Section
 from .grounding import Grounding
-from .models import ClientProfile, GenerateRequest, GenerateResponse, GroundingRecord, Usage
+from .models import (
+    ClientProfile,
+    GenerateRequest,
+    GenerateResponse,
+    GroundingRecord,
+    ProcessRecord,
+    Usage,
+)
 from .prompt import (
     DEFAULT_PROCESS_CAP,
     DISCLAIMER,
     build_aydinlatma_envanter_prompt,
+    build_kayit_envanter_prompt,
     build_prompt,
     ensure_disclaimer,
 )
@@ -154,6 +162,56 @@ def generate_aydinlatma_envanter_stream(
     yield ("grounding", [_section_to_grounding(s) for s in sections])
 
     prompt = build_aydinlatma_envanter_prompt(sections, boilerplate, profile)
+
+    chunks: list[str] = []
+    for delta in provider.stream(prompt, max_tokens=max_tokens):
+        chunks.append(delta)
+        yield ("delta", delta)
+
+    streamed = "".join(chunks)
+    final_text = ensure_disclaimer(streamed)
+    if final_text != streamed:
+        yield ("delta", final_text[len(streamed):])
+
+    last = getattr(provider, "last_result", None)
+    yield (
+        "done",
+        {
+            "model": getattr(provider, "model", "") or "",
+            "disclaimer": DISCLAIMER,
+            "usage": (
+                {"inputTokens": last.input_tokens, "outputTokens": last.output_tokens}
+                if last
+                else None
+            ),
+        },
+    )
+
+
+def _process_to_grounding(record: ProcessRecord) -> GroundingRecord:
+    return GroundingRecord(
+        kategori=record.is_sureci or record.departman,
+        veri_turleri=record.veri_turleri,
+        amaclar=record.amaclar,
+        hukuki_sebepler=record.hukuki_sebepler,
+        kisi_gruplari=[record.kisi_grubu] if record.kisi_grubu else [],
+        saklama_sureleri=record.saklama_sureleri,
+    )
+
+
+def generate_kayit_envanter_stream(
+    records: list[ProcessRecord],
+    profile: ClientProfile,
+    measures: list[str],
+    rules: list[str],
+    *,
+    provider: Any,
+    max_tokens: int = DEFAULT_MAX_TOKENS,
+) -> Iterator[tuple[str, Any]]:
+    """Müvekkil envanterinden İşleme Kaydı üretir — aydinlatma envanter-modu deseni."""
+    yield ("grounding", [_process_to_grounding(r) for r in records])
+
+    prompt = build_kayit_envanter_prompt(records, profile, measures, rules)
 
     chunks: list[str] = []
     for delta in provider.stream(prompt, max_tokens=max_tokens):

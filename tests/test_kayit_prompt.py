@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from legal_core.generate import generate_kayit_envanter_stream
 from legal_core.models import ClientProfile, ProcessRecord
 from legal_core.prompt import DISCLAIMER, build_kayit_envanter_prompt
+from legal_core.provider import ProviderResult
 
 PROFILE = ClientProfile(ad="ACME A.S.", unvan="ACME Anonim Sirketi", adres="Istanbul", kep="acme@hs01.kep.tr")
 RECORDS = [
@@ -37,3 +39,34 @@ def test_kayit_prompt_uydurma_yasagi_ve_disclaimer():
 def test_kayit_prompt_bos_envanter_uyari():
     p = build_kayit_envanter_prompt([], PROFILE, MEASURES, RULES)
     assert "Envanterde süreç yok" in p or "surec yok" in p.lower()
+
+
+class _FakeStreamProvider:
+    def __init__(self, chunks, model="fake-model"):
+        self.chunks = chunks
+        self.model = model
+        self.last_result = None
+
+    def stream(self, prompt, *, max_tokens=8000):
+        self.seen_prompt = prompt
+        yield from self.chunks
+        self.last_result = ProviderResult(text="", model=self.model, input_tokens=11, output_tokens=22)
+
+
+def test_kayit_stream_olay_sirasi_ve_grounding():
+    provider = _FakeStreamProvider(["Isleme ", "kaydi."])
+    events = list(generate_kayit_envanter_stream(RECORDS, PROFILE, MEASURES, RULES, provider=provider))
+    kinds = [e[0] for e in events]
+    assert kinds[0] == "grounding"
+    assert kinds[-1] == "done"
+    assert kinds.count("delta") >= 2
+    grounding = events[0][1]
+    assert len(grounding) == 1
+    assert grounding[0].kategori == "Ozluk Yonetimi"  # is_sureci
+
+
+def test_kayit_stream_disclaimer_garantisi():
+    provider = _FakeStreamProvider(["kisa cikti"])
+    events = list(generate_kayit_envanter_stream(RECORDS, PROFILE, MEASURES, RULES, provider=provider))
+    full = "".join(e[1] for e in events if e[0] == "delta")
+    assert "avukat incelemesine tabi" in full
