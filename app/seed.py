@@ -15,6 +15,8 @@ from pathlib import Path
 
 from sqlalchemy import delete
 
+from legal_core.prompt import ONAY_BEKLEYEN_PLACEHOLDER
+
 from .auth.tenant_session import begin_provisioning
 from .db import get_sessionmaker
 from .models import BusinessRule, Category, Measure, Process
@@ -47,7 +49,7 @@ RULES: list[tuple[str, str]] = [
               "kategorileri, ilgili kişi grupları, alıcı kategorileri, yurt dışı aktarım, "
               "saklama süreleri, teknik ve idari tedbirler."),
     ("kayit", "Her kategori için somut saklama süresi gerekir (GDPR m.13/2-a). Envanterde "
-              "süre yoksa UYDURMA; alanı boş bırakıp '[Avukat tarafından belirlenecek]' yaz."),
+              f"süre yoksa UYDURMA; ilgili alana '{ONAY_BEKLEYEN_PLACEHOLDER}' yaz."),
     ("dpa", "DPA zorunlu unsurları: işleme konusu/süresi/amacı, veri kategorileri, yalnızca "
             "belgelenmiş talimatla işleme, gizlilik taahhüdü, m.32 tedbirleri, alt işleyici "
             "onay prosedürü, ihlal bildirim süresi, sözleşme sonu silme/iade, denetim hakkı."),
