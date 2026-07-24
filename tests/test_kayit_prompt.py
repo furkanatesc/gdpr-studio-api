@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from legal_core.generate import generate_kayit_envanter_stream
 from legal_core.models import ClientProfile, ProcessRecord
-from legal_core.prompt import DISCLAIMER, build_kayit_envanter_prompt
+from legal_core.prompt import DISCLAIMER, ONAY_BEKLEYEN_PLACEHOLDER, build_kayit_envanter_prompt
 from legal_core.provider import ProviderResult
 
 PROFILE = ClientProfile(ad="ACME A.S.", unvan="ACME Anonim Sirketi", adres="Istanbul", kep="acme@hs01.kep.tr")
@@ -39,6 +39,50 @@ def test_kayit_prompt_uydurma_yasagi_ve_disclaimer():
 def test_kayit_prompt_bos_envanter_uyari():
     p = build_kayit_envanter_prompt([], PROFILE, MEASURES, RULES)
     assert "Envanterde süreç yok" in p or "surec yok" in p.lower()
+
+
+def test_kayit_prompt_bos_zorunlu_alanlar_kosulsuz_placeholder_ile_gorunur():
+    """C1: hukuki sebep + aktarım + amaç boşsa satır hiç düşmemeli — koşulsuz placeholder basılmalı."""
+    rec = ProcessRecord(
+        departman="Insan Kaynaklari", is_sureci="Ozluk Yonetimi", alt_surec="Bordro",
+        kisi_grubu="Calisan", kategoriler=["Kimlik"], veri_turleri=["Ad Soyad"],
+        amaclar=[], hukuki_sebepler=[], saklama_sureleri=["10 yil"], aktarim=[],
+    )
+    p = build_kayit_envanter_prompt([rec], PROFILE, MEASURES, RULES)
+    assert f"İşleme Amaçları: {ONAY_BEKLEYEN_PLACEHOLDER}" in p
+    assert f"Hukuki Sebep: {ONAY_BEKLEYEN_PLACEHOLDER}" in p
+    assert f"Alıcı/Aktarım: {ONAY_BEKLEYEN_PLACEHOLDER}" in p
+
+
+def test_kayit_prompt_tum_zorunlu_slotlar_bos_kayit_ise_placeholder_basar():
+    """Puan A'nın saydığı 6 zorunlu VERBİS slotunun hepsi kısı grubu dahil kapsanmalı."""
+    rec = ProcessRecord(
+        departman="", is_sureci="", alt_surec="", kisi_grubu="",
+        kategoriler=[], veri_turleri=[], amaclar=[], hukuki_sebepler=[],
+        saklama_sureleri=[], aktarim=[],
+    )
+    p = build_kayit_envanter_prompt([rec], PROFILE, MEASURES, RULES)
+    assert f"Veri Konusu Kişi Grubu: {ONAY_BEKLEYEN_PLACEHOLDER}" in p
+    assert f"Kişisel Veri Kategorisi/Türü: {ONAY_BEKLEYEN_PLACEHOLDER}" in p
+    assert f"İşleme Amaçları: {ONAY_BEKLEYEN_PLACEHOLDER}" in p
+    assert f"Hukuki Sebep: {ONAY_BEKLEYEN_PLACEHOLDER}" in p
+    assert f"Saklama Süresi: {ONAY_BEKLEYEN_PLACEHOLDER}" in p
+    assert f"Alıcı/Aktarım: {ONAY_BEKLEYEN_PLACEHOLDER}" in p
+
+
+def test_kayit_prompt_kirpma_sessiz_degil():
+    many = [
+        ProcessRecord(
+            departman="IK", is_sureci="Ozluk", alt_surec=f"Adim {i}", kisi_grubu="Calisan",
+            kategoriler=["Kimlik"], amaclar=["Amac"], hukuki_sebepler=["m.5"],
+            saklama_sureleri=["1 yil"], aktarim=["Yok"],
+        )
+        for i in range(65)
+    ]
+    p = build_kayit_envanter_prompt(many, PROFILE, MEASURES, RULES, process_cap=60)
+    assert "Adim 0" in p and "Adim 59" in p
+    assert "Adim 60" not in p
+    assert "65" in p and "kırpıldı" in p.lower()
 
 
 class _FakeStreamProvider:

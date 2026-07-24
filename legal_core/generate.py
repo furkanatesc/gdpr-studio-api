@@ -207,11 +207,12 @@ def generate_kayit_envanter_stream(
     *,
     provider: Any,
     max_tokens: int = DEFAULT_MAX_TOKENS,
+    process_cap: int = DEFAULT_PROCESS_CAP,
 ) -> Iterator[tuple[str, Any]]:
     """Müvekkil envanterinden İşleme Kaydı üretir — aydinlatma envanter-modu deseni."""
     yield ("grounding", [_process_to_grounding(r) for r in records])
 
-    prompt = build_kayit_envanter_prompt(records, profile, measures, rules)
+    prompt = build_kayit_envanter_prompt(records, profile, measures, rules, process_cap=process_cap)
 
     chunks: list[str] = []
     for delta in provider.stream(prompt, max_tokens=max_tokens):
