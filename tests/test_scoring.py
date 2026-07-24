@@ -1,5 +1,10 @@
 from legal_core.aggregate_sections import Section
-from legal_core.scoring import cerez_completeness_score, completeness_score
+from legal_core.models import ProcessRecord
+from legal_core.scoring import (
+    cerez_completeness_score,
+    completeness_score,
+    kayit_completeness_score,
+)
 
 
 def _full_section():
@@ -54,10 +59,6 @@ def test_cerez_completeness_kimliksiz():
 
 def test_cerez_completeness_tools_bosluk_bos_sayilir():
     assert cerez_completeness_score(True, ["Zorunlu"], "   ", "var-kendi") == 0.75
-
-
-from legal_core.models import ProcessRecord
-from legal_core.scoring import kayit_completeness_score
 
 
 def _rec(**ov):
