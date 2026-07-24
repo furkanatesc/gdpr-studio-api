@@ -25,7 +25,7 @@ from legal_core.scoring import cerez_completeness_score
 
 from .. import idempotency
 from ..auth.identity import Identity, get_current_identity
-from ..auth.tenant_session import tenant_session
+from ..auth.tenant_session import set_org_context, tenant_session
 from ..billing.quota import (
     enforce_generation_quota,
     reserve_generation_usage,
@@ -41,7 +41,13 @@ from ..repositories import (
     PostgresBusinessRuleRepository,
 )
 from .document_store import client_profile, store_client_document
-from .generation import _build_grounding, _claim_idempotency, _resolve_api_key, _sse
+from .generation import (
+    _build_grounding,
+    _claim_idempotency,
+    _resolve_api_key,
+    _sse,
+    classify_incomplete_stop_reason,
+)
 
 router = APIRouter(prefix="/api/clients", tags=["cerez"])
 _log = logging.getLogger("app.cerez")
@@ -109,6 +115,7 @@ def generate(
         reserved = 0
         started = False
         full_text = ""
+        generated_doc_id: uuid.UUID | None = None
         try:
             for kind, payload in generate_document_stream(
                 req,
@@ -125,7 +132,9 @@ def generate(
                 elif kind == "delta":
                     if not started:
                         started = True
-                        GeneratedDocumentRepository(session).record(identity.org_id, DocType.cerez)
+                        generated_doc_id = GeneratedDocumentRepository(session).record(
+                            identity.org_id, DocType.cerez
+                        ).id
                         reserved = reserve_generation_usage(
                             session, settings, identity.org_id,
                             model=settings.default_model, byok=byok,
@@ -133,6 +142,31 @@ def generate(
                     full_text += payload
                     yield _sse("delta", {"text": payload})
                 elif kind == "done":
+                    incomplete_kind = classify_incomplete_stop_reason(payload.get("stopReason"))
+                    warn_code, warn_message = None, None
+                    if incomplete_kind == "truncated":
+                        warn_code = "truncated_output_limit"
+                        warn_message = (
+                            "Belge, model çıktı/bağlam sınırına takıldığı için eksik "
+                            "kaldı ve KAYDEDİLMEDİ. Çerez kategori sayısını daraltıp "
+                            "yeniden deneyin."
+                        )
+                    elif incomplete_kind == "refusal":
+                        warn_code = "generation_refused"
+                        warn_message = (
+                            "Model bu içeriği üretmeyi REDDETTİ; bu bir uzunluk sorunu "
+                            "değildir, kapsamı daraltmak yardımcı olmaz. İçeriği gözden "
+                            "geçirip tekrar deneyin."
+                        )
+                    if warn_code:
+                        # Kesik/reddedilen belge tam puanla resmi kayit olarak SAKLANMAZ.
+                        _log.warning(
+                            "cerez uretimi tamamlanamadi (stop_reason=%s): org=%s doc_type=cerez",
+                            payload.get("stopReason"), identity.org_id,
+                        )
+                        # Uyari, 'done'dan ONCE yayinlanir (bkz. generation.py gerekcesi).
+                        yield _sse("warning", {"code": warn_code, "message": warn_message})
+                        payload = {**payload, "incomplete": True, "warningMessage": warn_message}
                     yield _sse("done", payload)
                     usage = payload.get("usage")
                     settle_generation_usage(
@@ -142,16 +176,34 @@ def generate(
                         output_tokens=usage["outputTokens"] if usage else 0,
                         byok=byok, reserved_micros=reserved,
                     )
-                    try:
-                        store_client_document(
-                            session, identity.org_id, client_id, "cerez",
-                            (body.site or "Genel")[:255], ensure_disclaimer(full_text),
-                            cerez_completeness_score(
-                                bool(prof.ad or prof.unvan), body.kategoriler, body.tools, body.cmp
-                            ),
-                        )
-                    except Exception as store_err:  # best-effort; PII'siz log
-                        _log.error("cerez saklama basarisiz (org=%s): %s", identity.org_id, type(store_err).__name__)
+                    if warn_code:
+                        try:
+                            if generated_doc_id is not None:
+                                set_org_context(session, identity.org_id)
+                                GeneratedDocumentRepository(session).discard(
+                                    identity.org_id, generated_doc_id
+                                )
+                                session.commit()
+                        except Exception as discard_err:  # best-effort; uyariyi bozma
+                            _log.error(
+                                "generated_documents geri alma basarisiz (org=%s): %s",
+                                identity.org_id, type(discard_err).__name__,
+                            )
+                        idempotency.release(identity.org_id, idempotency_key)
+                    else:
+                        try:
+                            store_client_document(
+                                session, identity.org_id, client_id, "cerez",
+                                (body.site or "Genel")[:255], ensure_disclaimer(full_text),
+                                cerez_completeness_score(
+                                    bool(prof.ad or prof.unvan), body.kategoriler, body.tools, body.cmp
+                                ),
+                            )
+                        except Exception as store_err:  # best-effort; PII'siz log
+                            _log.error(
+                                "cerez saklama basarisiz (org=%s): %s",
+                                identity.org_id, type(store_err).__name__,
+                            )
         except Exception as e:
             if not started:
                 idempotency.release(identity.org_id, idempotency_key)

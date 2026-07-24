@@ -43,6 +43,22 @@ from ..semantic import PostgresSemanticMatcher, get_embedder
 router = APIRouter(prefix="/api", tags=["generation"])
 _log = logging.getLogger("app.generation")
 
+# Belge SAKLANMAMASI gereken stop_reason'lar (aydinlatma/cerez/kayit generate uclarinin
+# ortak siniflandirmasi — kopyalanmasin, buradan import edilsin).
+# - max_tokens / model_context_window_exceeded: cikti kesildi (kapsam daraltma tavsiyesi anlamli).
+# - refusal: model uretimi reddetti (kapsam daraltma YARDIMCI OLMAZ; farkli mesaj sart).
+TRUNCATED_STOP_REASONS = frozenset({"max_tokens", "model_context_window_exceeded"})
+REFUSAL_STOP_REASON = "refusal"
+
+
+def classify_incomplete_stop_reason(stop_reason: str | None) -> str | None:
+    """None -> uretim tamamlandi (saklanir). 'truncated' | 'refusal' -> SAKLANMAZ."""
+    if stop_reason in TRUNCATED_STOP_REASONS:
+        return "truncated"
+    if stop_reason == REFUSAL_STOP_REASON:
+        return "refusal"
+    return None
+
 
 def _build_grounding(session: Session, settings) -> Grounding:
     """Env-gated grounding: semantic_fallback_enabled ise pgvector matcher enjekte edilir.

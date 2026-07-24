@@ -86,15 +86,19 @@ def test_kayit_prompt_kirpma_sessiz_degil():
 
 
 class _FakeStreamProvider:
-    def __init__(self, chunks, model="fake-model"):
+    def __init__(self, chunks, model="fake-model", stop_reason=None):
         self.chunks = chunks
         self.model = model
+        self.stop_reason = stop_reason
         self.last_result = None
 
     def stream(self, prompt, *, max_tokens=8000):
         self.seen_prompt = prompt
         yield from self.chunks
-        self.last_result = ProviderResult(text="", model=self.model, input_tokens=11, output_tokens=22)
+        self.last_result = ProviderResult(
+            text="", model=self.model, input_tokens=11, output_tokens=22,
+            stop_reason=self.stop_reason,
+        )
 
 
 def test_kayit_stream_olay_sirasi_ve_grounding():
@@ -133,6 +137,21 @@ def test_kayit_stream_grounding_cap_ile_prompt_tutarli():
     )
     grounding = events[0][1]
     assert len(grounding) == 60
+
+
+def test_kayit_stream_done_stop_reason_max_tokens_tasir():
+    """max_tokens'ta kesilen uretim done meta'sinda gorunur olmali (borc: gorunmez kesme)."""
+    provider = _FakeStreamProvider(["kirpik cikti"], stop_reason="max_tokens")
+    events = list(generate_kayit_envanter_stream(RECORDS, PROFILE, MEASURES, RULES, provider=provider))
+    done = next(p for k, p in events if k == "done")
+    assert done["stopReason"] == "max_tokens"
+
+
+def test_kayit_stream_done_stop_reason_normalde_end_turn():
+    provider = _FakeStreamProvider(["tam cikti"], stop_reason="end_turn")
+    events = list(generate_kayit_envanter_stream(RECORDS, PROFILE, MEASURES, RULES, provider=provider))
+    done = next(p for k, p in events if k == "done")
+    assert done["stopReason"] == "end_turn"
 
 
 def test_kayit_stream_grounding_cap_sifir_sinirsiz():

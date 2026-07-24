@@ -330,6 +330,19 @@ class GeneratedDocumentRepository:
         )
         return set(rows)
 
+    def discard(self, org_id: uuid.UUID, doc_id: uuid.UUID) -> None:
+        """Kesme/reddedilme durumunda ilk delta'da atilan satiri geri al.
+
+        Yalniz (org_id, doc_id) eslesen TEK satiri siler; org'un onceki gecerli
+        uretim kayitlarini etkilemez.
+        """
+        self._s.execute(
+            delete(GeneratedDocument).where(
+                GeneratedDocument.id == doc_id, GeneratedDocument.org_id == org_id
+            )
+        )
+        self._s.flush()
+
 
 class ClientRepository:
     _FIELDS = ("name", "sector", "legal_name", "mersis", "vergi_dairesi", "vergi_no", "kep", "adres", "eposta", "telefon")
