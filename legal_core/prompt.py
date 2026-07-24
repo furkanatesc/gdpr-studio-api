@@ -302,3 +302,42 @@ Aydınlatma Metni üret. Belgenin EN ALTINA aşağıdaki uyarıyı aynen ekle:
 
 {DISCLAIMER}
 """
+
+
+def build_kayit_envanter_prompt(
+    records: list[ProcessRecord], profile: ClientProfile, measures: list[str], rules: list[str],
+) -> str:
+    """Müvekkil envanterinden VERBİS/RoPA işleme kaydı prompt'u kurar (aydinlatma envanter-modu deseni)."""
+    surecler = format_processes(records) if records else "\n(Envanterde süreç yok — üretilecek işleme faaliyeti yok.)\n"
+    tedbir = format_measures(measures)
+    kurallar = ""
+    for i, r in enumerate(rules, 1):
+        kurallar += f"{i}. {r}\n"
+
+    return f"""Sen KVKK (6698) m.16 ve GDPR m.30 uzmanı bir hukuk asistanısın. Aşağıdaki müvekkil
+kimliği ve işleme envanterinden (VERBİS/RoPA) bir Kişisel Veri İşleme Kaydı üret.
+
+Yalnız aşağıda verilen envanter değerlerini kullan; hukuki sebep, saklama süresi, amaç, alıcı veya
+aktarım UYDURMA. Envanterde boş olan bir zorunlu alanı "{ONAY_BEKLEYEN_PLACEHOLDER}" olarak bırak.
+
+Her işleme faaliyetini (süreç) VERBİS sütun mantığıyla ele al: İş Süreci · Veri Konusu Kişi Grubu ·
+Kişisel Veri Kategorisi/Türü · İşleme Amaçları · Hukuki Sebep · Saklama Süresi · Alıcı/Aktarım ·
+Teknik ve İdari Tedbirler. Her sürecin KENDİ hukuki sebebini ve saklama süresini kullan; başka bir
+sürecin değerini bu sürece UYGULAMA.
+
+## VERİ SORUMLUSU KİMLİĞİ
+{_format_client_profile(profile)}
+
+## İŞLEME ENVANTERİ — BAĞLAYICI SÜREÇLER
+{surecler}
+
+## TEKNİK VE İDARİ TEDBİRLER (org geneli standart liste; bunları kullan, UYDURMA)
+{tedbir}
+
+## BAĞLAYICI İŞ KURALLARI (HARFİYEN UY)
+{kurallar}
+Yukarıdaki bilgilere KESİNLİKLE bağlı kalarak eksiksiz ve Markdown formatında bir İşleme Kaydı üret.
+Belgenin EN ALTINA aşağıdaki uyarıyı aynen ekle:
+
+{DISCLAIMER}
+"""
