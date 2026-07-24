@@ -152,9 +152,10 @@ def test_generate_musvekkil_yok_404(db_session, monkeypatch):
         raise AssertionError("404 bekleniyordu")
 
 
-def test_generate_hala_8000_max_tokens_ile_cagirir(db_session, monkeypatch):
-    """Regresyon kilidi: aydinlatma kayit'in 32000 tavanindan ETKILENMEMELI, hala 8000
-    kullanmali (kayit'e ozel tavan yalniz doc_type='kayit' icin gecerli)."""
+def test_generate_envanter_belgesi_tavani_ile_cagirir(db_session, monkeypatch):
+    """Aydinlatma da envanterden tureyen bir belge: uzunlugu bolum sayisiyla dogrusal
+    buyur. Canlida 30 surecli bir muvekkilde 8000 tavani asildi ve belge 5.5.4'te kesildi;
+    bu yuzden yuksek tavani (32000) kullanmali."""
     _managed_billing_settings()
     captured = {}
 
@@ -168,7 +169,7 @@ def test_generate_hala_8000_max_tokens_ile_cagirir(db_session, monkeypatch):
     resp = _generate(db_session, cid)
     _consume(resp)
 
-    assert captured["max_tokens"] == 8000
+    assert captured["max_tokens"] == 32000
 
 
 class _FakeRedis:

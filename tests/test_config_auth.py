@@ -20,11 +20,13 @@ def test_max_tokens_for_kayit_ozel_tavan_kullanir():
     buyur -> 8000 200+ surecli envanterlerde yetmez. Yalniz 'kayit' 32000 kullanmali."""
     s = Settings(_env_file=None)
     assert s.max_tokens == 8000
-    assert s.max_tokens_kayit == 32000
+    assert s.max_tokens_envanter_belgesi == 32000
+    assert s.max_tokens_for("aydinlatma") == 32000
     assert s.max_tokens_for("kayit") == 32000
 
 
-def test_max_tokens_for_diger_turler_degismez():
+def test_max_tokens_for_sabit_boyutlu_turler_degismez():
+    """Yuksek tavan yalniz envanterden tureyen turler icin; sabit boyutlu turler 8000'de kalir."""
     s = Settings(_env_file=None)
-    for doc_type in ("aydinlatma", "cerez", "dpa", "dpia", "ihlal"):
+    for doc_type in ("cerez", "dpa", "dpia", "ihlal"):
         assert s.max_tokens_for(doc_type) == 8000
