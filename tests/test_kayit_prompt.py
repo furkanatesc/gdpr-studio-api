@@ -23,6 +23,7 @@ def test_kayit_prompt_icerir_kimlik_surec_tedbir_kural():
     assert "Calisan" in p                       # kisi grubu
     assert "m.5/2-c" in p                        # hukuki sebep
     assert "10 yil" in p                         # saklama
+    assert "SGK" in p                            # alici/aktarim
     assert "Veriler sifrelenir" in p            # tedbir
     assert "VERBIS unsurlarini icermeli" in p   # is kurali
 

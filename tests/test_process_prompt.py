@@ -20,6 +20,11 @@ def test_format_processes_emits_own_legal_basis_and_retention():
     assert "Çalışan" in out
 
 
+def test_format_processes_emits_aktarim():
+    out = format_processes([_rec(aktarim=["SGK"])])
+    assert "SGK" in out
+
+
 def test_format_processes_marks_missing_retention_as_do_not_invent():
     out = format_processes([_rec(sak=[])])
     assert "UYDURMA" in out  # boş saklama → uydurma yasağı ibaresi

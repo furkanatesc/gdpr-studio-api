@@ -88,6 +88,8 @@ def format_processes(records: list[ProcessRecord], cap: int = DEFAULT_PROCESS_CA
             "- Saklama: "
             f"{', '.join(r.saklama_sureleri) if r.saklama_sureleri else '[envanterde belirtilmemiş — UYDURMA]'}\n"
         )
+        if r.aktarim:
+            out += f"- Alıcı/Aktarım: {', '.join(r.aktarim)}\n"
         if r.islem:
             out += f"- İşlem: {', '.join(r.islem)}\n"
         if r.konum:
