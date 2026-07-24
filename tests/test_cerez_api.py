@@ -99,6 +99,25 @@ def test_cerez_generate_max_tokensta_saklanmaz_ve_uyari_yayinlanir(db_session, m
     assert len(rows) == 0
 
 
+def test_cerez_generate_hala_8000_max_tokens_ile_cagirir(db_session, monkeypatch):
+    """Regresyon kilidi: cerez kayit'in 32000 tavanindan ETKILENMEMELI, hala 8000
+    kullanmali (kayit'e ozel tavan yalniz doc_type='kayit' icin gecerli)."""
+    _managed_billing_settings()
+    captured = {}
+
+    def _capture_stream(req, **kw):
+        captured["max_tokens"] = kw.get("max_tokens")
+        yield from _fake_stream()
+
+    monkeypatch.setattr(cerezmod, "generate_document_stream", _capture_stream)
+    cid = _make_client(db_session)
+
+    resp = _generate(db_session, cid)
+    _consume(resp)
+
+    assert captured["max_tokens"] == 8000
+
+
 class _FakeRedis:
     """set(nx, ex) + delete destekleyen minimum sahte Redis (TTL simüle edilmez)."""
 

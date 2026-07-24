@@ -88,6 +88,7 @@ def generate(
     rules = kayit_aligned_global_rules() + PostgresBusinessRuleRepository(session).business_rules("kayit")
     cap = settings.process_cap
     scored_records = records[:cap] if cap else records
+    kayit_max_tokens = settings.max_tokens_for("kayit")
     provider = AnthropicProvider(
         api_key,
         model=settings.default_model,
@@ -103,7 +104,7 @@ def generate(
         generated_doc_id: uuid.UUID | None = None
         try:
             for kind, payload in generate_kayit_envanter_stream(
-                records, prof, measures, rules, provider=provider, max_tokens=settings.max_tokens,
+                records, prof, measures, rules, provider=provider, max_tokens=kayit_max_tokens,
                 process_cap=cap,
             ):
                 if kind == "grounding":
@@ -117,6 +118,7 @@ def generate(
                         reserved = reserve_generation_usage(
                             session, settings, identity.org_id,
                             model=settings.default_model, byok=byok,
+                            max_tokens=kayit_max_tokens,
                         )
                     full_text += payload
                     yield _sse("delta", {"text": payload})
