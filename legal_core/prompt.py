@@ -297,6 +297,35 @@ hukuki sebebi "{ONAY_BEKLEYEN_PLACEHOLDER}" ise eşleştirme yapma, gerekçe uyd
 ## BAŞVURU USULÜ
 {boilerplate["basvuru_usulu"]}
 
+## BELGE İSKELETİ (AYNEN BU SIRA, BU BAŞLIKLAR VE BU NUMARALANDIRMA)
+
+Belgeyi tam olarak aşağıdaki yedi üst başlıkla, bu sırayla ve bu numaralandırmayla üret.
+Başlık ekleme, çıkarma, yeniden adlandırma veya sırasını değiştirme.
+
+# Kişisel Verilerin Korunması Kanunu Kapsamında Aydınlatma Metni
+
+## 1. Veri Sorumlusunun Kimliği
+(yukarıdaki VERİ SORUMLUSU KİMLİĞİ bloğunu Markdown tablosu olarak ver: "Bilgi | Değer")
+
+## 2. Tanımlar
+## 3. Veri Toplama Kaynakları
+## 4. Ortak Hükümler
+
+## 5. İş Süreçlerine Göre Kişisel Veri İşleme Faaliyetleri
+Her iş süreci için sırayla `### 5.N <Süreç Adı>` başlığı aç (N: 1'den başlayarak artan).
+Başlığın hemen altına tek satır: "İlgili kişi grubu: <değer>". Sonra ALTI alt başlık,
+her zaman bu sıra ve bu adlarla:
+
+#### 5.N.1 İşlenen Kişisel Veriler
+#### 5.N.2 İşleme Amaçları
+#### 5.N.3 Hukuki Sebep
+#### 5.N.4 Saklama Süresi
+#### 5.N.5 Aktarım
+#### 5.N.6 Toplama Yöntemi
+
+## 6. İlgili Kişinin Hakları (KVKK m.11)
+## 7. Başvuru Usulü
+
 Yukarıdaki bilgilere KESİNLİKLE bağlı kalarak eksiksiz ve Markdown formatında bir
 Aydınlatma Metni üret. Belgenin EN ALTINA aşağıdaki uyarıyı aynen ekle:
 
