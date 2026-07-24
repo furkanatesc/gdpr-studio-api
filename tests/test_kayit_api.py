@@ -113,6 +113,65 @@ def test_kayit_generate_belgeyi_saklar(db_session, monkeypatch):
     assert rows[0].score_compliance == 0.0  # org'da uyum statusu yok
 
 
+def test_kayit_generate_global_kurallar_dahil(db_session, monkeypatch):
+    """I2: app/modules/kayit.py yalniz doc_type='kayit' kurallarini degil GLOBAL_RULES'u
+    da (ozellikle yurt disi aktarim kurali) generate_kayit_envanter_stream'e gecirmeli."""
+    _managed_billing_settings()
+    captured = {}
+
+    def _capture_stream(records, profile, measures, rules, **kw):
+        captured["rules"] = rules
+        yield from _fake_stream()
+
+    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream", _capture_stream)
+    cid = _make_client(db_session)
+    _put_inventory(db_session, cid)
+
+    resp = _generate(db_session, cid)
+    _consume(resp)
+
+    assert any("YURT DIŞI AKTARIM" in r for r in captured["rules"])
+
+
+def test_kayit_generate_puan_a_cap_ile_tutarli(db_session, monkeypatch):
+    """I4: process_cap'ten fazla surec varsa Puan A yalniz prompt'a giren (capli) kumeden
+    hesaplanmali; aksi halde belgedeki her sey tam oldugu halde puan yanlis dusuk gorunur."""
+    from app.models import ClientDocument
+
+    _managed_billing_settings()
+    config_module._settings.process_cap = 1
+    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream", _fake_stream)
+    cid = _make_client(db_session)
+
+    # Ilk satir tam dolu (6/6), ikinci satir tamamen bos (0/6). Cap=1 -> yalniz ilk satir sayilmali.
+    rows = [
+        {
+            "sector": "otel", "kisi_grubu": "Calisan", "departman": "IK",
+            "is_sureci": "Ozluk", "alt_surec": "Bordro",
+            "data": {
+                "kategoriler": ["Kimlik"], "veri_turleri": ["Ad"], "amaclar": ["Bordro"],
+                "hukuki_sebepler": ["m.5/2-c"], "saklama_sureleri": ["10 yil"], "aktarim": ["SGK"],
+            },
+        },
+        {
+            "sector": "otel", "kisi_grubu": "", "departman": "IK",
+            "is_sureci": "Zbos", "alt_surec": "Zbos",
+            "data": {
+                "kategoriler": [], "veri_turleri": [], "amaclar": [],
+                "hukuki_sebepler": [], "saklama_sureleri": [], "aktarim": [],
+            },
+        },
+    ]
+    PostgresProcessRepository(db_session).replace_client(IDENT.org_id, cid, rows)
+    db_session.commit()
+
+    resp = _generate(db_session, cid)
+    _consume(resp)
+
+    doc = db_session.query(ClientDocument).filter_by(client_id=cid).one()
+    assert doc.score_completeness == 1.0
+
+
 def test_kayit_generate_baska_org_muvekkili_404(db_session, monkeypatch):
     """client_processes(client_id) org filtresi tasimaz; tek savunma ClientRepository.get
     sahiplik kontrolunun envanter okumasindan once gelmesidir. Baska org'un muvekkilinin

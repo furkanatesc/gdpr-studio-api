@@ -20,6 +20,7 @@ from legal_core.generate import generate_kayit_envanter_stream
 from legal_core.models import DocType
 from legal_core.prompt import ensure_disclaimer
 from legal_core.provider import AnthropicProvider
+from legal_core.rules import GLOBAL_RULES
 from legal_core.scoring import kayit_completeness_score
 
 from .. import idempotency
@@ -84,7 +85,9 @@ def generate(
 
     prof = client_profile(client)
     measures = PostgresMeasureRepository(session).all_measures()
-    rules = PostgresBusinessRuleRepository(session).business_rules("kayit")
+    rules = GLOBAL_RULES + PostgresBusinessRuleRepository(session).business_rules("kayit")
+    cap = settings.process_cap
+    scored_records = records[:cap] if cap else records
     provider = AnthropicProvider(
         api_key,
         model=settings.default_model,
@@ -100,6 +103,7 @@ def generate(
         try:
             for kind, payload in generate_kayit_envanter_stream(
                 records, prof, measures, rules, provider=provider, max_tokens=settings.max_tokens,
+                process_cap=cap,
             ):
                 if kind == "grounding":
                     yield _sse("grounding", [g.model_dump(by_alias=True) for g in payload])
@@ -126,7 +130,7 @@ def generate(
                     try:
                         store_client_document(
                             session, identity.org_id, client_id, "kayit", "İşleme Kaydı",
-                            ensure_disclaimer(full_text), kayit_completeness_score(records),
+                            ensure_disclaimer(full_text), kayit_completeness_score(scored_records),
                         )
                     except Exception as store_err:  # best-effort; PII'siz log
                         _log.error("kayit saklama basarisiz (org=%s): %s", identity.org_id, type(store_err).__name__)
