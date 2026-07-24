@@ -704,31 +704,6 @@
         "title": "DocType",
         "type": "string"
       },
-      "DocxIn": {
-        "additionalProperties": false,
-        "properties": {
-          "text": {
-            "title": "Text",
-            "type": "string"
-          },
-          "title": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Title"
-          }
-        },
-        "required": [
-          "text"
-        ],
-        "title": "DocxIn",
-        "type": "object"
-      },
       "EnrichedSectionOut": {
         "additionalProperties": false,
         "properties": {
@@ -1522,6 +1497,106 @@
         ],
         "title": "ValidationError",
         "type": "object"
+      },
+      "app__modules__aydinlatma__DocxIn": {
+        "additionalProperties": false,
+        "properties": {
+          "kisiGruplari": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kisigruplari"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "DocxIn",
+        "type": "object"
+      },
+      "app__modules__cerez__DocxIn": {
+        "additionalProperties": false,
+        "properties": {
+          "site": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "DocxIn",
+        "type": "object"
+      },
+      "app__modules__kayit__DocxIn": {
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "DocxIn",
+        "type": "object"
       }
     }
   },
@@ -1963,7 +2038,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/DocxIn"
+                "$ref": "#/components/schemas/app__modules__aydinlatma__DocxIn"
               }
             }
           },
@@ -2151,7 +2226,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/DocxIn"
+                "$ref": "#/components/schemas/app__modules__cerez__DocxIn"
               }
             }
           },
@@ -2635,7 +2710,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/DocxIn"
+                "$ref": "#/components/schemas/app__modules__kayit__DocxIn"
               }
             }
           },

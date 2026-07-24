@@ -429,3 +429,25 @@ def test_kayit_generate_baska_org_muvekkili_404(db_session, monkeypatch):
 
     rows = db_session.query(ClientDocument).filter_by(client_id=other_cid).all()
     assert len(rows) == 0
+
+
+def test_kayit_docx_kapak_ilgili_kisi_yok(db_session):
+    import io as _io
+
+    import docx as _docx
+
+    from app.repositories import ClientRepository
+
+    _managed_billing_settings()
+    c = ClientRepository(db_session).create(IDENT.org_id, "ACME", "otel")
+    db_session.commit()
+    resp = kayitmod.docx(
+        client_id=c.id,
+        body=kayitmod.DocxIn(text="## İşleme Kaydı\n\nMetin."),
+        identity=IDENT,
+        session=db_session,
+    )
+    doc = _docx.Document(_io.BytesIO(resp.body))
+    t = "\n".join(p.text for p in doc.paragraphs)
+    assert "ACME" in t
+    assert "İlgili Kişi" not in t and "Site" not in t
