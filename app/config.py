@@ -22,6 +22,10 @@ def _swap_userinfo(url: str, user: str, password: str) -> str:
     return re.sub(r"://[^@/]+@", f"://{user}:{password}@", url, count=1)
 
 
+# Uzunlugu envanter hacmiyle dogrusal buyuyen belge turleri (yuksek cikti tavani).
+ENVANTER_TUREVLI_BELGELER = frozenset({"kayit", "aydinlatma"})
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_prefix="", extra="ignore")
 
@@ -35,9 +39,11 @@ class Settings(BaseSettings):
     managed_anthropic_api_key: str = ""
     default_model: str = "claude-sonnet-4-6"
     max_tokens: int = 8000
-    # İşleme Kaydı (VERBİS) süreç başına 8 sütunluk blok gerektirir → uzunluk envanterle
-    # doğrusal büyür; 200+ süreçli envanterler 8000'i aşar. Yalnız 'kayit' bu tavanı kullanır.
-    max_tokens_kayit: int = 32000
+    # Envanterden türeyen belgelerin uzunluğu envanterle DOĞRUSAL büyür:
+    # 'kayit' süreç başına 8 sütunluk blok, 'aydinlatma' bölüm başına 6 alt başlık üretir.
+    # Canlıda 30 süreçlik bir müvekkilde ikisi de 8000'i aştı. Sabit boyutlu türler
+    # (cerez vb.) varsayılan tavanda kalır.
+    max_tokens_envanter_belgesi: int = 32000
     # Süreç grounding'i prompt'a kaç süreç bassın (0 = sınırsız). Kırpma sessiz değildir.
     process_cap: int = 60
     # Sağlayıcı dayanıklılığı: sync üretim uçları threadpool'da; timeout/retry olmadan
@@ -131,9 +137,9 @@ class Settings(BaseSettings):
         return None
 
     def max_tokens_for(self, doc_type: str) -> int:
-        """Belge türüne göre çıktı tavanı; yalnız 'kayit' özel değer kullanır."""
-        if doc_type == "kayit":
-            return self.max_tokens_kayit
+        """Belge türüne göre çıktı tavanı; envanterden türeyen türler yüksek tavanı kullanır."""
+        if doc_type in ENVANTER_TUREVLI_BELGELER:
+            return self.max_tokens_envanter_belgesi
         return self.max_tokens
 
 

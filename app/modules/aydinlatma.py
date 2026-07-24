@@ -215,6 +215,7 @@ def generate(
     profile = client_profile(client)
     boilerplate = load_boilerplate()
     sections = [_in_to_section(s) for s in body.sections]
+    aydinlatma_max_tokens = settings.max_tokens_for("aydinlatma")
     provider = AnthropicProvider(
         api_key,
         model=settings.default_model,
@@ -231,7 +232,7 @@ def generate(
         generated_doc_id: uuid.UUID | None = None
         try:
             for kind, payload in generate_aydinlatma_envanter_stream(
-                sections, boilerplate, profile, provider=provider, max_tokens=settings.max_tokens,
+                sections, boilerplate, profile, provider=provider, max_tokens=aydinlatma_max_tokens,
             ):
                 if kind == "grounding":
                     yield _sse("grounding", [g.model_dump(by_alias=True) for g in payload])
@@ -248,6 +249,7 @@ def generate(
                             identity.org_id,
                             model=settings.default_model,
                             byok=byok,
+                            max_tokens=aydinlatma_max_tokens,
                         )
                     full_text += payload
                     yield _sse("delta", {"text": payload})
