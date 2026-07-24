@@ -114,3 +114,40 @@ def test_kayit_stream_disclaimer_garantisi():
     events = list(generate_kayit_envanter_stream(RECORDS, PROFILE, MEASURES, RULES, provider=provider))
     full = "".join(e[1] for e in events if e[0] == "delta")
     assert "avukat incelemesine tabi" in full
+
+
+def test_kayit_stream_grounding_cap_ile_prompt_tutarli():
+    """Grounding olayı, promptun (format_kayit_processes) gerçekte gösterdiği kayıt
+    sayısıyla eşleşmeli — şeffaflık paneli belgeye girmeyen satırları göstermemeli."""
+    many = [
+        ProcessRecord(
+            departman="IK", is_sureci="Ozluk", alt_surec=f"Adim {i}", kisi_grubu="Calisan",
+            kategoriler=["Kimlik"], amaclar=["Amac"], hukuki_sebepler=["m.5"],
+            saklama_sureleri=["1 yil"], aktarim=["Yok"],
+        )
+        for i in range(65)
+    ]
+    provider = _FakeStreamProvider(["cikti"])
+    events = list(
+        generate_kayit_envanter_stream(many, PROFILE, MEASURES, RULES, provider=provider, process_cap=60)
+    )
+    grounding = events[0][1]
+    assert len(grounding) == 60
+
+
+def test_kayit_stream_grounding_cap_sifir_sinirsiz():
+    """process_cap=0 sınırsız demektir — grounding TÜM kayıtları yayınlamalı (prompt ile tutarlı)."""
+    many = [
+        ProcessRecord(
+            departman="IK", is_sureci="Ozluk", alt_surec=f"Adim {i}", kisi_grubu="Calisan",
+            kategoriler=["Kimlik"], amaclar=["Amac"], hukuki_sebepler=["m.5"],
+            saklama_sureleri=["1 yil"], aktarim=["Yok"],
+        )
+        for i in range(65)
+    ]
+    provider = _FakeStreamProvider(["cikti"])
+    events = list(
+        generate_kayit_envanter_stream(many, PROFILE, MEASURES, RULES, provider=provider, process_cap=0)
+    )
+    grounding = events[0][1]
+    assert len(grounding) == 65

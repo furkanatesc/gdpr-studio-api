@@ -38,7 +38,7 @@ def cerez_completeness_score(has_identity: bool, kategoriler: list[str], tools: 
 
 def kayit_completeness_score(records: list[ProcessRecord]) -> float | None:
     """Isleme kaydi zorunlu VERBIS alanlarinin envanter satirlarindaki doluluk orani
-    (isleme_envanteri zorunlu unsurlari; avukat_bilgilendirme.md madde 11)."""
+    (isleme_envanteri zorunlu unsurlari; avukat_bilgilendirme.md'de belgelenir)."""
     if not records:
         return None
     filled = 0

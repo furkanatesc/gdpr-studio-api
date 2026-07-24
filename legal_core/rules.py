@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
 
+from .prompt import ONAY_BEKLEYEN_PLACEHOLDER
+
 # Üretilen tüm dokümanlarda istisnasız uygulanan çekirdek hukuki kurallar.
 # (privacy-legal-kvkk-2 / CLAUDE.md + hooks.json playbook'undan türetilmiştir.)
 GLOBAL_RULES: list[str] = [
@@ -31,6 +33,27 @@ GLOBAL_RULES: list[str] = [
     "Risk derecelendirmesi: Risk değerlendirmesi içeren dokümanlarda 4'lü matris kullan: "
     "Kritik / Yüksek / Orta / Düşük.",
 ]
+
+# GLOBAL_RULES içindeki "SAKLAMA SÜRESİ BOŞLUĞU" maddesinin listedeki sırası (0-index).
+_SAKLAMA_BOSLUGU_INDEX = 4
+
+# Kayıt yoluna özel varyant: aynı madde, ONAY_BEKLEYEN_PLACEHOLDER ile hizalı.
+_KAYIT_SAKLAMA_BOSLUGU_KURALI = (
+    "SAKLAMA SÜRESİ BOŞLUĞU: Envanterde saklama süresi verilmemişse süre UYDURMA; "
+    f"ilgili alana '{ONAY_BEKLEYEN_PLACEHOLDER}' yaz."
+)
+
+
+def kayit_aligned_global_rules() -> list[str]:
+    """Kayıt yoluna özel GLOBAL_RULES kopyası — #5 maddesi ONAY_BEKLEYEN_PLACEHOLDER ile hizalanır.
+
+    GLOBAL_RULES'un kendisi DEĞİŞMEZ (canlı /api/generate ve /api/clients/{id}/cerez/generate
+    yolları bu sabiti birebir kullanır); yalnızca kayıt prompt'una verilen KOPYADA tek madde
+    metni değiştirilir, kural sayısı/numaralandırması korunur.
+    """
+    aligned = list(GLOBAL_RULES)
+    aligned[_SAKLAMA_BOSLUGU_INDEX] = _KAYIT_SAKLAMA_BOSLUGU_KURALI
+    return aligned
 
 
 @runtime_checkable

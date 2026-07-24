@@ -20,7 +20,7 @@ from legal_core.generate import generate_kayit_envanter_stream
 from legal_core.models import DocType
 from legal_core.prompt import ensure_disclaimer
 from legal_core.provider import AnthropicProvider
-from legal_core.rules import GLOBAL_RULES
+from legal_core.rules import kayit_aligned_global_rules
 from legal_core.scoring import kayit_completeness_score
 
 from .. import idempotency
@@ -85,7 +85,7 @@ def generate(
 
     prof = client_profile(client)
     measures = PostgresMeasureRepository(session).all_measures()
-    rules = GLOBAL_RULES + PostgresBusinessRuleRepository(session).business_rules("kayit")
+    rules = kayit_aligned_global_rules() + PostgresBusinessRuleRepository(session).business_rules("kayit")
     cap = settings.process_cap
     scored_records = records[:cap] if cap else records
     provider = AnthropicProvider(

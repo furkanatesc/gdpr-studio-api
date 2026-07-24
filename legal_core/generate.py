@@ -209,8 +209,14 @@ def generate_kayit_envanter_stream(
     max_tokens: int = DEFAULT_MAX_TOKENS,
     process_cap: int = DEFAULT_PROCESS_CAP,
 ) -> Iterator[tuple[str, Any]]:
-    """Müvekkil envanterinden İşleme Kaydı üretir — aydinlatma envanter-modu deseni."""
-    yield ("grounding", [_process_to_grounding(r) for r in records])
+    """Müvekkil envanterinden İşleme Kaydı üretir — aydinlatma envanter-modu deseni.
+
+    Grounding olayı, format_kayit_processes'in prompt'a soktuğu aynı kırpılmış kümeyi
+    yayınlar (process_cap==0 sınırsız demektir — prompt ile tutarlı kalır).
+    """
+    total = len(records)
+    grounded = records[:process_cap] if process_cap and total > process_cap else records
+    yield ("grounding", [_process_to_grounding(r) for r in grounded])
 
     prompt = build_kayit_envanter_prompt(records, profile, measures, rules, process_cap=process_cap)
 
