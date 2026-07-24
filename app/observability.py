@@ -72,7 +72,13 @@ def configure_logging(level: str = "INFO") -> None:
 
 
 def init_sentry(dsn: str, environment: str) -> bool:
-    """DSN varsa Sentry'yi başlatır. KVKK: send_default_pii=False (PII/başlık/çerez gönderilmez)."""
+    """DSN varsa Sentry'yi başlatır.
+
+    KVKK: send_default_pii=False (PII/başlık/çerez gönderilmez) TEK BAŞINA frame local'lerini
+    kapatmaz — include_local_variables sentry-sdk'de varsayılan True'dur ve capture_exception
+    hatanın stack frame'lerindeki yerel değişkenleri (ör. müvekkil envanteri, üretilmiş belge
+    metni) serileştirip gönderirdi. include_local_variables=False bunu kapatır.
+    """
     if not dsn:
         return False
     import sentry_sdk
@@ -82,6 +88,7 @@ def init_sentry(dsn: str, environment: str) -> bool:
         environment=environment,
         traces_sample_rate=0.0,  # performans tracing Faz 4 (OTel ile); şimdilik yalnız hata.
         send_default_pii=False,
+        include_local_variables=False,
     )
     return True
 
