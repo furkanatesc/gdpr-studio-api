@@ -227,6 +227,33 @@ def test_generate_olay_sirasi_ve_uyum_kaydi(db_session, monkeypatch):
     assert str(rows[0].org_id) == str(IDENT.org_id)
 
 
+def _fake_stream_truncated(*a, **k):
+    yield "grounding", []
+    yield "delta", "Kesik aydinlatma metni..."
+    yield "done", {
+        "model": "claude-x",
+        "usage": {"inputTokens": 8000, "outputTokens": 8000},
+        "stopReason": "max_tokens",
+    }
+
+
+def test_generate_max_tokensta_saklanmaz_ve_uyari_yayinlanir(db_session, monkeypatch):
+    """Borc: kesik uretim (stop_reason=max_tokens) SAKLANMAMALI, istemci 'warning' alir."""
+    from app.models import ClientDocument
+
+    _managed_billing_settings()
+    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream", _fake_stream_truncated)
+    cid = _make_client(db_session)
+
+    resp = _generate(db_session, cid)
+    body = _consume(resp)
+
+    assert "event: warning" in body
+    assert "event: error" not in body
+    rows = db_session.query(ClientDocument).filter_by(client_id=cid).all()
+    assert len(rows) == 0
+
+
 def test_generate_belgeyi_saklar_iki_puanla(db_session, monkeypatch):
     from app.models import ClientDocument
 

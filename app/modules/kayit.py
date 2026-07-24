@@ -127,13 +127,31 @@ def generate(
                         output_tokens=usage["outputTokens"] if usage else 0,
                         byok=byok, reserved_micros=reserved,
                     )
-                    try:
-                        store_client_document(
-                            session, identity.org_id, client_id, "kayit", "İşleme Kaydı",
-                            ensure_disclaimer(full_text), kayit_completeness_score(scored_records),
+                    if payload.get("stopReason") == "max_tokens":
+                        # Kesik belge tam puanla resmi VERBIS kaydi olarak SAKLANMAZ.
+                        _log.warning(
+                            "kayit uretimi kesildi (max_tokens): org=%s doc_type=kayit",
+                            identity.org_id,
                         )
-                    except Exception as store_err:  # best-effort; PII'siz log
-                        _log.error("kayit saklama basarisiz (org=%s): %s", identity.org_id, type(store_err).__name__)
+                        yield _sse("warning", {
+                            "code": "truncated_max_tokens",
+                            "message": (
+                                "Belge, model çıktı uzunluğu sınırına takıldığı için eksik "
+                                "kaldı ve KAYDEDİLMEDİ. Envanterdeki süreç sayısını daraltıp "
+                                "yeniden deneyin."
+                            ),
+                        })
+                    else:
+                        try:
+                            store_client_document(
+                                session, identity.org_id, client_id, "kayit", "İşleme Kaydı",
+                                ensure_disclaimer(full_text), kayit_completeness_score(scored_records),
+                            )
+                        except Exception as store_err:  # best-effort; PII'siz log
+                            _log.error(
+                                "kayit saklama basarisiz (org=%s): %s",
+                                identity.org_id, type(store_err).__name__,
+                            )
         except Exception as e:
             if not started:
                 idempotency.release(identity.org_id, idempotency_key)

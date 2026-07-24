@@ -113,6 +113,35 @@ def test_kayit_generate_belgeyi_saklar(db_session, monkeypatch):
     assert rows[0].score_compliance == 0.0  # org'da uyum statusu yok
 
 
+def _fake_stream_truncated(*a, **k):
+    yield "grounding", []
+    yield "delta", "Kesik VERBIS tablosu..."
+    yield "done", {
+        "model": "claude-x",
+        "usage": {"inputTokens": 14000, "outputTokens": 8000},
+        "stopReason": "max_tokens",
+    }
+
+
+def test_kayit_generate_max_tokensta_saklanmaz_ve_uyari_yayinlanir(db_session, monkeypatch):
+    """Borc: kesik uretim (stop_reason=max_tokens) tam puanla resmi kayit gibi
+    SAKLANMAMALI ve istemci acik bir 'warning' SSE olayi almali (error DEGIL)."""
+    from app.models import ClientDocument
+
+    _managed_billing_settings()
+    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream", _fake_stream_truncated)
+    cid = _make_client(db_session)
+    _put_inventory(db_session, cid)
+
+    resp = _generate(db_session, cid)
+    body = _consume(resp)
+
+    assert "event: warning" in body
+    assert "event: error" not in body
+    rows = db_session.query(ClientDocument).filter_by(client_id=cid).all()
+    assert len(rows) == 0
+
+
 def test_kayit_generate_global_kurallar_dahil(db_session, monkeypatch):
     """I2: app/modules/kayit.py yalniz doc_type='kayit' kurallarini degil GLOBAL_RULES'u
     da (ozellikle yurt disi aktarim kurali) generate_kayit_envanter_stream'e gecirmeli."""

@@ -130,6 +130,7 @@ def generate_document_stream(
                 if last
                 else None
             ),
+            "stopReason": last.stop_reason if last else None,
         },
     )
 
@@ -184,6 +185,7 @@ def generate_aydinlatma_envanter_stream(
                 if last
                 else None
             ),
+            "stopReason": last.stop_reason if last else None,
         },
     )
 
@@ -241,5 +243,6 @@ def generate_kayit_envanter_stream(
                 if last
                 else None
             ),
+            "stopReason": last.stop_reason if last else None,
         },
     )

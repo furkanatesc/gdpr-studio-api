@@ -1,5 +1,6 @@
 from legal_core import GenerateRequest, generate_document
 from legal_core.adapters import DictBusinessRuleRepository, DictCategoryRepository
+from legal_core.generate import generate_document_stream
 from legal_core.grounding import Grounding
 from legal_core.prompt import DISCLAIMER_MARKER
 from legal_core.provider import ProviderResult
@@ -74,6 +75,48 @@ def test_disclaimer_varsa_tekrar_eklenmez():
 
     res = generate_document(req, grounding=grounding, rules_repo=rules_repo, provider=provider)
     assert res.text.count(DISCLAIMER_MARKER) == 1  # ikinci kez eklenmedi
+
+
+class FakeStreamProvider:
+    """generate_document_stream'in bekledigi duck-type: stream() + last_result."""
+
+    def __init__(self, chunks, model="fake-model", stop_reason=None):
+        self.chunks = chunks
+        self.model = model
+        self.last_result = None
+        self._stop_reason = stop_reason
+
+    def stream(self, prompt, *, max_tokens=8000):
+        yield from self.chunks
+        self.last_result = ProviderResult(
+            text="", model=self.model, input_tokens=11, output_tokens=22,
+            stop_reason=self._stop_reason,
+        )
+
+
+def test_stream_done_stop_reason_max_tokens_tasir():
+    """max_tokens'ta kesilen uretim done meta'sinda gorunur olmali (borc: gorunmez kesme)."""
+    grounding, rules_repo = _build()
+    provider = FakeStreamProvider(["kirpik cikti"], stop_reason="max_tokens")
+    req = GenerateRequest(type="cerez", fields={}, veriler=[])
+
+    events = list(
+        generate_document_stream(req, grounding=grounding, rules_repo=rules_repo, provider=provider)
+    )
+    done = next(e for e in events if e[0] == "done")[1]
+    assert done["stopReason"] == "max_tokens"
+
+
+def test_stream_done_stop_reason_normalde_end_turn():
+    grounding, rules_repo = _build()
+    provider = FakeStreamProvider(["tam cikti"], stop_reason="end_turn")
+    req = GenerateRequest(type="cerez", fields={}, veriler=[])
+
+    events = list(
+        generate_document_stream(req, grounding=grounding, rules_repo=rules_repo, provider=provider)
+    )
+    done = next(e for e in events if e[0] == "done")[1]
+    assert done["stopReason"] == "end_turn"
 
 
 def test_camelcase_serilestirme():

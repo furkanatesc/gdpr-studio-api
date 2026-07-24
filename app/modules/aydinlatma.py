@@ -261,15 +261,33 @@ def generate(
                         byok=byok,
                         reserved_micros=reserved,
                     )
-                    try:
-                        _store_generated_document(
-                            session, identity.org_id, client_id, sections, ensure_disclaimer(full_text)
+                    if payload.get("stopReason") == "max_tokens":
+                        # Kesik belge tam puanla resmi kayit olarak SAKLANMAZ.
+                        _log.warning(
+                            "aydinlatma uretimi kesildi (max_tokens): org=%s doc_type=aydinlatma",
+                            identity.org_id,
                         )
-                    except Exception as store_err:  # best-effort; uretimi bozma
-                        # PII sizintisi riski: SQL exception string'i belge icerigini (musvekkil PII)
-                        # tasiyabilir, capture_exception frame local'lerini (content, statuses) Sentry'ye
-                        # serilestirir. Bu yuzden yalniz exception TURU + org_id loglanir; string/traceback YOK.
-                        _log.error("belge saklama basarisiz (org=%s): %s", identity.org_id, type(store_err).__name__)
+                        yield _sse("warning", {
+                            "code": "truncated_max_tokens",
+                            "message": (
+                                "Belge, model çıktı uzunluğu sınırına takıldığı için eksik "
+                                "kaldı ve KAYDEDİLMEDİ. Kapsamı (hedef grup/bölüm sayısını) "
+                                "daraltıp yeniden deneyin."
+                            ),
+                        })
+                    else:
+                        try:
+                            _store_generated_document(
+                                session, identity.org_id, client_id, sections, ensure_disclaimer(full_text)
+                            )
+                        except Exception as store_err:  # best-effort; uretimi bozma
+                            # PII sizintisi riski: SQL exception string'i belge icerigini (musvekkil PII)
+                            # tasiyabilir, capture_exception frame local'lerini (content, statuses) Sentry'ye
+                            # serilestirir. Bu yuzden yalniz exception TURU + org_id loglanir; string/traceback YOK.
+                            _log.error(
+                                "belge saklama basarisiz (org=%s): %s",
+                                identity.org_id, type(store_err).__name__,
+                            )
         except Exception as e:
             if not started:
                 idempotency.release(identity.org_id, idempotency_key)

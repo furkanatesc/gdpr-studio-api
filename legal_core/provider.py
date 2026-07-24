@@ -26,6 +26,9 @@ class ProviderResult:
     model: str
     input_tokens: int = 0
     output_tokens: int = 0
+    # Anthropic'in "stop_reason"u: "max_tokens" ise metin cumle ortasinda kesilmis
+    # olabilir. None -> eski cagrilar (varsayilan) kirilmasin.
+    stop_reason: str | None = None
 
 
 @runtime_checkable
@@ -82,6 +85,7 @@ class AnthropicProvider:
             model=self._model,
             input_tokens=getattr(usage, "input_tokens", 0) or 0,
             output_tokens=getattr(usage, "output_tokens", 0) or 0,
+            stop_reason=getattr(message, "stop_reason", None),
         )
 
     def stream(self, prompt: str, *, max_tokens: int = DEFAULT_MAX_TOKENS) -> Iterator[str]:
@@ -101,4 +105,5 @@ class AnthropicProvider:
                 model=self._model,
                 input_tokens=getattr(usage, "input_tokens", 0) or 0,
                 output_tokens=getattr(usage, "output_tokens", 0) or 0,
+                stop_reason=getattr(final, "stop_reason", None),
             )

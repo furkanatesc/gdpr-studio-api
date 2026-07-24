@@ -64,12 +64,13 @@ SECTIONS = [
 class FakeStreamProvider:
     """AnthropicProvider.stream() desenini taklit eder: delta akitir, sonda last_result yazar."""
 
-    def __init__(self, chunks, model="fake-model", input_tokens=11, output_tokens=22):
+    def __init__(self, chunks, model="fake-model", input_tokens=11, output_tokens=22, stop_reason=None):
         self.chunks = chunks
         self.model = model
         self.last_result = None
         self._input_tokens = input_tokens
         self._output_tokens = output_tokens
+        self._stop_reason = stop_reason
         self.seen_prompt = None
 
     def stream(self, prompt, *, max_tokens=8000):
@@ -78,6 +79,7 @@ class FakeStreamProvider:
         self.last_result = ProviderResult(
             text="", model=self.model,
             input_tokens=self._input_tokens, output_tokens=self._output_tokens,
+            stop_reason=self._stop_reason,
         )
 
 
@@ -234,6 +236,25 @@ def test_stream_done_disclaimer_ve_usage_icerir():
     assert done["model"] == "fake-model"
     assert done["usage"]["inputTokens"] == 11
     assert done["usage"]["outputTokens"] == 22
+
+
+def test_stream_done_stop_reason_max_tokens_tasir():
+    """max_tokens'ta kesilen uretim done meta'sinda gorunur olmali (borc: gorunmez kesme)."""
+    provider = FakeStreamProvider(["kirpik cikti"], stop_reason="max_tokens")
+    events = list(
+        generate_aydinlatma_envanter_stream(SECTIONS, BOILERPLATE, PROFILE, provider=provider)
+    )
+    done = next(e for e in events if e[0] == "done")[1]
+    assert done["stopReason"] == "max_tokens"
+
+
+def test_stream_done_stop_reason_normalde_end_turn():
+    provider = FakeStreamProvider(["tam cikti"], stop_reason="end_turn")
+    events = list(
+        generate_aydinlatma_envanter_stream(SECTIONS, BOILERPLATE, PROFILE, provider=provider)
+    )
+    done = next(e for e in events if e[0] == "done")[1]
+    assert done["stopReason"] == "end_turn"
 
 
 def test_stream_final_metin_disclaimer_garantisi():
