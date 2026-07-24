@@ -22,6 +22,7 @@ from .modules import (
     health,
     inventory,
     invitations,
+    kayit,
     memberships,
     processes,
 )
@@ -81,6 +82,7 @@ app.include_router(clients.router)
 app.include_router(aydinlatma.router)
 app.include_router(cerez.router)
 app.include_router(inventory.router)
+app.include_router(kayit.router)
 
 
 @app.get("/")
