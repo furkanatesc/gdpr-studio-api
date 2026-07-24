@@ -268,3 +268,30 @@ def test_stream_final_metin_disclaimer_garantisi():
 
     full_text = "".join(e[1] for e in events if e[0] == "delta")
     assert "avukat incelemesine tabi" in full_text
+
+
+def test_prompt_sabit_belge_iskeleti_dayatir():
+    """Iskelet sabitlenmeden ayni girdi her uretimde farkli bolum sirasi/numaralandirma
+    veriyordu (kullanici bildirimi: 'uretimler farkli sablonlarda cikiyor')."""
+    p = build_aydinlatma_envanter_prompt(SECTIONS, BOILERPLATE, PROFILE)
+    assert "BELGE İSKELETİ" in p
+    for baslik in (
+        "## 1. Veri Sorumlusunun Kimliği",
+        "## 2. Tanımlar",
+        "## 3. Veri Toplama Kaynakları",
+        "## 4. Ortak Hükümler",
+        "## 5. İş Süreçlerine Göre Kişisel Veri İşleme Faaliyetleri",
+        "## 6. İlgili Kişinin Hakları (KVKK m.11)",
+        "## 7. Başvuru Usulü",
+    ):
+        assert baslik in p, f"iskelette eksik: {baslik}"
+    for alt in (
+        "#### 5.N.1 İşlenen Kişisel Veriler",
+        "#### 5.N.2 İşleme Amaçları",
+        "#### 5.N.3 Hukuki Sebep",
+        "#### 5.N.4 Saklama Süresi",
+        "#### 5.N.5 Aktarım",
+        "#### 5.N.6 Toplama Yöntemi",
+    ):
+        assert alt in p, f"alt basli eksik: {alt}"
+    assert "Başlık ekleme, çıkarma, yeniden adlandırma veya sırasını değiştirme." in p
