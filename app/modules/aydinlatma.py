@@ -42,6 +42,7 @@ from ..observability import capture_exception
 from ..redis_client import generate_rate_limit
 from ..repositories import (
     ClientDocumentRepository,
+    ClientDocumentVersionRepository,
     ClientRepository,
     GeneratedDocumentRepository,
     PostgresProcessRepository,
@@ -110,6 +111,8 @@ class ClientDocumentMetaOut(_Camel):
     score_compliance: float | None = None
     created_at: datetime
     updated_at: datetime
+    latest_version: int | None = None
+    latest_published_at: datetime | None = None
 
 
 class ClientDocumentsOut(_Camel):
@@ -132,6 +135,14 @@ class ClientDocumentVersionMetaOut(_Camel):
     published_by: uuid.UUID | None = None
     score_completeness: float | None = None
     score_compliance: float | None = None
+
+
+class ClientDocumentVersionsOut(_Camel):
+    versions: list[ClientDocumentVersionMetaOut]
+
+
+class ClientDocumentVersionOut(ClientDocumentVersionMetaOut):
+    content: str
 
 
 def _enriched_to_out(es: EnrichedSection) -> EnrichedSectionOut:
@@ -390,7 +401,16 @@ def list_documents(
     if ClientRepository(session).get(identity.org_id, client_id) is None:
         raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
     rows = ClientDocumentRepository(session).list_for_client(identity.org_id, client_id)
-    return ClientDocumentsOut(documents=[ClientDocumentMetaOut.model_validate(r, from_attributes=True) for r in rows])
+    latest = ClientDocumentVersionRepository(session).latest_versions_for_client(
+        identity.org_id, client_id
+    )
+    out = []
+    for r in rows:
+        meta = ClientDocumentMetaOut.model_validate(r, from_attributes=True)
+        if r.id in latest:
+            meta.latest_version, meta.latest_published_at = latest[r.id]
+        out.append(meta)
+    return ClientDocumentsOut(documents=out)
 
 
 @router.get("/{client_id}/documents/{document_id}", response_model=ClientDocumentOut, response_model_by_alias=True)
@@ -427,3 +447,44 @@ def publish_document_version(
     if ver is None:
         raise HTTPException(status_code=404, detail="Belge bulunamadı.")
     return ClientDocumentVersionMetaOut.model_validate(ver, from_attributes=True)
+
+
+@router.get(
+    "/{client_id}/documents/{document_id}/versions",
+    response_model=ClientDocumentVersionsOut,
+    response_model_by_alias=True,
+)
+def list_document_versions(
+    client_id: uuid.UUID,
+    document_id: uuid.UUID,
+    identity: Identity = Depends(get_current_identity),
+    session: Session = Depends(tenant_session),
+) -> ClientDocumentVersionsOut:
+    if ClientRepository(session).get(identity.org_id, client_id) is None:
+        raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
+    vers = ClientDocumentVersionRepository(session).list_for_document(identity.org_id, document_id)
+    return ClientDocumentVersionsOut(
+        versions=[ClientDocumentVersionMetaOut.model_validate(v, from_attributes=True) for v in vers]
+    )
+
+
+@router.get(
+    "/{client_id}/documents/{document_id}/versions/{version_id}",
+    response_model=ClientDocumentVersionOut,
+    response_model_by_alias=True,
+)
+def get_document_version(
+    client_id: uuid.UUID,
+    document_id: uuid.UUID,
+    version_id: uuid.UUID,
+    identity: Identity = Depends(get_current_identity),
+    session: Session = Depends(tenant_session),
+) -> ClientDocumentVersionOut:
+    if ClientRepository(session).get(identity.org_id, client_id) is None:
+        raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
+    ver = ClientDocumentVersionRepository(session).get_version(
+        identity.org_id, document_id, version_id
+    )
+    if ver is None:
+        raise HTTPException(status_code=404, detail="Sürüm bulunamadı.")
+    return ClientDocumentVersionOut.model_validate(ver, from_attributes=True)

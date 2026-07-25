@@ -72,3 +72,39 @@ def test_get_bilinmeyen_belge_404(client_fresh):
     cid = _bootstrap_client(client_fresh)
     r = client_fresh.get(f"/api/clients/{cid}/documents/{uuid.uuid4()}")
     assert r.status_code == 404
+
+
+def _seed_and_publish(client_fresh, db_session):
+    boot = client_fresh.post("/api/auth/bootstrap", json={"orgName": "Buro"}).json()
+    cid = client_fresh.post("/api/clients", json={"name": "Muvekkil"}).json()["id"]
+    ClientDocumentRepository(db_session).upsert(
+        uuid.UUID(boot["orgId"]), uuid.UUID(cid), "aydinlatma", "Calisan", "surum-icerigi", 0.6, 0.7
+    )
+    db_session.commit()
+    doc_id = client_fresh.get(f"/api/clients/{cid}/documents").json()["documents"][0]["id"]
+    client_fresh.post(f"/api/clients/{cid}/documents/{doc_id}/publish", json={"note": "n1"})
+    return cid, doc_id
+
+
+def test_list_versions(client_fresh, db_session):
+    cid, doc_id = _seed_and_publish(client_fresh, db_session)
+    r = client_fresh.get(f"/api/clients/{cid}/documents/{doc_id}/versions")
+    assert r.status_code == 200
+    vers = r.json()["versions"]
+    assert len(vers) == 1 and vers[0]["version"] == 1
+
+
+def test_get_version_content_is_snapshot(client_fresh, db_session):
+    cid, doc_id = _seed_and_publish(client_fresh, db_session)
+    ver_id = client_fresh.get(f"/api/clients/{cid}/documents/{doc_id}/versions").json()["versions"][0]["id"]
+    r = client_fresh.get(f"/api/clients/{cid}/documents/{doc_id}/versions/{ver_id}")
+    assert r.status_code == 200
+    assert r.json()["content"] == "surum-icerigi"
+
+
+def test_documents_list_shows_latest_version(client_fresh, db_session):
+    cid, doc_id = _seed_and_publish(client_fresh, db_session)
+    docs = client_fresh.get(f"/api/clients/{cid}/documents").json()["documents"]
+    row = next(d for d in docs if d["id"] == doc_id)
+    assert row["latestVersion"] == 1
+    assert row["latestPublishedAt"] is not None
