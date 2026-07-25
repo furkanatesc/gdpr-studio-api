@@ -174,6 +174,11 @@ def _in_to_section(s: SectionIn) -> Section:
     )
 
 
+def _require_client(session: Session, org_id: uuid.UUID, client_id: uuid.UUID) -> None:
+    if ClientRepository(session).get(org_id, client_id) is None:
+        raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
+
+
 def _derive_title(sections: list[Section]) -> str:
     seen: list[str] = []
     for s in sections:
@@ -371,9 +376,8 @@ def docx(
     identity: Identity = Depends(get_current_identity),
     session: Session = Depends(tenant_session),
 ) -> Response:
+    _require_client(session, identity.org_id, client_id)
     client = ClientRepository(session).get(identity.org_id, client_id)
-    if client is None:
-        raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
     prof = client_profile(client)
     data = render_styled_docx(
         body.text,
@@ -398,8 +402,7 @@ def list_documents(
     identity: Identity = Depends(get_current_identity),
     session: Session = Depends(tenant_session),
 ) -> ClientDocumentsOut:
-    if ClientRepository(session).get(identity.org_id, client_id) is None:
-        raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
+    _require_client(session, identity.org_id, client_id)
     rows = ClientDocumentRepository(session).list_for_client(identity.org_id, client_id)
     latest = ClientDocumentVersionRepository(session).latest_versions_for_client(
         identity.org_id, client_id
@@ -460,8 +463,8 @@ def list_document_versions(
     identity: Identity = Depends(get_current_identity),
     session: Session = Depends(tenant_session),
 ) -> ClientDocumentVersionsOut:
-    if ClientRepository(session).get(identity.org_id, client_id) is None:
-        raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
+    if ClientDocumentRepository(session).get(identity.org_id, client_id, document_id) is None:
+        raise HTTPException(status_code=404, detail="Belge bulunamadı.")
     vers = ClientDocumentVersionRepository(session).list_for_document(identity.org_id, document_id)
     return ClientDocumentVersionsOut(
         versions=[ClientDocumentVersionMetaOut.model_validate(v, from_attributes=True) for v in vers]
@@ -480,8 +483,8 @@ def get_document_version(
     identity: Identity = Depends(get_current_identity),
     session: Session = Depends(tenant_session),
 ) -> ClientDocumentVersionOut:
-    if ClientRepository(session).get(identity.org_id, client_id) is None:
-        raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
+    if ClientDocumentRepository(session).get(identity.org_id, client_id, document_id) is None:
+        raise HTTPException(status_code=404, detail="Belge bulunamadı.")
     ver = ClientDocumentVersionRepository(session).get_version(
         identity.org_id, document_id, version_id
     )
