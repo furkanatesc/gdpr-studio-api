@@ -160,3 +160,28 @@ def test_list_documents_unpublished_shows_null_latest(client_fresh, db_session):
     docs = client_fresh.get(f"/api/clients/{cid}/documents").json()["documents"]
     row = next(d for d in docs if d["id"] == doc_id)
     assert row["latestVersion"] is None
+
+
+def test_version_docx_downloads(client_fresh, db_session):
+    cid, doc_id = _seed_and_publish(client_fresh, db_session)
+    ver_id = client_fresh.get(f"/api/clients/{cid}/documents/{doc_id}/versions").json()["versions"][0]["id"]
+    r = client_fresh.get(f"/api/clients/{cid}/documents/versions/{ver_id}/docx")
+    assert r.status_code == 200, r.text
+    assert r.content[:2] == b"PK"  # docx = zip
+    assert "attachment" in r.headers["content-disposition"]
+
+
+def test_version_docx_wrong_client_404(client_fresh, db_session):
+    boot = client_fresh.post("/api/auth/bootstrap", json={"orgName": "Buro"}).json()
+    cid_a = client_fresh.post("/api/clients", json={"name": "Muvekkil A"}).json()["id"]
+    cid_b = client_fresh.post("/api/clients", json={"name": "Muvekkil B"}).json()["id"]
+    ClientDocumentRepository(db_session).upsert(
+        uuid.UUID(boot["orgId"]), uuid.UUID(cid_a), "aydinlatma", "Calisan", "surum-icerigi", 0.6, 0.7
+    )
+    db_session.commit()
+    doc_id = client_fresh.get(f"/api/clients/{cid_a}/documents").json()["documents"][0]["id"]
+    client_fresh.post(f"/api/clients/{cid_a}/documents/{doc_id}/publish", json={"note": "n1"})
+    ver_id = client_fresh.get(f"/api/clients/{cid_a}/documents/{doc_id}/versions").json()["versions"][0]["id"]
+
+    r = client_fresh.get(f"/api/clients/{cid_b}/documents/versions/{ver_id}/docx")
+    assert r.status_code == 404

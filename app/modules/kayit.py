@@ -214,7 +214,7 @@ def docx(
         {
             "veri_sorumlusu": prof.unvan or prof.ad,
             "tarih": date.today().strftime("%d.%m.%Y"),
-            "versiyon": "1.0",
+            "versiyon": "Taslak",
         },
     )
     return Response(

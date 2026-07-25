@@ -465,4 +465,4 @@ def test_aydinlatma_docx_kapak_ilgili_kisi(db_session):
     t = "\n".join(p.text for p in doc.paragraphs)
     assert "ACME A.S." in t
     assert "İlgili Kişi" in t and "Çalışan" in t
-    assert "Versiyon" in t and "1.0" in t
+    assert "Versiyon" in t and "Taslak" in t

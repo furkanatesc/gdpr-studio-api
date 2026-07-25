@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from legal_core.aggregate_sections import Section, aggregate_sections
@@ -38,6 +39,7 @@ from ..billing.quota import (
 )
 from ..config import get_settings
 from ..docx_export import render_styled_docx
+from ..models import ClientDocument, ClientDocumentVersion
 from ..observability import capture_exception
 from ..redis_client import generate_rate_limit
 from ..repositories import (
@@ -386,7 +388,7 @@ def docx(
             "veri_sorumlusu": prof.unvan or prof.ad,
             "ilgili_kisi": ", ".join(body.kisi_gruplari) if body.kisi_gruplari else None,
             "tarih": date.today().strftime("%d.%m.%Y"),
-            "versiyon": "1.0",
+            "versiyon": "Taslak",
         },
     )
     return Response(
@@ -491,3 +493,51 @@ def get_document_version(
     if ver is None:
         raise HTTPException(status_code=404, detail="Sürüm bulunamadı.")
     return ClientDocumentVersionOut.model_validate(ver, from_attributes=True)
+
+
+@router.get("/{client_id}/documents/versions/{version_id}/docx")
+def get_version_docx(
+    client_id: uuid.UUID,
+    version_id: uuid.UUID,
+    identity: Identity = Depends(get_current_identity),
+    session: Session = Depends(tenant_session),
+) -> Response:
+    client = ClientRepository(session).get(identity.org_id, client_id)
+    if client is None:
+        raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
+    ver = session.scalar(
+        select(ClientDocumentVersion).where(
+            ClientDocumentVersion.org_id == identity.org_id,
+            ClientDocumentVersion.id == version_id,
+        )
+    )
+    if ver is None:
+        raise HTTPException(status_code=404, detail="Sürüm bulunamadı.")
+    doc = session.scalar(
+        select(ClientDocument).where(
+            ClientDocument.org_id == identity.org_id,
+            ClientDocument.id == ver.document_id,
+            ClientDocument.client_id == client_id,
+        )
+    )
+    if doc is None:
+        raise HTTPException(status_code=404, detail="Belge bulunamadı.")
+    prof = client_profile(client)
+    data = render_styled_docx(
+        ver.content,
+        doc.doc_type,
+        {
+            "veri_sorumlusu": prof.unvan or prof.ad,
+            "ilgili_kisi": doc.title if doc.doc_type == "aydinlatma" else None,
+            "site": doc.title if doc.doc_type == "cerez" else None,
+            "tarih": ver.published_at.strftime("%d.%m.%Y"),
+            "versiyon": str(ver.version),
+        },
+    )
+    return Response(
+        content=data,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={
+            "Content-Disposition": f'attachment; filename="{doc.doc_type}-v{ver.version}.docx"'
+        },
+    )
