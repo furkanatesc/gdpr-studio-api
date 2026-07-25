@@ -12,13 +12,15 @@ from ..repositories import ClientDocumentVersionRepository
 
 
 def publish_document(
-    session, org_id: uuid.UUID, document_id: uuid.UUID, note: str | None, published_by: uuid.UUID
+    session, org_id: uuid.UUID, client_id: uuid.UUID, document_id: uuid.UUID,
+    note: str | None, published_by: uuid.UUID,
 ) -> ClientDocumentVersion | None:
     set_org_context(session, org_id)
-    # document_id path'i client_id'den bağımsız; sahiplik org üzerinden RLS + org filtresi.
     draft = session.scalar(
         select(ClientDocument).where(
-            ClientDocument.org_id == org_id, ClientDocument.id == document_id
+            ClientDocument.org_id == org_id,
+            ClientDocument.client_id == client_id,
+            ClientDocument.id == document_id,
         )
     )
     if draft is None:

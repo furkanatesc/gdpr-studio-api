@@ -40,6 +40,21 @@ def test_publish_unknown_document_404(client_fresh):
     assert r.status_code == 404
 
 
+def test_publish_wrong_client_404(client_fresh, db_session):
+    boot = client_fresh.post("/api/auth/bootstrap", json={"orgName": "Buro"}).json()
+    cid_a = client_fresh.post("/api/clients", json={"name": "Muvekkil A"}).json()["id"]
+    cid_b = client_fresh.post("/api/clients", json={"name": "Muvekkil B"}).json()["id"]
+    ClientDocumentRepository(db_session).upsert(
+        uuid.UUID(boot["orgId"]), uuid.UUID(cid_a), "aydinlatma", "Calisan", "taslak-metni", 0.5, 0.8
+    )
+    db_session.commit()
+    doc_id = client_fresh.get(f"/api/clients/{cid_a}/documents").json()["documents"][0]["id"]
+    r = client_fresh.post(
+        f"/api/clients/{cid_b}/documents/{doc_id}/publish", json={"note": "capraz-muvekkil"}
+    )
+    assert r.status_code == 404
+
+
 def test_list_bos_muvekkil_bos_liste(client_fresh):
     cid = _bootstrap_client(client_fresh)
     r = client_fresh.get(f"/api/clients/{cid}/documents")

@@ -423,7 +423,7 @@ def publish_document_version(
 ) -> ClientDocumentVersionMetaOut:
     if ClientRepository(session).get(identity.org_id, client_id) is None:
         raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
-    ver = publish_document(session, identity.org_id, document_id, body.note, identity.user_id)
+    ver = publish_document(session, identity.org_id, client_id, document_id, body.note, identity.user_id)
     if ver is None:
         raise HTTPException(status_code=404, detail="Belge bulunamadı.")
     return ClientDocumentVersionMetaOut.model_validate(ver, from_attributes=True)
