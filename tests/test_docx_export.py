@@ -5,6 +5,7 @@ import zipfile
 import docx
 
 from app.docx_export import render_docx, render_styled_docx
+from app.docx_style import build_cover
 
 MARKDOWN = (
     "## Baslik\n\nBir paragraf.\n\n- madde bir\n- madde iki\n\n"
@@ -68,3 +69,13 @@ def test_render_docx_hala_calisir_ve_tablo_isler():
     b = render_docx(TABLO_MD, "Baslik")
     doc = docx.Document(_io.BytesIO(b))
     assert len(doc.tables) == 1
+
+
+def test_cover_version_label_taslak_vs_number():
+    d1 = docx.Document()
+    build_cover(d1, "kayit", veri_sorumlusu="X", ilgili_kisi=None, site=None, tarih="25.07.2026", versiyon="Taslak")
+    assert any("Versiyon: " in p.text and "Taslak" in p.text for p in d1.paragraphs)
+
+    d2 = docx.Document()
+    build_cover(d2, "kayit", veri_sorumlusu="X", ilgili_kisi=None, site=None, tarih="25.07.2026", versiyon="2")
+    assert any(p.text.strip() == "Versiyon: 2" for p in d2.paragraphs)

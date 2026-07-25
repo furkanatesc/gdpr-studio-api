@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from legal_core.aggregate_sections import Section, aggregate_sections
@@ -38,15 +39,18 @@ from ..billing.quota import (
 )
 from ..config import get_settings
 from ..docx_export import render_styled_docx
+from ..models import ClientDocument, ClientDocumentVersion
 from ..observability import capture_exception
 from ..redis_client import generate_rate_limit
 from ..repositories import (
     ClientDocumentRepository,
+    ClientDocumentVersionRepository,
     ClientRepository,
     GeneratedDocumentRepository,
     PostgresProcessRepository,
 )
 from .document_store import client_profile, store_client_document
+from .document_versions import publish_document
 from .generation import _claim_idempotency, _resolve_api_key, _sse, classify_incomplete_stop_reason
 
 router = APIRouter(prefix="/api/clients", tags=["aydinlatma"])
@@ -109,6 +113,8 @@ class ClientDocumentMetaOut(_Camel):
     score_compliance: float | None = None
     created_at: datetime
     updated_at: datetime
+    latest_version: int | None = None
+    latest_published_at: datetime | None = None
 
 
 class ClientDocumentsOut(_Camel):
@@ -116,6 +122,28 @@ class ClientDocumentsOut(_Camel):
 
 
 class ClientDocumentOut(ClientDocumentMetaOut):
+    content: str
+
+
+class PublishIn(_Camel):
+    note: str | None = None
+
+
+class ClientDocumentVersionMetaOut(_Camel):
+    id: uuid.UUID
+    version: int
+    note: str | None = None
+    published_at: datetime
+    published_by: uuid.UUID | None = None
+    score_completeness: float | None = None
+    score_compliance: float | None = None
+
+
+class ClientDocumentVersionsOut(_Camel):
+    versions: list[ClientDocumentVersionMetaOut]
+
+
+class ClientDocumentVersionOut(ClientDocumentVersionMetaOut):
     content: str
 
 
@@ -146,6 +174,11 @@ def _in_to_section(s: SectionIn) -> Section:
         aktarim=s.aktarim,
         toplama=s.toplama,
     )
+
+
+def _require_client(session: Session, org_id: uuid.UUID, client_id: uuid.UUID) -> None:
+    if ClientRepository(session).get(org_id, client_id) is None:
+        raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
 
 
 def _derive_title(sections: list[Section]) -> str:
@@ -345,9 +378,8 @@ def docx(
     identity: Identity = Depends(get_current_identity),
     session: Session = Depends(tenant_session),
 ) -> Response:
+    _require_client(session, identity.org_id, client_id)
     client = ClientRepository(session).get(identity.org_id, client_id)
-    if client is None:
-        raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
     prof = client_profile(client)
     data = render_styled_docx(
         body.text,
@@ -356,7 +388,7 @@ def docx(
             "veri_sorumlusu": prof.unvan or prof.ad,
             "ilgili_kisi": ", ".join(body.kisi_gruplari) if body.kisi_gruplari else None,
             "tarih": date.today().strftime("%d.%m.%Y"),
-            "versiyon": "1.0",
+            "versiyon": "Taslak",
         },
     )
     return Response(
@@ -372,10 +404,18 @@ def list_documents(
     identity: Identity = Depends(get_current_identity),
     session: Session = Depends(tenant_session),
 ) -> ClientDocumentsOut:
-    if ClientRepository(session).get(identity.org_id, client_id) is None:
-        raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
+    _require_client(session, identity.org_id, client_id)
     rows = ClientDocumentRepository(session).list_for_client(identity.org_id, client_id)
-    return ClientDocumentsOut(documents=[ClientDocumentMetaOut.model_validate(r, from_attributes=True) for r in rows])
+    latest = ClientDocumentVersionRepository(session).latest_versions_for_client(
+        identity.org_id, client_id
+    )
+    out = []
+    for r in rows:
+        meta = ClientDocumentMetaOut.model_validate(r, from_attributes=True)
+        if r.id in latest:
+            meta.latest_version, meta.latest_published_at = latest[r.id]
+        out.append(meta)
+    return ClientDocumentsOut(documents=out)
 
 
 @router.get("/{client_id}/documents/{document_id}", response_model=ClientDocumentOut, response_model_by_alias=True)
@@ -391,3 +431,113 @@ def get_document(
     if row is None:
         raise HTTPException(status_code=404, detail="Belge bulunamadı.")
     return ClientDocumentOut.model_validate(row, from_attributes=True)
+
+
+@router.post(
+    "/{client_id}/documents/{document_id}/publish",
+    response_model=ClientDocumentVersionMetaOut,
+    response_model_by_alias=True,
+    status_code=201,
+)
+def publish_document_version(
+    client_id: uuid.UUID,
+    document_id: uuid.UUID,
+    body: PublishIn,
+    identity: Identity = Depends(get_current_identity),
+    session: Session = Depends(tenant_session),
+) -> ClientDocumentVersionMetaOut:
+    if ClientRepository(session).get(identity.org_id, client_id) is None:
+        raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
+    ver = publish_document(session, identity.org_id, client_id, document_id, body.note, identity.user_id)
+    if ver is None:
+        raise HTTPException(status_code=404, detail="Belge bulunamadı.")
+    return ClientDocumentVersionMetaOut.model_validate(ver, from_attributes=True)
+
+
+@router.get(
+    "/{client_id}/documents/{document_id}/versions",
+    response_model=ClientDocumentVersionsOut,
+    response_model_by_alias=True,
+)
+def list_document_versions(
+    client_id: uuid.UUID,
+    document_id: uuid.UUID,
+    identity: Identity = Depends(get_current_identity),
+    session: Session = Depends(tenant_session),
+) -> ClientDocumentVersionsOut:
+    if ClientDocumentRepository(session).get(identity.org_id, client_id, document_id) is None:
+        raise HTTPException(status_code=404, detail="Belge bulunamadı.")
+    vers = ClientDocumentVersionRepository(session).list_for_document(identity.org_id, document_id)
+    return ClientDocumentVersionsOut(
+        versions=[ClientDocumentVersionMetaOut.model_validate(v, from_attributes=True) for v in vers]
+    )
+
+
+@router.get(
+    "/{client_id}/documents/{document_id}/versions/{version_id}",
+    response_model=ClientDocumentVersionOut,
+    response_model_by_alias=True,
+)
+def get_document_version(
+    client_id: uuid.UUID,
+    document_id: uuid.UUID,
+    version_id: uuid.UUID,
+    identity: Identity = Depends(get_current_identity),
+    session: Session = Depends(tenant_session),
+) -> ClientDocumentVersionOut:
+    if ClientDocumentRepository(session).get(identity.org_id, client_id, document_id) is None:
+        raise HTTPException(status_code=404, detail="Belge bulunamadı.")
+    ver = ClientDocumentVersionRepository(session).get_version(
+        identity.org_id, document_id, version_id
+    )
+    if ver is None:
+        raise HTTPException(status_code=404, detail="Sürüm bulunamadı.")
+    return ClientDocumentVersionOut.model_validate(ver, from_attributes=True)
+
+
+@router.get("/{client_id}/documents/versions/{version_id}/docx")
+def get_version_docx(
+    client_id: uuid.UUID,
+    version_id: uuid.UUID,
+    identity: Identity = Depends(get_current_identity),
+    session: Session = Depends(tenant_session),
+) -> Response:
+    client = ClientRepository(session).get(identity.org_id, client_id)
+    if client is None:
+        raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
+    ver = session.scalar(
+        select(ClientDocumentVersion).where(
+            ClientDocumentVersion.org_id == identity.org_id,
+            ClientDocumentVersion.id == version_id,
+        )
+    )
+    if ver is None:
+        raise HTTPException(status_code=404, detail="Sürüm bulunamadı.")
+    doc = session.scalar(
+        select(ClientDocument).where(
+            ClientDocument.org_id == identity.org_id,
+            ClientDocument.id == ver.document_id,
+            ClientDocument.client_id == client_id,
+        )
+    )
+    if doc is None:
+        raise HTTPException(status_code=404, detail="Belge bulunamadı.")
+    prof = client_profile(client)
+    data = render_styled_docx(
+        ver.content,
+        doc.doc_type,
+        {
+            "veri_sorumlusu": prof.unvan or prof.ad,
+            "ilgili_kisi": doc.title if doc.doc_type == "aydinlatma" else None,
+            "site": doc.title if doc.doc_type == "cerez" else None,
+            "tarih": ver.published_at.strftime("%d.%m.%Y"),
+            "versiyon": str(ver.version),
+        },
+    )
+    return Response(
+        content=data,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={
+            "Content-Disposition": f'attachment; filename="{doc.doc_type}-v{ver.version}.docx"'
+        },
+    )

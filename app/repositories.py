@@ -6,7 +6,7 @@ import unicodedata
 import uuid
 from datetime import datetime
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from legal_core.models import ProcessRecord
@@ -16,6 +16,7 @@ from .models import (
     Category,
     Client,
     ClientDocument,
+    ClientDocumentVersion,
     ComplianceRequirement,
     ComplianceStatus,
     GeneratedDocument,
@@ -417,3 +418,67 @@ class ClientDocumentRepository:
                 ClientDocument.id == document_id,
             )
         )
+
+
+class ClientDocumentVersionRepository:
+    def __init__(self, session: Session) -> None:
+        self._s = session
+
+    def publish(
+        self, org_id, document_id, content, score_completeness, score_compliance,
+        note, published_by,
+    ) -> ClientDocumentVersion:
+        current_max = self._s.scalar(
+            select(func.max(ClientDocumentVersion.version)).where(
+                ClientDocumentVersion.document_id == document_id
+            )
+        )
+        row = ClientDocumentVersion(
+            document_id=document_id, org_id=org_id, version=(current_max or 0) + 1,
+            content=content, score_completeness=score_completeness,
+            score_compliance=score_compliance, note=note, published_by=published_by,
+        )
+        self._s.add(row)
+        self._s.flush()
+        return row
+
+    def list_for_document(self, org_id, document_id) -> list[ClientDocumentVersion]:
+        return list(
+            self._s.scalars(
+                select(ClientDocumentVersion)
+                .where(
+                    ClientDocumentVersion.org_id == org_id,
+                    ClientDocumentVersion.document_id == document_id,
+                )
+                .order_by(ClientDocumentVersion.version.desc())
+            )
+        )
+
+    def get_version(self, org_id, document_id, version_id) -> ClientDocumentVersion | None:
+        return self._s.scalar(
+            select(ClientDocumentVersion).where(
+                ClientDocumentVersion.org_id == org_id,
+                ClientDocumentVersion.document_id == document_id,
+                ClientDocumentVersion.id == version_id,
+            )
+        )
+
+    def latest_versions_for_client(self, org_id, client_id) -> dict:
+        rows = self._s.execute(
+            select(
+                ClientDocumentVersion.document_id,
+                ClientDocumentVersion.version,
+                ClientDocumentVersion.published_at,
+            )
+            .join(ClientDocument, ClientDocument.id == ClientDocumentVersion.document_id)
+            .where(
+                ClientDocumentVersion.org_id == org_id,
+                ClientDocument.client_id == client_id,
+            )
+            .order_by(ClientDocumentVersion.document_id, ClientDocumentVersion.version.desc())
+        ).all()
+        latest: dict = {}
+        for doc_id, ver, pub in rows:
+            if doc_id not in latest:
+                latest[doc_id] = (ver, pub)
+        return latest
