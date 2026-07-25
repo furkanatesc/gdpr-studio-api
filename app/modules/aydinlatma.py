@@ -47,6 +47,7 @@ from ..repositories import (
     PostgresProcessRepository,
 )
 from .document_store import client_profile, store_client_document
+from .document_versions import publish_document
 from .generation import _claim_idempotency, _resolve_api_key, _sse, classify_incomplete_stop_reason
 
 router = APIRouter(prefix="/api/clients", tags=["aydinlatma"])
@@ -117,6 +118,20 @@ class ClientDocumentsOut(_Camel):
 
 class ClientDocumentOut(ClientDocumentMetaOut):
     content: str
+
+
+class PublishIn(_Camel):
+    note: str | None = None
+
+
+class ClientDocumentVersionMetaOut(_Camel):
+    id: uuid.UUID
+    version: int
+    note: str | None = None
+    published_at: datetime
+    published_by: uuid.UUID | None = None
+    score_completeness: float | None = None
+    score_compliance: float | None = None
 
 
 def _enriched_to_out(es: EnrichedSection) -> EnrichedSectionOut:
@@ -391,3 +406,24 @@ def get_document(
     if row is None:
         raise HTTPException(status_code=404, detail="Belge bulunamadı.")
     return ClientDocumentOut.model_validate(row, from_attributes=True)
+
+
+@router.post(
+    "/{client_id}/documents/{document_id}/publish",
+    response_model=ClientDocumentVersionMetaOut,
+    response_model_by_alias=True,
+    status_code=201,
+)
+def publish_document_version(
+    client_id: uuid.UUID,
+    document_id: uuid.UUID,
+    body: PublishIn,
+    identity: Identity = Depends(get_current_identity),
+    session: Session = Depends(tenant_session),
+) -> ClientDocumentVersionMetaOut:
+    if ClientRepository(session).get(identity.org_id, client_id) is None:
+        raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
+    ver = publish_document(session, identity.org_id, document_id, body.note, identity.user_id)
+    if ver is None:
+        raise HTTPException(status_code=404, detail="Belge bulunamadı.")
+    return ClientDocumentVersionMetaOut.model_validate(ver, from_attributes=True)
