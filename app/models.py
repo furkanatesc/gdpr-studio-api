@@ -263,6 +263,30 @@ class ClientDocument(Base):
     )
 
 
+class ClientDocumentVersion(Base):
+    __tablename__ = "client_document_versions"
+    __table_args__ = (
+        UniqueConstraint("document_id", "version", name="uq_client_document_versions_key"),
+        Index("ix_client_document_versions_document", "document_id"),
+    )
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("client_documents.id", ondelete="CASCADE"), nullable=False
+    )
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    )
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    score_completeness: Mapped[float | None] = mapped_column(Float, nullable=True)
+    score_compliance: Mapped[float | None] = mapped_column(Float, nullable=True)
+    note: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    published_by: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class Process(Base):
     """Global süreç şablonu (VERBİS satırı). Faz 1'de org_id YOK — referans verisi.
 
