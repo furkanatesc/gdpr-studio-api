@@ -49,6 +49,9 @@ def upgrade() -> None:
     )
     op.execute("ALTER TABLE client_document_versions FORCE ROW LEVEL SECURITY")
     op.execute("GRANT SELECT, INSERT ON client_document_versions TO kvkk_app")
+    # 0003'teki ALTER DEFAULT PRIVILEGES owner'in olusturdugu her yeni tabloya
+    # UPDATE/DELETE de grant'lar; surumler DEGISMEZ olmali → bu tabloda acikca geri al.
+    op.execute("REVOKE UPDATE, DELETE ON client_document_versions FROM kvkk_app")
 
 
 def downgrade() -> None:
