@@ -9,9 +9,9 @@ def _rec(**kw):
     return ProcessRecord(**base)
 
 
-def _grounding(**data):
+def _grounding(kisi_grubu="Calisan", **data):
     return {
-        "sector": "otel", "kisi_grubu": "Calisan", "departman": "IK",
+        "sector": "otel", "kisi_grubu": kisi_grubu, "departman": "IK",
         "is_sureci": "Ozluk", "alt_surec": "Bordro",
         "data": {"kategoriler": ["Kimlik"], **data},
     }
@@ -76,7 +76,7 @@ def test_no_row_when_nothing_to_offer():
 def test_canonicalizes_person_group_variants():
     from legal_core.canonical import load_canonicalizer
     canon = load_canonicalizer()
-    repo = DictProcessRepository([_grounding(kisi_grubu="Çalışan", saklama_sureleri=["10 yil"])])
-    rec = _rec(kisi_grubu="calisan", kategoriler=["Kimlik"], saklama_sureleri=[])
+    repo = DictProcessRepository([_grounding(kisi_grubu="Aktif Çalışan", saklama_sureleri=["10 yil"])])
+    rec = _rec(kisi_grubu="aktif çalişan", kategoriler=["Kimlik"], saklama_sureleri=[])
     out = enrich_inventory([rec], "otel", repo, canonicalizer=canon)
     assert out and out[0].oneriler.get("saklama_sureleri") == ["10 yil"]
