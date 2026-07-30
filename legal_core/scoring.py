@@ -54,7 +54,7 @@ def kayit_completeness_score(records: list[ProcessRecord]) -> float | None:
 
 def dpia_completeness_score(records: list[ProcessRecord]) -> float | None:
     """DPIA'nin risk-ilgili girdi dolulugu. kayit'ten farki: 6. bolum tedbir
-    gerektriginden idari/teknik tedbir slotu eklenir (kisi_grubu yerine)."""
+    gerektirdiğinden idari/teknik tedbir slotu eklenir (kisi_grubu yerine)."""
     if not records:
         return None
     filled = 0

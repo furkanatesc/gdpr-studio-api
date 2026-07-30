@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from app.grounding_options import OZEL_NITELIKLI
+from legal_core.grounding import OZEL_NITELIKLI
 from legal_core.models import ProcessRecord
 from legal_core.normalize import norm
 
