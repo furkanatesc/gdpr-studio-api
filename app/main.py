@@ -21,6 +21,7 @@ from .modules import (
     grounding,
     health,
     inventory,
+    inventory_suggestions,
     invitations,
     kayit,
     memberships,
@@ -82,6 +83,7 @@ app.include_router(clients.router)
 app.include_router(aydinlatma.router)
 app.include_router(cerez.router)
 app.include_router(inventory.router)
+app.include_router(inventory_suggestions.router)
 app.include_router(kayit.router)
 
 
