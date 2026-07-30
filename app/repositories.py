@@ -113,7 +113,7 @@ class PostgresProcessRepository:
     def client_processes(self, client_id: uuid.UUID) -> list[ProcessRecord]:
         rows = self._s.scalars(
             select(Process).where(Process.client_id == client_id)
-            .order_by(Process.departman, Process.is_sureci, Process.alt_surec)
+            .order_by(Process.departman, Process.is_sureci, Process.alt_surec, Process.kisi_grubu)
         )
         return [self._to_record(r) for r in rows]
 
