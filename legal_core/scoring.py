@@ -50,3 +50,18 @@ def kayit_completeness_score(records: list[ProcessRecord]) -> float | None:
         filled += bool(r.saklama_sureleri)
         filled += bool(r.aktarim)
     return filled / (6 * len(records))
+
+
+def dpia_completeness_score(records: list[ProcessRecord]) -> float | None:
+    """DPIA'nin risk-ilgili girdi dolulugu. kayit'ten farki: 6. bolum tedbir
+    gerektriginden idari/teknik tedbir slotu eklenir (kisi_grubu yerine)."""
+    if not records:
+        return None
+    filled = 0
+    for r in records:
+        filled += bool(r.kategoriler or r.veri_turleri)
+        filled += bool(r.amaclar)
+        filled += bool(r.hukuki_sebepler)
+        filled += bool(r.saklama_sureleri)
+        filled += bool(r.idari_tedbirler or r.teknik_tedbirler)
+    return filled / (5 * len(records))
