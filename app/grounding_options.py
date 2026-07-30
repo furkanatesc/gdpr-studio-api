@@ -5,25 +5,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-_PATH = Path(__file__).resolve().parent.parent / "data" / "categories.json"
+from legal_core.grounding import OZEL_NITELIKLI
 
-# KVKK m.6/1'in saydığı özel nitelikli veri türlerinin kanonik kategori karşılıkları.
-# Kanun metninden türetilmiştir (uydurma yok). Kategori adı değişirse test kırılır —
-# aksi halde m.6 uyarısı sessizce kaybolur.
-OZEL_NITELIKLI = frozenset({
-    "Irk ve Etnik Köken",
-    "Siyasi Düşünce Bilgileri",
-    "Felsefi İnanç, Din, Mezhep ve Diğer İnançlar",
-    "Kılık ve Kıyafet",
-    "Dernek Üyeliği",
-    "Vakıf Üyeliği",
-    "Sendika Üyeliği",
-    "Sağlık Bilgileri",
-    "Cinsel Hayat",
-    "Ceza Mahkûmiyeti Ve Güvenlik Tedbirleri",
-    "Biyometrik Veri",
-    "Genetik Veri",
-})
+_PATH = Path(__file__).resolve().parent.parent / "data" / "categories.json"
 
 
 def grounding_options() -> dict:

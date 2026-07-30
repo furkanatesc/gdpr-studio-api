@@ -417,3 +417,60 @@ Belgenin EN ALTINA aşağıdaki uyarıyı aynen ekle:
 
 {DISCLAIMER}
 """
+
+
+def build_dpia_envanter_prompt(
+    records: list[ProcessRecord],
+    profile: ClientProfile,
+    measures: list[str],
+    rules: list[str],
+    tetiklenenler: list[str],
+    process_cap: int = DEFAULT_PROCESS_CAP,
+) -> str:
+    """Müvekkil envanterinden DPIA (Veri Koruma Etki Değerlendirmesi) taslağı kurar."""
+    surecler = (
+        format_kayit_processes(records, cap=process_cap)
+        if records
+        else "\n(Envanterde süreç yok — değerlendirilecek işleme faaliyeti yok.)\n"
+    )
+    tedbir = format_measures(measures)
+    kurallar = ""
+    for i, r in enumerate(rules, 1):
+        kurallar += f"{i}. {r}\n"
+    tetik = ", ".join(tetiklenenler) if tetiklenenler else "(zorunluluk kriteri işaretlenmedi)"
+
+    return f"""Sen KVKK (6698) ve GDPR m.35 uzmanı bir hukuk asistanısın. Aşağıdaki müvekkil kimliği
+ve işleme envanterinden bir Veri Koruma Etki Değerlendirmesi (DPIA) TASLAĞI üret.
+
+Yalnız aşağıda verilen envanter değerlerini kullan; kategori, amaç, hukuki sebep, saklama süresi
+UYDURMA. Envanterde boş olan bir zorunlu alanı "{ONAY_BEKLEYEN_PLACEHOLDER}" olarak bırak.
+
+Belge AYNEN şu 8 bölümü BU SIRAYLA içermeli:
+1. Proje ve Kapsam
+2. İşlemenin Tanımı
+3. Veri Akış Haritası
+4. Uyum Değerlendirmesi
+5. Risk Matrisi
+6. Risk Azaltma Tedbirleri
+7. Sonuç Kararı
+8. Güncelleme Takvimi
+
+Zorunluluğu tetikleyen kriterler (Proje ve Kapsam + Uyum Değerlendirmesi bunlara odaklansın): {tetik}
+
+RİSK MATRİSİ RUBRİĞİ: Her risk için Olasılık (1-5) × Etki (1-5) = Risk Skoru.
+Skor bandı: 1-4 Düşük, 5-9 Orta, 10-14 Yüksek, 15-25 Kritik.
+SONUÇ KARARI şunlardan biri olmalı: DEVAM / KOŞULLU DEVAM / KURUL DANIŞMASI GEREKLİ (GDPR m.36) / DURDUR.
+Yüksek/Kritik risk azaltılamıyorsa "KURUL DANIŞMASI GEREKLİ" belirt.
+
+ÖNEMLİ: Risk skorları ve sonuç kararı bir TASLAKTIR; nihai değerlendirme hukuki inceleme gerektirir.
+Bunu belgenin başında açıkça belirt.
+
+--- MÜVEKKİL KİMLİĞİ ---
+{_format_client_profile(profile)}
+--- İŞLEME ENVANTERİ ---
+{surecler}
+--- UYGULANABİLİR TEKNİK VE İDARİ TEDBİRLER (6. bölüm için) ---
+{tedbir}
+--- EK KURALLAR ---
+{kurallar}
+"""

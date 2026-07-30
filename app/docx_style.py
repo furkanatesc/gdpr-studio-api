@@ -18,6 +18,7 @@ _BASLIK = {
     "aydinlatma": "Kişisel Verilerin Korunması Kanunu Kapsamında Aydınlatma Metni",
     "cerez": "Çerez Politikası",
     "kayit": "Kişisel Veri İşleme Kaydı",
+    "dpia": "Veri Koruma Etki Değerlendirmesi",
 }
 
 

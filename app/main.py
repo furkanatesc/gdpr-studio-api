@@ -17,6 +17,7 @@ from .modules import (
     cerez,
     clients,
     compliance,
+    dpia,
     generation,
     grounding,
     health,
@@ -85,6 +86,7 @@ app.include_router(cerez.router)
 app.include_router(inventory.router)
 app.include_router(inventory_suggestions.router)
 app.include_router(kayit.router)
+app.include_router(dpia.router)
 
 
 @app.get("/")

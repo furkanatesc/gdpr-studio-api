@@ -11,6 +11,24 @@ from typing import Protocol, runtime_checkable
 from .models import InventoryRecord, ProcessRecord
 from .normalize import norm
 
+# KVKK m.6/1'in saydığı özel nitelikli veri türlerinin kanonik kategori karşılıkları.
+# Kanun metninden türetilmiştir (uydurma yok). Kategori adı değişirse test kırılır —
+# aksi halde m.6 uyarısı sessizce kaybolur.
+OZEL_NITELIKLI = frozenset({
+    "Irk ve Etnik Köken",
+    "Siyasi Düşünce Bilgileri",
+    "Felsefi İnanç, Din, Mezhep ve Diğer İnançlar",
+    "Kılık ve Kıyafet",
+    "Dernek Üyeliği",
+    "Vakıf Üyeliği",
+    "Sendika Üyeliği",
+    "Sağlık Bilgileri",
+    "Cinsel Hayat",
+    "Ceza Mahkûmiyeti Ve Güvenlik Tedbirleri",
+    "Biyometrik Veri",
+    "Genetik Veri",
+})
+
 # Arayüzdeki kullanıcı dostu etiketler -> gerçek KVKK kategori adı.
 # Yalnızca alt-dize eşleşmesiyle bulunamayacak etiketler için; eşleşmeyenler
 # otomatik olarak veri_turu alt-dize taramasına düşer.
