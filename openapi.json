@@ -1360,6 +1360,91 @@
         "title": "InventoryRow",
         "type": "object"
       },
+      "InventorySuggestionRowOut": {
+        "properties": {
+          "altSurec": {
+            "title": "Altsurec",
+            "type": "string"
+          },
+          "departman": {
+            "title": "Departman",
+            "type": "string"
+          },
+          "elleAlanlar": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ellealanlar",
+            "type": "array"
+          },
+          "index": {
+            "title": "Index",
+            "type": "integer"
+          },
+          "isSureci": {
+            "title": "Issureci",
+            "type": "string"
+          },
+          "kisiGrubu": {
+            "title": "Kisigrubu",
+            "type": "string"
+          },
+          "oneriler": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Oneriler",
+            "type": "object"
+          }
+        },
+        "required": [
+          "index",
+          "departman",
+          "isSureci",
+          "altSurec",
+          "kisiGrubu",
+          "oneriler",
+          "elleAlanlar"
+        ],
+        "title": "InventorySuggestionRowOut",
+        "type": "object"
+      },
+      "InventorySuggestionsOut": {
+        "properties": {
+          "bosSlot": {
+            "title": "Bosslot",
+            "type": "integer"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/InventorySuggestionRowOut"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "tamlik": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tamlik"
+          }
+        },
+        "required": [
+          "bosSlot",
+          "tamlik",
+          "rows"
+        ],
+        "title": "InventorySuggestionsOut",
+        "type": "object"
+      },
       "InviteOut": {
         "properties": {
           "email": {
@@ -3101,6 +3186,49 @@
         "summary": "Import Workbook",
         "tags": [
           "clients"
+        ]
+      }
+    },
+    "/api/clients/{client_id}/inventory/suggestions": {
+      "get": {
+        "operationId": "inventory_suggestions_api_clients__client_id__inventory_suggestions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventorySuggestionsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Inventory Suggestions",
+        "tags": [
+          "inventory"
         ]
       }
     },
