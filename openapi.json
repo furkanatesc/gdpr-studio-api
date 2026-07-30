@@ -914,6 +914,111 @@
         "title": "DocType",
         "type": "string"
       },
+      "DpiaAnketIn": {
+        "additionalProperties": false,
+        "properties": {
+          "buyukOlcek": {
+            "default": false,
+            "title": "Buyukolcek",
+            "type": "boolean"
+          },
+          "savunmasizGrup": {
+            "default": false,
+            "title": "Savunmasizgrup",
+            "type": "boolean"
+          },
+          "veriEslestirme": {
+            "default": false,
+            "title": "Verieslestirme",
+            "type": "boolean"
+          },
+          "yeniTeknoloji": {
+            "default": false,
+            "title": "Yeniteknoloji",
+            "type": "boolean"
+          }
+        },
+        "title": "DpiaAnketIn",
+        "type": "object"
+      },
+      "DpiaGenerateIn": {
+        "additionalProperties": false,
+        "properties": {
+          "tetiklenenler": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Tetiklenenler",
+            "type": "array"
+          }
+        },
+        "title": "DpiaGenerateIn",
+        "type": "object"
+      },
+      "DpiaOtomatikOut": {
+        "additionalProperties": false,
+        "properties": {
+          "ozelNitelikliVar": {
+            "title": "Ozelniteliklivar",
+            "type": "boolean"
+          },
+          "profillemeVar": {
+            "title": "Profillemevar",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ozelNitelikliVar",
+          "profillemeVar"
+        ],
+        "title": "DpiaOtomatikOut",
+        "type": "object"
+      },
+      "DpiaPrepareIn": {
+        "additionalProperties": false,
+        "properties": {
+          "anket": {
+            "$ref": "#/components/schemas/DpiaAnketIn"
+          }
+        },
+        "required": [
+          "anket"
+        ],
+        "title": "DpiaPrepareIn",
+        "type": "object"
+      },
+      "DpiaPrepareOut": {
+        "additionalProperties": false,
+        "properties": {
+          "kriterSayisi": {
+            "title": "Kritersayisi",
+            "type": "integer"
+          },
+          "otomatik": {
+            "$ref": "#/components/schemas/DpiaOtomatikOut"
+          },
+          "tetiklenenler": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tetiklenenler",
+            "type": "array"
+          },
+          "zorunlu": {
+            "title": "Zorunlu",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "otomatik",
+          "kriterSayisi",
+          "zorunlu",
+          "tetiklenenler"
+        ],
+        "title": "DpiaPrepareOut",
+        "type": "object"
+      },
       "EnrichedSectionOut": {
         "additionalProperties": false,
         "properties": {
@@ -1864,6 +1969,31 @@
             ],
             "title": "Site"
           },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "DocxIn",
+        "type": "object"
+      },
+      "app__modules__dpia__DocxIn": {
+        "additionalProperties": false,
+        "properties": {
           "text": {
             "title": "Text",
             "type": "string"
@@ -2978,6 +3108,194 @@
         "summary": "Get Document Version",
         "tags": [
           "aydinlatma"
+        ]
+      }
+    },
+    "/api/clients/{client_id}/dpia/docx": {
+      "post": {
+        "operationId": "docx_api_clients__client_id__dpia_docx_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/app__modules__dpia__DocxIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Docx",
+        "tags": [
+          "dpia"
+        ]
+      }
+    },
+    "/api/clients/{client_id}/dpia/generate": {
+      "post": {
+        "description": "Muvekkil envanterinden DPIA taslagi akisi (SSE).",
+        "operationId": "generate_api_clients__client_id__dpia_generate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Anthropic-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Anthropic-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DpiaGenerateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Generate",
+        "tags": [
+          "dpia"
+        ]
+      }
+    },
+    "/api/clients/{client_id}/dpia/prepare": {
+      "post": {
+        "operationId": "prepare_api_clients__client_id__dpia_prepare_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DpiaPrepareIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DpiaPrepareOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prepare",
+        "tags": [
+          "dpia"
         ]
       }
     },

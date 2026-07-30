@@ -1,0 +1,272 @@
+# app/modules/dpia.py
+"""DPIA (Veri Koruma Etki Degerlendirmesi) — zorunluluk testi + muvekkil envanterinden uretim/docx.
+
+kayit.py'nin generate/docx uclarini izler; ek olarak zorunluluk testi (prepare) sunar.
+"""
+
+from __future__ import annotations
+
+import logging
+import uuid
+from datetime import date
+
+from fastapi import APIRouter, Depends, Header, HTTPException, Response
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, ConfigDict
+from pydantic.alias_generators import to_camel
+from sqlalchemy.orm import Session
+
+from legal_core.dpia_necessity import DpiaAnket, evaluate_dpia_necessity
+from legal_core.generate import generate_dpia_envanter_stream
+from legal_core.models import DocType
+from legal_core.prompt import ensure_disclaimer
+from legal_core.provider import AnthropicProvider
+from legal_core.scoring import dpia_completeness_score
+
+from .. import idempotency
+from ..auth.identity import Identity, get_current_identity
+from ..auth.tenant_session import set_org_context, tenant_session
+from ..billing.quota import (
+    enforce_generation_quota,
+    reserve_generation_usage,
+    settle_generation_usage,
+)
+from ..config import get_settings
+from ..docx_export import render_styled_docx
+from ..observability import capture_exception
+from ..redis_client import generate_rate_limit
+from ..repositories import (
+    ClientRepository,
+    GeneratedDocumentRepository,
+    PostgresBusinessRuleRepository,
+    PostgresMeasureRepository,
+    PostgresProcessRepository,
+)
+from .document_store import client_profile, store_client_document
+from .generation import _claim_idempotency, _resolve_api_key, _sse, classify_incomplete_stop_reason
+
+router = APIRouter(prefix="/api/clients", tags=["dpia"])
+_log = logging.getLogger("app.dpia")
+
+
+class _Camel(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="forbid")
+
+
+class DocxIn(_Camel):
+    text: str
+    title: str | None = None
+
+
+class DpiaAnketIn(_Camel):
+    buyuk_olcek: bool = False
+    yeni_teknoloji: bool = False
+    savunmasiz_grup: bool = False
+    veri_eslestirme: bool = False
+
+
+class DpiaPrepareIn(_Camel):
+    anket: DpiaAnketIn
+
+
+class DpiaOtomatikOut(_Camel):
+    ozel_nitelikli_var: bool
+    profilleme_var: bool
+
+
+class DpiaPrepareOut(_Camel):
+    otomatik: DpiaOtomatikOut
+    kriter_sayisi: int
+    zorunlu: bool
+    tetiklenenler: list[str]
+
+
+class DpiaGenerateIn(_Camel):
+    tetiklenenler: list[str] = []
+
+
+@router.post("/{client_id}/dpia/prepare", response_model=DpiaPrepareOut, response_model_by_alias=True)
+def prepare(
+    client_id: uuid.UUID,
+    body: DpiaPrepareIn,
+    identity: Identity = Depends(get_current_identity),
+    session: Session = Depends(tenant_session),
+) -> DpiaPrepareOut:
+    client = ClientRepository(session).get(identity.org_id, client_id)
+    if client is None:
+        raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
+    records = PostgresProcessRepository(session).client_processes(client_id)
+    if not records:
+        raise HTTPException(status_code=422, detail="Envanterde DPIA için süreç bulunamadı — önce envanter girin.")
+    v = evaluate_dpia_necessity(records, DpiaAnket(
+        buyuk_olcek=body.anket.buyuk_olcek, yeni_teknoloji=body.anket.yeni_teknoloji,
+        savunmasiz_grup=body.anket.savunmasiz_grup, veri_eslestirme=body.anket.veri_eslestirme))
+    return DpiaPrepareOut(
+        otomatik=DpiaOtomatikOut(ozel_nitelikli_var=v.ozel_nitelikli_var, profilleme_var=v.profilleme_var),
+        kriter_sayisi=v.kriter_sayisi, zorunlu=v.zorunlu, tetiklenenler=v.tetiklenenler)
+
+
+@router.post("/{client_id}/dpia/generate", dependencies=[Depends(generate_rate_limit)])
+def generate(
+    client_id: uuid.UUID,
+    body: DpiaGenerateIn,
+    session: Session = Depends(tenant_session),
+    identity: Identity = Depends(enforce_generation_quota),
+    x_anthropic_key: str | None = Header(default=None, alias="X-Anthropic-Key"),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+) -> StreamingResponse:
+    """Muvekkil envanterinden DPIA taslagi akisi (SSE)."""
+    settings = get_settings()
+
+    client = ClientRepository(session).get(identity.org_id, client_id)
+    if client is None:
+        raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
+
+    records = PostgresProcessRepository(session).client_processes(client_id)
+    if not records:
+        raise HTTPException(
+            status_code=422,
+            detail="Envanterde DPIA için süreç bulunamadı — önce envanter girin.",
+        )
+
+    api_key = _resolve_api_key(x_anthropic_key)
+    _claim_idempotency(identity, idempotency_key)
+
+    prof = client_profile(client)
+    measures = PostgresMeasureRepository(session).all_measures()
+    rules = PostgresBusinessRuleRepository(session).business_rules("dpia")
+    cap = settings.process_cap
+    scored_records = records[:cap] if cap else records
+    dpia_max_tokens = settings.max_tokens_for("dpia")
+    provider = AnthropicProvider(
+        api_key,
+        model=settings.default_model,
+        timeout_s=settings.anthropic_timeout_s,
+        max_retries=settings.anthropic_max_retries,
+    )
+    byok = x_anthropic_key is not None
+
+    def event_stream():
+        reserved = 0
+        started = False
+        full_text = ""
+        generated_doc_id: uuid.UUID | None = None
+        try:
+            for kind, payload in generate_dpia_envanter_stream(
+                records, prof, measures, rules, body.tetiklenenler, provider=provider,
+                max_tokens=dpia_max_tokens, process_cap=cap,
+            ):
+                if kind == "grounding":
+                    yield _sse("grounding", [g.model_dump(by_alias=True) for g in payload])
+                elif kind == "delta":
+                    if not started:
+                        started = True
+                        generated_doc_id = GeneratedDocumentRepository(session).record(
+                            identity.org_id, DocType.dpia
+                        ).id
+                        reserved = reserve_generation_usage(
+                            session, settings, identity.org_id,
+                            model=settings.default_model, byok=byok,
+                            max_tokens=dpia_max_tokens,
+                        )
+                    full_text += payload
+                    yield _sse("delta", {"text": payload})
+                elif kind == "done":
+                    incomplete_kind = classify_incomplete_stop_reason(payload.get("stopReason"))
+                    warn_code, warn_message = None, None
+                    if incomplete_kind == "truncated":
+                        warn_code = "truncated_output_limit"
+                        warn_message = (
+                            "Belge, model çıktı/bağlam sınırına takıldığı için eksik "
+                            "kaldı ve KAYDEDİLMEDİ. Envanterdeki süreç sayısını daraltıp "
+                            "yeniden deneyin."
+                        )
+                    elif incomplete_kind == "refusal":
+                        warn_code = "generation_refused"
+                        warn_message = (
+                            "Model bu içeriği üretmeyi REDDETTİ; bu bir uzunluk sorunu "
+                            "değildir, kapsamı daraltmak yardımcı olmaz. İçeriği gözden "
+                            "geçirip tekrar deneyin."
+                        )
+                    if warn_code:
+                        # Kesik/reddedilen belge tam puanla resmi DPIA kaydi olarak SAKLANMAZ.
+                        _log.warning(
+                            "dpia uretimi tamamlanamadi (stop_reason=%s): org=%s doc_type=dpia",
+                            payload.get("stopReason"), identity.org_id,
+                        )
+                        # Uyari, 'done'dan ONCE yayinlanir (bkz. generation.py gerekcesi).
+                        yield _sse("warning", {"code": warn_code, "message": warn_message})
+                        payload = {**payload, "incomplete": True, "warningMessage": warn_message}
+                    yield _sse("done", payload)
+                    usage = payload.get("usage")
+                    settle_generation_usage(
+                        session, settings, identity.org_id,
+                        model=payload.get("model") or settings.default_model,
+                        input_tokens=usage["inputTokens"] if usage else 0,
+                        output_tokens=usage["outputTokens"] if usage else 0,
+                        byok=byok, reserved_micros=reserved,
+                    )
+                    if warn_code:
+                        try:
+                            if generated_doc_id is not None:
+                                set_org_context(session, identity.org_id)
+                                GeneratedDocumentRepository(session).discard(
+                                    identity.org_id, generated_doc_id
+                                )
+                                session.commit()
+                        except Exception as discard_err:  # best-effort; uyariyi bozma
+                            _log.error(
+                                "generated_documents geri alma basarisiz (org=%s): %s",
+                                identity.org_id, type(discard_err).__name__,
+                            )
+                        idempotency.release(identity.org_id, idempotency_key)
+                    else:
+                        try:
+                            store_client_document(
+                                session, identity.org_id, client_id, "dpia", "Veri Koruma Etki Değerlendirmesi",
+                                ensure_disclaimer(full_text), dpia_completeness_score(scored_records),
+                            )
+                        except Exception as store_err:  # best-effort; PII'siz log
+                            _log.error(
+                                "dpia saklama basarisiz (org=%s): %s",
+                                identity.org_id, type(store_err).__name__,
+                            )
+        except Exception as e:
+            if not started:
+                idempotency.release(identity.org_id, idempotency_key)
+            _log.exception("dpia akis hatasi (org=%s)", identity.org_id)
+            capture_exception(e)
+            yield _sse("error", {"detail": f"Üretim hatası: {e}"})
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"},
+    )
+
+
+@router.post("/{client_id}/dpia/docx")
+def docx(
+    client_id: uuid.UUID,
+    body: DocxIn,
+    identity: Identity = Depends(get_current_identity),
+    session: Session = Depends(tenant_session),
+) -> Response:
+    client = ClientRepository(session).get(identity.org_id, client_id)
+    if client is None:
+        raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
+    prof = client_profile(client)
+    data = render_styled_docx(
+        body.text,
+        "dpia",
+        {
+            "veri_sorumlusu": prof.unvan or prof.ad,
+            "tarih": date.today().strftime("%d.%m.%Y"),
+            "versiyon": "Taslak",
+        },
+    )
+    return Response(
+        content=data,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": 'attachment; filename="dpia.docx"'},
+    )
