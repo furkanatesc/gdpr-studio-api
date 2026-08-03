@@ -1,6 +1,23 @@
 {
   "components": {
     "schemas": {
+      "AktarimAdlariOut": {
+        "additionalProperties": false,
+        "properties": {
+          "adlar": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Adlar",
+            "type": "array"
+          }
+        },
+        "required": [
+          "adlar"
+        ],
+        "title": "AktarimAdlariOut",
+        "type": "object"
+      },
       "BillingStatusOut": {
         "properties": {
           "canManage": {
@@ -914,6 +931,98 @@
         "title": "DocType",
         "type": "string"
       },
+      "DpaGenerateIn": {
+        "additionalProperties": false,
+        "properties": {
+          "processorId": {
+            "format": "uuid",
+            "title": "Processorid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "processorId"
+        ],
+        "title": "DpaGenerateIn",
+        "type": "object"
+      },
+      "DpaPrepareIn": {
+        "additionalProperties": false,
+        "properties": {
+          "processorId": {
+            "format": "uuid",
+            "title": "Processorid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "processorId"
+        ],
+        "title": "DpaPrepareIn",
+        "type": "object"
+      },
+      "DpaPrepareOut": {
+        "additionalProperties": false,
+        "properties": {
+          "amaclar": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Amaclar",
+            "type": "array"
+          },
+          "eslesenSurecSayisi": {
+            "title": "Eslesensurecsayisi",
+            "type": "integer"
+          },
+          "idariTedbirler": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Idaritedbirler",
+            "type": "array"
+          },
+          "kategoriler": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Kategoriler",
+            "type": "array"
+          },
+          "saklamaSureleri": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Saklamasureleri",
+            "type": "array"
+          },
+          "teknikTedbirler": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tekniktedbirler",
+            "type": "array"
+          },
+          "veriTurleri": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Veriturleri",
+            "type": "array"
+          }
+        },
+        "required": [
+          "eslesenSurecSayisi",
+          "kategoriler",
+          "veriTurleri",
+          "amaclar",
+          "saklamaSureleri",
+          "teknikTedbirler",
+          "idariTedbirler"
+        ],
+        "title": "DpaPrepareOut",
+        "type": "object"
+      },
       "DpiaAnketIn": {
         "additionalProperties": false,
         "properties": {
@@ -1680,6 +1789,201 @@
         "title": "PrepareOut",
         "type": "object"
       },
+      "ProcessorIn": {
+        "additionalProperties": false,
+        "properties": {
+          "ad": {
+            "title": "Ad",
+            "type": "string"
+          },
+          "adres": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adres"
+          },
+          "aktarimAliases": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Aktarimaliases",
+            "type": "array"
+          },
+          "altIsleyenVar": {
+            "default": false,
+            "title": "Altisleyenvar",
+            "type": "boolean"
+          },
+          "iletisim": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iletisim"
+          },
+          "notlar": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notlar"
+          },
+          "unvan": {
+            "title": "Unvan",
+            "type": "string"
+          },
+          "vergiDairesiNo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vergidairesino"
+          },
+          "yetkiliKisi": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Yetkilikisi"
+          },
+          "yurtDisi": {
+            "default": false,
+            "title": "Yurtdisi",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ad",
+          "unvan"
+        ],
+        "title": "ProcessorIn",
+        "type": "object"
+      },
+      "ProcessorOut": {
+        "additionalProperties": false,
+        "properties": {
+          "ad": {
+            "title": "Ad",
+            "type": "string"
+          },
+          "adres": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adres"
+          },
+          "aktarimAliases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Aktarimaliases",
+            "type": "array"
+          },
+          "altIsleyenVar": {
+            "title": "Altisleyenvar",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "iletisim": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iletisim"
+          },
+          "notlar": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notlar"
+          },
+          "unvan": {
+            "title": "Unvan",
+            "type": "string"
+          },
+          "vergiDairesiNo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vergidairesino"
+          },
+          "yetkiliKisi": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Yetkilikisi"
+          },
+          "yurtDisi": {
+            "title": "Yurtdisi",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "ad",
+          "unvan",
+          "adres",
+          "yetkiliKisi",
+          "iletisim",
+          "vergiDairesiNo",
+          "yurtDisi",
+          "altIsleyenVar",
+          "aktarimAliases",
+          "notlar"
+        ],
+        "title": "ProcessorOut",
+        "type": "object"
+      },
       "PublishIn": {
         "additionalProperties": false,
         "properties": {
@@ -1968,6 +2272,43 @@
               }
             ],
             "title": "Site"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "DocxIn",
+        "type": "object"
+      },
+      "app__modules__dpa__DocxIn": {
+        "additionalProperties": false,
+        "properties": {
+          "processorId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processorid"
           },
           "text": {
             "title": "Text",
@@ -2459,6 +2800,49 @@
         "summary": "Update Client",
         "tags": [
           "clients"
+        ]
+      }
+    },
+    "/api/clients/{client_id}/aktarim-adlari": {
+      "get": {
+        "operationId": "aktarim_adlari_api_clients__client_id__aktarim_adlari_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AktarimAdlariOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Aktarim Adlari",
+        "tags": [
+          "processors"
         ]
       }
     },
@@ -3111,6 +3495,194 @@
         ]
       }
     },
+    "/api/clients/{client_id}/dpa/docx": {
+      "post": {
+        "operationId": "docx_api_clients__client_id__dpa_docx_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/app__modules__dpa__DocxIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Docx",
+        "tags": [
+          "dpa"
+        ]
+      }
+    },
+    "/api/clients/{client_id}/dpa/generate": {
+      "post": {
+        "description": "Muvekkil envanterinden, isleyene aktarilan kapsamdan DPA taslagi akisi (SSE).",
+        "operationId": "generate_api_clients__client_id__dpa_generate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Anthropic-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Anthropic-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DpaGenerateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Generate",
+        "tags": [
+          "dpa"
+        ]
+      }
+    },
+    "/api/clients/{client_id}/dpa/prepare": {
+      "post": {
+        "operationId": "prepare_api_clients__client_id__dpa_prepare_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DpaPrepareIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DpaPrepareOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prepare",
+        "tags": [
+          "dpa"
+        ]
+      }
+    },
     "/api/clients/{client_id}/dpia/docx": {
       "post": {
         "operationId": "docx_api_clients__client_id__dpia_docx_post",
@@ -3717,6 +4289,262 @@
         "summary": "Generate",
         "tags": [
           "kayit"
+        ]
+      }
+    },
+    "/api/clients/{client_id}/processors": {
+      "get": {
+        "operationId": "list_processors_api_clients__client_id__processors_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProcessorOut"
+                  },
+                  "title": "Response List Processors Api Clients  Client Id  Processors Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Processors",
+        "tags": [
+          "processors"
+        ]
+      },
+      "post": {
+        "operationId": "create_processor_api_clients__client_id__processors_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessorIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessorOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Processor",
+        "tags": [
+          "processors"
+        ]
+      }
+    },
+    "/api/clients/{client_id}/processors/{processor_id}": {
+      "delete": {
+        "operationId": "delete_processor_api_clients__client_id__processors__processor_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "processor_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Processor Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Processor",
+        "tags": [
+          "processors"
+        ]
+      },
+      "get": {
+        "operationId": "get_processor_api_clients__client_id__processors__processor_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "processor_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Processor Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessorOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Processor",
+        "tags": [
+          "processors"
+        ]
+      },
+      "put": {
+        "operationId": "update_processor_api_clients__client_id__processors__processor_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "processor_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Processor Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessorIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessorOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Processor",
+        "tags": [
+          "processors"
         ]
       }
     },

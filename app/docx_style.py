@@ -19,6 +19,7 @@ _BASLIK = {
     "cerez": "Çerez Politikası",
     "kayit": "Kişisel Veri İşleme Kaydı",
     "dpia": "Veri Koruma Etki Değerlendirmesi",
+    "dpa": "Veri İşleyen Sözleşmesi",
 }
 
 
@@ -41,6 +42,7 @@ def build_cover(
     site: str | None,
     tarih: str | None,
     versiyon: str | None,
+    veri_isleyen: str | None = None,
 ) -> None:
     """Belge turune gore kapak sayfasi kurar, sonuna page break ekler."""
     h = doc.add_paragraph()
@@ -51,6 +53,8 @@ def build_cover(
     run.font.color.rgb = ACCENT
 
     _alan(doc, "Veri Sorumlusu", veri_sorumlusu)
+    if doc_type == "dpa":
+        _alan(doc, "Veri İşleyen", veri_isleyen)
     if doc_type == "aydinlatma":
         _alan(doc, "İlgili Kişi", ilgili_kisi)
     if doc_type == "cerez":

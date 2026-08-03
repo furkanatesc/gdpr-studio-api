@@ -17,6 +17,7 @@ from .models import (
     Client,
     ClientDocument,
     ClientDocumentVersion,
+    ClientProcessor,
     ComplianceRequirement,
     ComplianceStatus,
     GeneratedDocument,
@@ -372,6 +373,59 @@ class ClientRepository:
                 setattr(c, k, v)
         self._s.flush()
         return c
+
+
+class ClientProcessorRepository:
+    _FIELDS = (
+        "ad", "unvan", "adres", "yetkili_kisi", "iletisim",
+        "vergi_dairesi_no", "yurt_disi", "alt_isleyen_var", "aktarim_aliases", "notlar",
+    )
+
+    def __init__(self, session: Session) -> None:
+        self._s = session
+
+    def create(self, org_id: uuid.UUID, client_id: uuid.UUID, **fields) -> ClientProcessor:
+        row = ClientProcessor(
+            org_id=org_id, client_id=client_id,
+            **{k: v for k, v in fields.items() if k in self._FIELDS},
+        )
+        self._s.add(row)
+        self._s.flush()
+        return row
+
+    def list(self, org_id: uuid.UUID, client_id: uuid.UUID) -> list[ClientProcessor]:
+        return list(self._s.scalars(
+            select(ClientProcessor)
+            .where(ClientProcessor.org_id == org_id, ClientProcessor.client_id == client_id)
+            .order_by(ClientProcessor.created_at)
+        ))
+
+    def get(self, org_id: uuid.UUID, client_id: uuid.UUID, processor_id: uuid.UUID) -> ClientProcessor | None:
+        return self._s.scalar(select(ClientProcessor).where(
+            ClientProcessor.org_id == org_id,
+            ClientProcessor.client_id == client_id,
+            ClientProcessor.id == processor_id,
+        ))
+
+    def update(
+        self, org_id: uuid.UUID, client_id: uuid.UUID, processor_id: uuid.UUID, **fields
+    ) -> ClientProcessor | None:
+        row = self.get(org_id, client_id, processor_id)
+        if row is None:
+            return None
+        for k, v in fields.items():
+            if k in self._FIELDS:
+                setattr(row, k, v)
+        self._s.flush()
+        return row
+
+    def delete(self, org_id: uuid.UUID, client_id: uuid.UUID, processor_id: uuid.UUID) -> bool:
+        row = self.get(org_id, client_id, processor_id)
+        if row is None:
+            return False
+        self._s.delete(row)
+        self._s.flush()
+        return True
 
 
 class ClientDocumentRepository:

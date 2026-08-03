@@ -14,6 +14,7 @@ from datetime import datetime
 from sqlalchemy import (
     JSON,
     BigInteger,
+    Boolean,
     CheckConstraint,
     DateTime,
     Float,
@@ -25,6 +26,7 @@ from sqlalchemy import (
     UniqueConstraint,
     Uuid,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
@@ -285,6 +287,36 @@ class ClientDocumentVersion(Base):
         Uuid(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ClientProcessor(Base):
+    """Müvekkilin (veri sorumlusu) bir veri işleyeni — DPA üretimi için kalıcı kimlik + aktarım eşlemesi."""
+
+    __tablename__ = "client_processors"
+    __table_args__ = (
+        Index("ix_client_processors_org_client", "org_id", "client_id"),
+    )
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    )
+    client_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("clients.id", ondelete="CASCADE"), nullable=False
+    )
+    ad: Mapped[str] = mapped_column(String(255), nullable=False)
+    unvan: Mapped[str] = mapped_column(String(255), nullable=False)
+    adres: Mapped[str | None] = mapped_column(Text, nullable=True)
+    yetkili_kisi: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    iletisim: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    vergi_dairesi_no: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    yurt_disi: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
+    alt_isleyen_var: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
+    aktarim_aliases: Mapped[list] = mapped_column(_JSON, nullable=False, default=list)
+    notlar: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
 
 class Process(Base):

@@ -11,12 +11,14 @@ from collections.abc import Iterator
 from typing import Any
 
 from .aggregate_sections import Section
+from .dpa_scope import DpaScope
 from .grounding import Grounding
 from .models import (
     ClientProfile,
     GenerateRequest,
     GenerateResponse,
     GroundingRecord,
+    ProcessorInfo,
     ProcessRecord,
     Usage,
 )
@@ -24,6 +26,7 @@ from .prompt import (
     DEFAULT_PROCESS_CAP,
     DISCLAIMER,
     build_aydinlatma_envanter_prompt,
+    build_dpa_envanter_prompt,
     build_dpia_envanter_prompt,
     build_kayit_envanter_prompt,
     build_prompt,
@@ -288,6 +291,49 @@ def generate_dpia_envanter_stream(
                 {"inputTokens": last.input_tokens, "outputTokens": last.output_tokens}
                 if last
                 else None
+            ),
+            "stopReason": last.stop_reason if last else None,
+        },
+    )
+
+
+def generate_dpa_envanter_stream(
+    scope: DpaScope,
+    profile: ClientProfile,
+    processor: ProcessorInfo,
+    measures: list[str],
+    rules: list[str],
+    *,
+    provider: Any,
+    max_tokens: int = DEFAULT_MAX_TOKENS,
+    process_cap: int = DEFAULT_PROCESS_CAP,
+) -> Iterator[tuple[str, Any]]:
+    """İşleyene aktarılan süreç kapsamından DPA taslağı üretir — dpia envanter-modu deseni."""
+    total = len(scope.eslesen_surecler)
+    grounded = scope.eslesen_surecler[:process_cap] if process_cap and total > process_cap else scope.eslesen_surecler
+    yield ("grounding", [_process_to_grounding(r) for r in grounded])
+
+    prompt = build_dpa_envanter_prompt(scope, profile, processor, measures, rules, process_cap=process_cap)
+
+    chunks: list[str] = []
+    for delta in provider.stream(prompt, max_tokens=max_tokens):
+        chunks.append(delta)
+        yield ("delta", delta)
+
+    streamed = "".join(chunks)
+    final_text = ensure_disclaimer(streamed)
+    if final_text != streamed:
+        yield ("delta", final_text[len(streamed):])
+
+    last = getattr(provider, "last_result", None)
+    yield (
+        "done",
+        {
+            "model": getattr(provider, "model", "") or "",
+            "disclaimer": DISCLAIMER,
+            "usage": (
+                {"inputTokens": last.input_tokens, "outputTokens": last.output_tokens}
+                if last else None
             ),
             "stopReason": last.stop_reason if last else None,
         },

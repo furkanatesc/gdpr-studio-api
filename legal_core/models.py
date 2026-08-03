@@ -140,3 +140,18 @@ class ProcessRecord:
     teknik_tedbirler: list[str] = field(default_factory=list)
     aktarim: list[str] = field(default_factory=list)
     toplama: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class ProcessorInfo:
+    """Veri işleyen kimliği — DPA üretimi için saf value object (app ORM'inden eşlenir)."""
+
+    ad: str
+    unvan: str
+    adres: str | None = None
+    yetkili_kisi: str | None = None
+    iletisim: str | None = None
+    vergi_dairesi_no: str | None = None
+    yurt_disi: bool = False
+    alt_isleyen_var: bool = False
+    aktarim_aliases: list[str] = field(default_factory=list)
