@@ -1,4 +1,4 @@
-from legal_core.dpa_scope import DpaScope, distinct_aktarim_adlari, resolve_dpa_scope
+from legal_core.dpa_scope import distinct_aktarim_adlari, resolve_dpa_scope
 from legal_core.models import ProcessRecord
 
 
