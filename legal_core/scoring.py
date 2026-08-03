@@ -8,6 +8,7 @@ sayilir -> muvekkile ozgu doluluk sinyalini verir.
 from __future__ import annotations
 
 from legal_core.aggregate_sections import Section
+from legal_core.dpa_scope import DpaScope
 from legal_core.models import ProcessRecord
 
 
@@ -65,3 +66,16 @@ def dpia_completeness_score(records: list[ProcessRecord]) -> float | None:
         filled += bool(r.saklama_sureleri)
         filled += bool(r.idari_tedbirler or r.teknik_tedbirler)
     return filled / (5 * len(records))
+
+
+def dpa_completeness_score(scope: DpaScope) -> float | None:
+    """DPA kapsam-girdi doluluğu (5 slot, kapsam-birleşimi üzerinden). Kapsam boşsa None."""
+    if not scope.eslesen_surecler:
+        return None
+    filled = 0
+    filled += bool(scope.kategoriler or scope.veri_turleri)
+    filled += bool(scope.amaclar)
+    filled += bool(scope.saklama_sureleri)
+    filled += bool(scope.teknik_tedbirler or scope.idari_tedbirler)
+    filled += len(scope.eslesen_surecler) >= 1
+    return filled / 5
