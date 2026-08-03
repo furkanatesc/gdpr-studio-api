@@ -9,7 +9,8 @@ from __future__ import annotations
 import json
 
 from .aggregate_sections import Section, _merge_dedup
-from .models import ClientProfile, InventoryRecord, ProcessRecord
+from .dpa_scope import DpaScope
+from .models import ClientProfile, InventoryRecord, ProcessorInfo, ProcessRecord
 
 # Bir bolum alani (ornegin saklama suresi) envanterde bulunamadigi durumda
 # koşulsuz basilan yer tutucu (spec: hicbir m.10 basligi sessizce dusmemeli).
@@ -473,4 +474,84 @@ Bunu belgenin başında açıkça belirt.
 {tedbir}
 --- EK KURALLAR ---
 {kurallar}
+"""
+
+
+def _isleyen_kimligi(p: ProcessorInfo) -> str:
+    return (
+        f"- Unvan: {p.unvan or ONAY_BEKLEYEN_PLACEHOLDER}\n"
+        f"- Adres: {p.adres or ONAY_BEKLEYEN_PLACEHOLDER}\n"
+        f"- Yetkili: {p.yetkili_kisi or ONAY_BEKLEYEN_PLACEHOLDER}\n"
+        f"- İletişim: {p.iletisim or ONAY_BEKLEYEN_PLACEHOLDER}\n"
+        f"- Vergi Dairesi/No: {p.vergi_dairesi_no or ONAY_BEKLEYEN_PLACEHOLDER}\n"
+    )
+
+
+def build_dpa_envanter_prompt(
+    scope: DpaScope,
+    profile: ClientProfile,
+    processor: ProcessorInfo,
+    measures: list[str],
+    rules: list[str],
+    process_cap: int = DEFAULT_PROCESS_CAP,
+) -> str:
+    """Veri işleyen sözleşmesi (DPA) taslağı prompt'u — kapsam işleyene aktarılan süreçlerden."""
+    surecler = (
+        format_kayit_processes(scope.eslesen_surecler, cap=process_cap)
+        if scope.eslesen_surecler
+        else "\n(İşleyene aktarılan süreç yok — kapsam boş.)\n"
+    )
+    tedbir = format_measures(measures)
+    kurallar = "".join(f"{i}. {r}\n" for i, r in enumerate(rules, 1))
+
+    alt_isleyen_md = (
+        "7. Alt Veri İşleyen (veri sorumlusunun yazılı izni; aynı yükümlülükler)\n"
+        if processor.alt_isleyen_var else ""
+    )
+    yurt_disi_md = (
+        "12. Yurt Dışı Aktarım (KVKK m.9; yeterlilik kararı/uygun güvence/açık rıza koşulları)\n"
+        if processor.yurt_disi else ""
+    )
+
+    return f"""Sen KVKK (6698) m.12 ve GDPR m.28 uzmanı bir hukuk asistanısın. Aşağıdaki veri
+sorumlusu (müvekkil) ile veri işleyen arasında imzalanacak bir VERİ İŞLEYEN SÖZLEŞMESİ (DPA)
+TASLAĞI üret.
+
+Yalnız aşağıda verilen değerleri kullan; taraf kimliği, kategori, amaç, saklama süresi veya
+tedbir UYDURMA. Boş bırakılmış zorunlu alanı "{ONAY_BEKLEYEN_PLACEHOLDER}" olarak koru.
+
+Belge AYNEN şu maddeleri BU SIRAYLA içermeli (koşullu maddeler yalnız verildiyse):
+1. Taraflar
+2. Tanımlar
+3. Sözleşmenin Konusu ve Kapsamı
+4. İşlemenin Niteliği, Amacı ve Süresi
+5. Veri İşleyenin Yükümlülükleri (yalnız talimatla işleme, gizlilik)
+6. Veri Sorumlusunun Yükümlülükleri
+{alt_isleyen_md}8. Veri Güvenliği Tedbirleri (KVKK m.12/1)
+9. Gizlilik (m.12/3; süresiz)
+10. Kişisel Veri İhlali Bildirimi (işleyen → sorumlu, gecikmeksizin)
+11. İlgili Kişi Taleplerine Yardım
+{yurt_disi_md}13. Denetim Hakkı
+14. Sözleşmenin Sona Ermesi ve Verilerin İadesi/İmhası
+15. Muhtelif (yürürlük, uygulanacak hukuk, sözleşme süresi)
+
+## VERİ SORUMLUSU (MÜVEKKİL)
+{_format_client_profile(profile)}
+
+## VERİ İŞLEYEN
+{_isleyen_kimligi(processor)}
+
+## SÖZLEŞME KAPSAMI — İŞLEYENE AKTARILAN SÜREÇLER (BAĞLAYICI)
+{surecler}
+
+## TEKNİK VE İDARİ TEDBİRLER (org geneli standart liste; bunları kullan, UYDURMA)
+{tedbir}
+
+## BAĞLAYICI İŞ KURALLARI (HARFİYEN UY)
+{kurallar}
+Yukarıdaki bilgilere KESİNLİKLE bağlı kalarak eksiksiz, Markdown formatında bir Veri İşleyen
+Sözleşmesi taslağı üret. ÖNEMLİ: Bu bir TASLAKTIR; imzadan önce hukuki inceleme gerektirir.
+Belgenin EN ALTINA aşağıdaki uyarıyı aynen ekle:
+
+{DISCLAIMER}
 """
