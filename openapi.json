@@ -931,6 +931,98 @@
         "title": "DocType",
         "type": "string"
       },
+      "DpaGenerateIn": {
+        "additionalProperties": false,
+        "properties": {
+          "processorId": {
+            "format": "uuid",
+            "title": "Processorid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "processorId"
+        ],
+        "title": "DpaGenerateIn",
+        "type": "object"
+      },
+      "DpaPrepareIn": {
+        "additionalProperties": false,
+        "properties": {
+          "processorId": {
+            "format": "uuid",
+            "title": "Processorid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "processorId"
+        ],
+        "title": "DpaPrepareIn",
+        "type": "object"
+      },
+      "DpaPrepareOut": {
+        "additionalProperties": false,
+        "properties": {
+          "amaclar": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Amaclar",
+            "type": "array"
+          },
+          "eslesenSurecSayisi": {
+            "title": "Eslesensurecsayisi",
+            "type": "integer"
+          },
+          "idariTedbirler": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Idaritedbirler",
+            "type": "array"
+          },
+          "kategoriler": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Kategoriler",
+            "type": "array"
+          },
+          "saklamaSureleri": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Saklamasureleri",
+            "type": "array"
+          },
+          "teknikTedbirler": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tekniktedbirler",
+            "type": "array"
+          },
+          "veriTurleri": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Veriturleri",
+            "type": "array"
+          }
+        },
+        "required": [
+          "eslesenSurecSayisi",
+          "kategoriler",
+          "veriTurleri",
+          "amaclar",
+          "saklamaSureleri",
+          "teknikTedbirler",
+          "idariTedbirler"
+        ],
+        "title": "DpaPrepareOut",
+        "type": "object"
+      },
       "DpiaAnketIn": {
         "additionalProperties": false,
         "properties": {
@@ -2196,6 +2288,43 @@
         "title": "DocxIn",
         "type": "object"
       },
+      "app__modules__dpa__DocxIn": {
+        "additionalProperties": false,
+        "properties": {
+          "processorId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processorid"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "DocxIn",
+        "type": "object"
+      },
       "app__modules__dpia__DocxIn": {
         "additionalProperties": false,
         "properties": {
@@ -3356,6 +3485,194 @@
         "summary": "Get Document Version",
         "tags": [
           "aydinlatma"
+        ]
+      }
+    },
+    "/api/clients/{client_id}/dpa/docx": {
+      "post": {
+        "operationId": "docx_api_clients__client_id__dpa_docx_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/app__modules__dpa__DocxIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Docx",
+        "tags": [
+          "dpa"
+        ]
+      }
+    },
+    "/api/clients/{client_id}/dpa/generate": {
+      "post": {
+        "description": "Muvekkil envanterinden, isleyene aktarilan kapsamdan DPA taslagi akisi (SSE).",
+        "operationId": "generate_api_clients__client_id__dpa_generate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Anthropic-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Anthropic-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DpaGenerateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Generate",
+        "tags": [
+          "dpa"
+        ]
+      }
+    },
+    "/api/clients/{client_id}/dpa/prepare": {
+      "post": {
+        "operationId": "prepare_api_clients__client_id__dpa_prepare_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DpaPrepareIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DpaPrepareOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prepare",
+        "tags": [
+          "dpa"
         ]
       }
     },

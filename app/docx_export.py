@@ -95,6 +95,7 @@ def render_styled_docx(markdown_text: str, doc_type: str, cover_data: dict) -> b
         site=cover_data.get("site"),
         tarih=cover_data.get("tarih"),
         versiyon=cover_data.get("versiyon"),
+        veri_isleyen=cover_data.get("veri_isleyen"),
     )
     _render_body(doc, markdown_text)
     buf = io.BytesIO()
