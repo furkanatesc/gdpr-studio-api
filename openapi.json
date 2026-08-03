@@ -1,6 +1,23 @@
 {
   "components": {
     "schemas": {
+      "AktarimAdlariOut": {
+        "additionalProperties": false,
+        "properties": {
+          "adlar": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Adlar",
+            "type": "array"
+          }
+        },
+        "required": [
+          "adlar"
+        ],
+        "title": "AktarimAdlariOut",
+        "type": "object"
+      },
       "BillingStatusOut": {
         "properties": {
           "canManage": {
@@ -56,7 +73,7 @@
       "Body_import_inventory_api_clients__client_id__inventory_import_post": {
         "properties": {
           "file": {
-            "contentMediaType": "application/octet-stream",
+            "format": "binary",
             "title": "File",
             "type": "string"
           }
@@ -70,7 +87,7 @@
       "Body_import_workbook_api_clients__client_id__inventory_import_workbook_post": {
         "properties": {
           "file": {
-            "contentMediaType": "application/octet-stream",
+            "format": "binary",
             "title": "File",
             "type": "string"
           }
@@ -1680,6 +1697,201 @@
         "title": "PrepareOut",
         "type": "object"
       },
+      "ProcessorIn": {
+        "additionalProperties": false,
+        "properties": {
+          "ad": {
+            "title": "Ad",
+            "type": "string"
+          },
+          "adres": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adres"
+          },
+          "aktarimAliases": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Aktarimaliases",
+            "type": "array"
+          },
+          "altIsleyenVar": {
+            "default": false,
+            "title": "Altisleyenvar",
+            "type": "boolean"
+          },
+          "iletisim": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iletisim"
+          },
+          "notlar": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notlar"
+          },
+          "unvan": {
+            "title": "Unvan",
+            "type": "string"
+          },
+          "vergiDairesiNo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vergidairesino"
+          },
+          "yetkiliKisi": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Yetkilikisi"
+          },
+          "yurtDisi": {
+            "default": false,
+            "title": "Yurtdisi",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ad",
+          "unvan"
+        ],
+        "title": "ProcessorIn",
+        "type": "object"
+      },
+      "ProcessorOut": {
+        "additionalProperties": false,
+        "properties": {
+          "ad": {
+            "title": "Ad",
+            "type": "string"
+          },
+          "adres": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adres"
+          },
+          "aktarimAliases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Aktarimaliases",
+            "type": "array"
+          },
+          "altIsleyenVar": {
+            "title": "Altisleyenvar",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "iletisim": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iletisim"
+          },
+          "notlar": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notlar"
+          },
+          "unvan": {
+            "title": "Unvan",
+            "type": "string"
+          },
+          "vergiDairesiNo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vergidairesino"
+          },
+          "yetkiliKisi": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Yetkilikisi"
+          },
+          "yurtDisi": {
+            "title": "Yurtdisi",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "ad",
+          "unvan",
+          "adres",
+          "yetkiliKisi",
+          "iletisim",
+          "vergiDairesiNo",
+          "yurtDisi",
+          "altIsleyenVar",
+          "aktarimAliases",
+          "notlar"
+        ],
+        "title": "ProcessorOut",
+        "type": "object"
+      },
       "PublishIn": {
         "additionalProperties": false,
         "properties": {
@@ -1878,13 +2090,6 @@
       },
       "ValidationError": {
         "properties": {
-          "ctx": {
-            "title": "Context",
-            "type": "object"
-          },
-          "input": {
-            "title": "Input"
-          },
           "loc": {
             "items": {
               "anyOf": [
@@ -2459,6 +2664,49 @@
         "summary": "Update Client",
         "tags": [
           "clients"
+        ]
+      }
+    },
+    "/api/clients/{client_id}/aktarim-adlari": {
+      "get": {
+        "operationId": "aktarim_adlari_api_clients__client_id__aktarim_adlari_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AktarimAdlariOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Aktarim Adlari",
+        "tags": [
+          "processors"
         ]
       }
     },
@@ -3717,6 +3965,262 @@
         "summary": "Generate",
         "tags": [
           "kayit"
+        ]
+      }
+    },
+    "/api/clients/{client_id}/processors": {
+      "get": {
+        "operationId": "list_processors_api_clients__client_id__processors_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProcessorOut"
+                  },
+                  "title": "Response List Processors Api Clients  Client Id  Processors Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Processors",
+        "tags": [
+          "processors"
+        ]
+      },
+      "post": {
+        "operationId": "create_processor_api_clients__client_id__processors_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessorIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessorOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Processor",
+        "tags": [
+          "processors"
+        ]
+      }
+    },
+    "/api/clients/{client_id}/processors/{processor_id}": {
+      "delete": {
+        "operationId": "delete_processor_api_clients__client_id__processors__processor_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "processor_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Processor Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Processor",
+        "tags": [
+          "processors"
+        ]
+      },
+      "get": {
+        "operationId": "get_processor_api_clients__client_id__processors__processor_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "processor_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Processor Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessorOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Processor",
+        "tags": [
+          "processors"
+        ]
+      },
+      "put": {
+        "operationId": "update_processor_api_clients__client_id__processors__processor_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "processor_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Processor Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessorIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessorOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Processor",
+        "tags": [
+          "processors"
         ]
       }
     },
