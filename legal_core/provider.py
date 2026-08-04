@@ -80,13 +80,15 @@ class AnthropicProvider:
         )
         text = message.content[0].text
         usage = getattr(message, "usage", None)
-        return ProviderResult(
+        result = ProviderResult(
             text=text,
             model=self._model,
             input_tokens=getattr(usage, "input_tokens", 0) or 0,
             output_tokens=getattr(usage, "output_tokens", 0) or 0,
             stop_reason=getattr(message, "stop_reason", None),
         )
+        self.last_result = result
+        return result
 
     def stream(self, prompt: str, *, max_tokens: int = DEFAULT_MAX_TOKENS) -> Iterator[str]:
         """Metin delta'larını akıtır; bitince final usage'ı self.last_result'a yazar."""

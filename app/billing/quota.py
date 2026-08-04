@@ -136,3 +136,50 @@ def settle_generation_usage(
         actual - reserved_micros,
     )
     session.commit()
+
+
+def enforce_cost_budget(
+    identity: Identity = Depends(get_current_identity),
+    session: Session = Depends(tenant_session),
+    x_anthropic_key: str | None = Header(default=None, alias="X-Anthropic-Key"),
+) -> Identity:
+    """DPA-İncele gibi 'belge üretmeyen' LLM uçları için: yalnız managed maliyet bütçesi.
+
+    enforce_generation_quota'nın maliyet kapısını uygular; doküman tavanını UYGULAMAZ
+    (inceleme üretilen belge değil, 5-belge kotasını tüketmemeli).
+    """
+    ent = resolve_entitlement(session, identity.org_id)
+    if x_anthropic_key is None:
+        budget = cost_budget_for(ent.plan)
+        if budget is not None:
+            used_cost = UsageRepository(session).get_cost(identity.org_id, current_period())
+            if used_cost >= budget:
+                raise HTTPException(
+                    status_code=402,
+                    detail={
+                        "code": "cost_budget_exceeded",
+                        "plan": ent.plan,
+                        "usedUsd": round(used_cost / 1_000_000, 2),
+                        "budgetUsd": round(budget / 1_000_000, 2),
+                    },
+                )
+    return identity
+
+
+def record_cost_only(
+    session: Session,
+    settings: Settings,
+    org_id: uuid.UUID,
+    *,
+    model: str,
+    input_tokens: int,
+    output_tokens: int,
+    byok: bool,
+) -> None:
+    """Maliyet birikimi (yalnız managed) — doküman sayacını ARTIRMAZ. BYOK → no-op."""
+    if byok:
+        return
+    set_org_context(session, org_id)
+    cm = cost_micros(model, input_tokens, output_tokens)
+    UsageRepository(session).add_cost(org_id, current_period(), input_tokens, output_tokens, cm)
+    session.commit()
