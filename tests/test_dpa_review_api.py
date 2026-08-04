@@ -109,3 +109,31 @@ def test_review_unknown_client_404(client_fresh, _patch_review):
     r = client_fresh.post(f"/api/clients/{uuid.uuid4()}/dpa/review",
                           data={"text": "metin"}, headers=_BYOK)
     assert r.status_code == 404
+
+
+def test_review_processor_id_camel_case_binds(client_fresh, monkeypatch):
+    import app.modules.dpa as dpa_mod
+
+    captured = []
+
+    def _capturing_review_dpa(source_text, context, *, provider):
+        captured.append(context)
+        return _fixed_result()
+
+    monkeypatch.setattr(dpa_mod, "review_dpa", _capturing_review_dpa)
+
+    cid = _bootstrap_client(client_fresh)
+    _put_inv(client_fresh, cid, [ROW])
+    pid = _create_processor(client_fresh, cid)
+
+    r = client_fresh.post(f"/api/clients/{cid}/dpa/review",
+                          data={"text": "Örnek DPA metni.", "processorId": pid}, headers=_BYOK)
+    assert r.status_code == 200, r.text
+    assert len(captured) == 1
+    assert captured[0].isleyen_adi == "Bulut A.Ş."
+
+    r2 = client_fresh.post(f"/api/clients/{cid}/dpa/review",
+                           data={"text": "Örnek DPA metni."}, headers=_BYOK)
+    assert r2.status_code == 200, r2.text
+    assert len(captured) == 2
+    assert captured[1].isleyen_adi is None

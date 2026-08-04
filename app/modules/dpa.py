@@ -9,12 +9,14 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import date
+from functools import partial
 
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Response, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
 from legal_core.document_text import DocumentTextError, extract_text
 from legal_core.dpa_review import DPA_CHECKLIST, ReviewContext, ReviewParseError, review_dpa
@@ -52,6 +54,8 @@ from .generation import _claim_idempotency, _resolve_api_key, _sse, classify_inc
 
 router = APIRouter(prefix="/api/clients", tags=["dpa"])
 _log = logging.getLogger("app.dpa")
+
+MAX_REVIEW_CHARS = 200_000
 
 
 class _Camel(BaseModel):
@@ -356,7 +360,7 @@ def docx(
 async def review(
     client_id: uuid.UUID,
     text: str | None = Form(default=None),
-    processor_id: uuid.UUID | None = Form(default=None),
+    processor_id: uuid.UUID | None = Form(default=None, alias="processorId"),
     file: UploadFile | None = File(default=None),
     identity: Identity = Depends(enforce_cost_budget),
     session: Session = Depends(tenant_session),
@@ -371,7 +375,12 @@ async def review(
         try:
             source_text = extract_text(await file.read(), kind)
         except DocumentTextError as e:
-            raise HTTPException(status_code=422, detail=f"Belge okunamadı: {e}") from e
+            _log.warning(
+                "dpa-incele belge okunamadi (org=%s): %s", identity.org_id, type(e).__name__)
+            raise HTTPException(
+                status_code=422,
+                detail="Belge okunamadı; dosya bozuk olabilir. Metni elle yapıştırmayı deneyin.",
+            ) from e
     else:
         source_text = text or ""
     if not source_text.strip():
@@ -379,6 +388,10 @@ async def review(
             status_code=422,
             detail="İncelenecek metin veya dosya gerekli; belgeden metin çıkarılamadıysa "
                    "metni elle yapıştırın.")
+    if len(source_text) > MAX_REVIEW_CHARS:
+        raise HTTPException(
+            status_code=422,
+            detail="Belge çok büyük; en fazla ~200.000 karakter incelenebilir.")
 
     context = _build_review_context(session, identity.org_id, client_id, processor_id)
     api_key = _resolve_api_key(x_anthropic_key)
@@ -388,7 +401,9 @@ async def review(
         timeout_s=settings.anthropic_timeout_s, max_retries=settings.anthropic_max_retries,
     )
     try:
-        result = review_dpa(source_text, context, provider=provider)
+        result = await run_in_threadpool(
+            partial(review_dpa, source_text, context, provider=provider)
+        )
     except ReviewParseError as e:
         capture_exception(e)
         raise HTTPException(status_code=502, detail="Analiz biçimlendirilemedi; tekrar deneyin.") from e

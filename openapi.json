@@ -112,7 +112,7 @@
             ],
             "title": "File"
           },
-          "processor_id": {
+          "processorId": {
             "anyOf": [
               {
                 "format": "uuid",
@@ -122,7 +122,7 @@
                 "type": "null"
               }
             ],
-            "title": "Processor Id"
+            "title": "Processorid"
           },
           "text": {
             "anyOf": [
