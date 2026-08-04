@@ -164,6 +164,11 @@ def parse_review_json(
     return out
 
 
+def _collect_stream(provider, prompt: str, max_tokens: int) -> str:
+    """Sağlayıcı akışını tam metne biriktirir (streaming → read-timeout tetiklenmez)."""
+    return "".join(provider.stream(prompt, max_tokens=max_tokens))
+
+
 def review_dpa(
     text: str,
     context: ReviewContext,
@@ -173,15 +178,16 @@ def review_dpa(
     checklist: list[ReviewItem] = DPA_CHECKLIST,
 ) -> DpaReviewResult:
     prompt = build_dpa_review_prompt(text, context, checklist)
-    result = provider.generate(prompt, max_tokens=max_tokens)
+    raw = _collect_stream(provider, prompt, max_tokens)
     try:
-        findings = parse_review_json(result.text, checklist)
+        findings = parse_review_json(raw, checklist)
     except ReviewParseError:
-        retry = provider.generate(
+        retry_raw = _collect_stream(
+            provider,
             prompt + "\n\nHATIRLATMA: Çıktı YALNIZCA geçerli JSON dizisi olmalı.",
-            max_tokens=max_tokens,
+            max_tokens,
         )
-        findings = parse_review_json(retry.text, checklist)
+        findings = parse_review_json(retry_raw, checklist)
     flag_ids = {it.id for it in checklist if it.kirmizi_bayrak}
     uygun = sum(1 for f in findings if f.durum == "var")
     eksik = sum(1 for f in findings if f.durum == "eksik")
