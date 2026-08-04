@@ -12,7 +12,6 @@ from legal_core.dpa_review import (
     parse_review_json,
     review_dpa,
 )
-from legal_core.provider import ProviderResult
 
 
 def test_checklist_has_expected_items():
@@ -76,10 +75,12 @@ class _FakeProvider:
         self.model = "fake"
         self.calls = 0
 
-    def generate(self, prompt, *, max_tokens=8000):
+    def stream(self, prompt, *, max_tokens=8000):
         self.calls += 1
-        return ProviderResult(text=self._payload, model="fake",
-                              input_tokens=10, output_tokens=20, stop_reason="end_turn")
+        # akışı taklit için parça parça yield
+        mid = len(self._payload) // 2
+        yield self._payload[:mid]
+        yield self._payload[mid:]
 
 
 def test_review_dpa_counts_summary():
