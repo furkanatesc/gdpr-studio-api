@@ -98,6 +98,47 @@
         "title": "Body_import_workbook_api_clients__client_id__inventory_import_workbook_post",
         "type": "object"
       },
+      "Body_review_api_clients__client_id__dpa_review_post": {
+        "properties": {
+          "file": {
+            "anyOf": [
+              {
+                "contentMediaType": "application/octet-stream",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File"
+          },
+          "processor_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processor Id"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "title": "Body_review_api_clients__client_id__dpa_review_post",
+        "type": "object"
+      },
       "BootstrapRequest": {
         "additionalProperties": false,
         "properties": {
@@ -2002,6 +2043,97 @@
         "title": "PublishIn",
         "type": "object"
       },
+      "ReviewFindingOut": {
+        "additionalProperties": false,
+        "properties": {
+          "alinti": {
+            "title": "Alinti",
+            "type": "string"
+          },
+          "baslik": {
+            "title": "Baslik",
+            "type": "string"
+          },
+          "durum": {
+            "title": "Durum",
+            "type": "string"
+          },
+          "gerekce": {
+            "title": "Gerekce",
+            "type": "string"
+          },
+          "kirmiziBayrak": {
+            "title": "Kirmizibayrak",
+            "type": "boolean"
+          },
+          "kvkkRef": {
+            "title": "Kvkkref",
+            "type": "string"
+          },
+          "maddeId": {
+            "title": "Maddeid",
+            "type": "string"
+          },
+          "oneri": {
+            "title": "Oneri",
+            "type": "string"
+          }
+        },
+        "required": [
+          "maddeId",
+          "baslik",
+          "kvkkRef",
+          "kirmiziBayrak",
+          "durum",
+          "alinti",
+          "gerekce",
+          "oneri"
+        ],
+        "title": "ReviewFindingOut",
+        "type": "object"
+      },
+      "ReviewResultOut": {
+        "additionalProperties": false,
+        "properties": {
+          "bulgular": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewFindingOut"
+            },
+            "title": "Bulgular",
+            "type": "array"
+          },
+          "disclaimer": {
+            "title": "Disclaimer",
+            "type": "string"
+          },
+          "eksik": {
+            "title": "Eksik",
+            "type": "integer"
+          },
+          "kirmiziBayrak": {
+            "title": "Kirmizibayrak",
+            "type": "integer"
+          },
+          "uygun": {
+            "title": "Uygun",
+            "type": "integer"
+          },
+          "yetersiz": {
+            "title": "Yetersiz",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "bulgular",
+          "uygun",
+          "eksik",
+          "yetersiz",
+          "kirmiziBayrak",
+          "disclaimer"
+        ],
+        "title": "ReviewResultOut",
+        "type": "object"
+      },
       "RoleUpdate": {
         "additionalProperties": false,
         "properties": {
@@ -3678,6 +3810,75 @@
           }
         },
         "summary": "Prepare",
+        "tags": [
+          "dpa"
+        ]
+      }
+    },
+    "/api/clients/{client_id}/dpa/review": {
+      "post": {
+        "description": "Yüklenen DPA metnini KVKK m.12 kontrol listesine göre analiz eder (kalıcı değil).",
+        "operationId": "review_api_clients__client_id__dpa_review_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Anthropic-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Anthropic-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_review_api_clients__client_id__dpa_review_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewResultOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Review",
         "tags": [
           "dpa"
         ]

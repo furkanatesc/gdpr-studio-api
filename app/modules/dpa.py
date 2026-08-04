@@ -10,13 +10,15 @@ import logging
 import uuid
 from datetime import date
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Response
+from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Response, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 from sqlalchemy.orm import Session
 
-from legal_core.dpa_scope import resolve_dpa_scope
+from legal_core.document_text import DocumentTextError, extract_text
+from legal_core.dpa_review import DPA_CHECKLIST, ReviewContext, ReviewParseError, review_dpa
+from legal_core.dpa_scope import distinct_aktarim_adlari, resolve_dpa_scope
 from legal_core.generate import generate_dpa_envanter_stream
 from legal_core.models import DocType, ProcessorInfo
 from legal_core.prompt import ensure_disclaimer
@@ -27,7 +29,9 @@ from .. import idempotency
 from ..auth.identity import Identity, get_current_identity
 from ..auth.tenant_session import set_org_context, tenant_session
 from ..billing.quota import (
+    enforce_cost_budget,
     enforce_generation_quota,
+    record_cost_only,
     reserve_generation_usage,
     settle_generation_usage,
 )
@@ -78,6 +82,26 @@ class DpaGenerateIn(_Camel):
     processor_id: uuid.UUID
 
 
+class ReviewFindingOut(_Camel):
+    madde_id: str
+    baslik: str
+    kvkk_ref: str
+    kirmizi_bayrak: bool
+    durum: str
+    alinti: str
+    gerekce: str
+    oneri: str
+
+
+class ReviewResultOut(_Camel):
+    bulgular: list[ReviewFindingOut]
+    uygun: int
+    eksik: int
+    yetersiz: int
+    kirmizi_bayrak: int
+    disclaimer: str
+
+
 def _require_client(session: Session, org_id, client_id) -> None:
     if ClientRepository(session).get(org_id, client_id) is None:
         raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
@@ -99,6 +123,44 @@ def _load_scope_and_processor(session, org_id, client_id, processor_id):
         yurt_disi=row.yurt_disi, alt_isleyen_var=row.alt_isleyen_var,
         aktarim_aliases=list(row.aktarim_aliases or []))
     return scope, processor, row
+
+
+def _detect_kind(filename: str) -> str:
+    name = (filename or "").lower()
+    if name.endswith(".docx"):
+        return "docx"
+    if name.endswith(".pdf"):
+        return "pdf"
+    raise HTTPException(status_code=422, detail="Yalnızca .docx ve .pdf desteklenir.")
+
+
+def _build_review_context(session, org_id, client_id, processor_id):
+    client = ClientRepository(session).get(org_id, client_id)
+    if client is None:
+        raise HTTPException(status_code=404, detail="Müvekkil bulunamadı.")
+    prof = client_profile(client)
+    records = PostgresProcessRepository(session).client_processes(client_id)
+    isleyen_adi = None
+    if processor_id is not None:
+        row = ClientProcessorRepository(session).get(org_id, client_id, processor_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail="Veri işleyen bulunamadı.")
+        isleyen_adi = row.unvan or row.ad
+        scope = resolve_dpa_scope(records, list(row.aktarim_aliases or []))
+        kategoriler = scope.kategoriler
+        aktarim_adlari = list(row.aktarim_aliases or [])
+    else:
+        aktarim_adlari = distinct_aktarim_adlari(records)
+        kategoriler = []
+        for r in records:
+            for k in r.kategoriler:
+                if k and k not in kategoriler:
+                    kategoriler.append(k)
+    yurt_disi = any("yurt" in a.lower() or "dış" in a.lower() for a in aktarim_adlari)
+    return ReviewContext(
+        veri_sorumlusu=prof.unvan or prof.ad, isleyen_adi=isleyen_adi,
+        yurt_disi=yurt_disi, aktarim_adlari=aktarim_adlari, kategoriler=kategoriler,
+    )
 
 
 @router.post("/{client_id}/dpa/prepare", response_model=DpaPrepareOut, response_model_by_alias=True)
@@ -286,4 +348,70 @@ def docx(
         content=data,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={"Content-Disposition": 'attachment; filename="dpa.docx"'},
+    )
+
+
+@router.post("/{client_id}/dpa/review", response_model=ReviewResultOut,
+             response_model_by_alias=True, dependencies=[Depends(generate_rate_limit)])
+async def review(
+    client_id: uuid.UUID,
+    text: str | None = Form(default=None),
+    processor_id: uuid.UUID | None = Form(default=None),
+    file: UploadFile | None = File(default=None),
+    identity: Identity = Depends(enforce_cost_budget),
+    session: Session = Depends(tenant_session),
+    x_anthropic_key: str | None = Header(default=None, alias="X-Anthropic-Key"),
+) -> ReviewResultOut:
+    """Yüklenen DPA metnini KVKK m.12 kontrol listesine göre analiz eder (kalıcı değil)."""
+    settings = get_settings()
+    _require_client(session, identity.org_id, client_id)
+
+    if file is not None and file.filename:
+        kind = _detect_kind(file.filename)
+        try:
+            source_text = extract_text(await file.read(), kind)
+        except DocumentTextError as e:
+            raise HTTPException(status_code=422, detail=f"Belge okunamadı: {e}") from e
+    else:
+        source_text = text or ""
+    if not source_text.strip():
+        raise HTTPException(
+            status_code=422,
+            detail="İncelenecek metin veya dosya gerekli; belgeden metin çıkarılamadıysa "
+                   "metni elle yapıştırın.")
+
+    context = _build_review_context(session, identity.org_id, client_id, processor_id)
+    api_key = _resolve_api_key(x_anthropic_key)
+    byok = x_anthropic_key is not None
+    provider = AnthropicProvider(
+        api_key, model=settings.default_model,
+        timeout_s=settings.anthropic_timeout_s, max_retries=settings.anthropic_max_retries,
+    )
+    try:
+        result = review_dpa(source_text, context, provider=provider)
+    except ReviewParseError as e:
+        capture_exception(e)
+        raise HTTPException(status_code=502, detail="Analiz biçimlendirilemedi; tekrar deneyin.") from e
+
+    usage = provider.last_result
+    record_cost_only(
+        session, settings, identity.org_id, model=settings.default_model,
+        input_tokens=usage.input_tokens if usage else 0,
+        output_tokens=usage.output_tokens if usage else 0, byok=byok,
+    )
+
+    by_id = {it.id: it for it in DPA_CHECKLIST}
+    out = [
+        ReviewFindingOut(
+            madde_id=f.madde_id,
+            baslik=by_id[f.madde_id].baslik if f.madde_id in by_id else f.madde_id,
+            kvkk_ref=by_id[f.madde_id].kvkk_ref if f.madde_id in by_id else "",
+            kirmizi_bayrak=by_id[f.madde_id].kirmizi_bayrak if f.madde_id in by_id else False,
+            durum=f.durum, alinti=f.alinti, gerekce=f.gerekce, oneri=f.oneri,
+        )
+        for f in result.bulgular
+    ]
+    return ReviewResultOut(
+        bulgular=out, uygun=result.uygun, eksik=result.eksik, yetersiz=result.yetersiz,
+        kirmizi_bayrak=result.kirmizi_bayrak, disclaimer=result.disclaimer,
     )
