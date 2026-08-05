@@ -1,6 +1,12 @@
 from datetime import datetime
 
-from legal_core.ihlal import IhlalOlay, evaluate_ihlal_bildirim
+from legal_core.ihlal import (
+    IhlalOlay,
+    build_ihlal_ilgili_kisi_prompt,
+    build_ihlal_kurul_prompt,
+    evaluate_ihlal_bildirim,
+)
+from legal_core.models import ClientProfile
 
 
 def _olay(**ov):
@@ -17,6 +23,10 @@ def _olay(**ov):
     )
     base.update(ov)
     return IhlalOlay(**base)
+
+
+def _prof():
+    return ClientProfile(ad="furkan", unvan="Genel Şirket")
 
 
 def test_kurul_bildirimi_her_zaman_gerekli():
@@ -62,3 +72,17 @@ def test_72_saat_asildi():
     )
     assert v.sure_asildi is True
     assert v.saat_kalan < 0
+
+
+def test_kurul_prompt_zorunlu_basliklar():
+    p = build_ihlal_kurul_prompt(
+        _olay(), _prof(), ["Kimlik"], ["Ad"], ["1.Şifreleme"], ["kural1"]
+    )
+    assert "İHLALİN TARİHİ" in p.upper()
+    assert "ETKİLENEN" in p.upper()
+    assert "İRTİBAT" in p.upper()
+
+
+def test_ilgili_kisi_prompt_sade_dil_basliklar():
+    p = build_ihlal_ilgili_kisi_prompt(_olay(), _prof(), ["Kimlik"])
+    assert "önlem" in p.lower()
