@@ -73,7 +73,7 @@
       "Body_import_inventory_api_clients__client_id__inventory_import_post": {
         "properties": {
           "file": {
-            "contentMediaType": "application/octet-stream",
+            "format": "binary",
             "title": "File",
             "type": "string"
           }
@@ -87,7 +87,7 @@
       "Body_import_workbook_api_clients__client_id__inventory_import_workbook_post": {
         "properties": {
           "file": {
-            "contentMediaType": "application/octet-stream",
+            "format": "binary",
             "title": "File",
             "type": "string"
           }
@@ -103,7 +103,7 @@
           "file": {
             "anyOf": [
               {
-                "contentMediaType": "application/octet-stream",
+                "format": "binary",
                 "type": "string"
               },
               {
@@ -112,7 +112,7 @@
             ],
             "title": "File"
           },
-          "processorId": {
+          "processor_id": {
             "anyOf": [
               {
                 "format": "uuid",
@@ -122,7 +122,7 @@
                 "type": "null"
               }
             ],
-            "title": "Processorid"
+            "title": "Processor Id"
           },
           "text": {
             "anyOf": [
@@ -1476,6 +1476,171 @@
         "title": "IdentityOut",
         "type": "object"
       },
+      "IhlalGenerateIn": {
+        "additionalProperties": false,
+        "properties": {
+          "bildirimTuru": {
+            "title": "Bildirimturu",
+            "type": "string"
+          },
+          "etkilenenIndeksler": {
+            "default": [],
+            "items": {
+              "type": "integer"
+            },
+            "title": "Etkilenenindeksler",
+            "type": "array"
+          },
+          "kimlikFinansal": {
+            "default": false,
+            "title": "Kimlikfinansal",
+            "type": "boolean"
+          },
+          "kisiSayisi": {
+            "default": 0,
+            "title": "Kisisayisi",
+            "type": "integer"
+          },
+          "nasil": {
+            "default": "",
+            "title": "Nasil",
+            "type": "string"
+          },
+          "onlemler": {
+            "default": "",
+            "title": "Onlemler",
+            "type": "string"
+          },
+          "sifreli": {
+            "default": false,
+            "title": "Sifreli",
+            "type": "boolean"
+          },
+          "tespit": {
+            "format": "date-time",
+            "title": "Tespit",
+            "type": "string"
+          },
+          "tur": {
+            "title": "Tur",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tespit",
+          "tur",
+          "bildirimTuru"
+        ],
+        "title": "IhlalGenerateIn",
+        "type": "object"
+      },
+      "IhlalPrepareIn": {
+        "additionalProperties": false,
+        "properties": {
+          "etkilenenIndeksler": {
+            "default": [],
+            "items": {
+              "type": "integer"
+            },
+            "title": "Etkilenenindeksler",
+            "type": "array"
+          },
+          "kimlikFinansal": {
+            "default": false,
+            "title": "Kimlikfinansal",
+            "type": "boolean"
+          },
+          "kisiSayisi": {
+            "default": 0,
+            "title": "Kisisayisi",
+            "type": "integer"
+          },
+          "nasil": {
+            "default": "",
+            "title": "Nasil",
+            "type": "string"
+          },
+          "onlemler": {
+            "default": "",
+            "title": "Onlemler",
+            "type": "string"
+          },
+          "sifreli": {
+            "default": false,
+            "title": "Sifreli",
+            "type": "boolean"
+          },
+          "tespit": {
+            "format": "date-time",
+            "title": "Tespit",
+            "type": "string"
+          },
+          "tur": {
+            "title": "Tur",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tespit",
+          "tur"
+        ],
+        "title": "IhlalPrepareIn",
+        "type": "object"
+      },
+      "IhlalPrepareOut": {
+        "additionalProperties": false,
+        "properties": {
+          "ilgiliKisiGerekli": {
+            "title": "Ilgilikisigerekli",
+            "type": "boolean"
+          },
+          "ilgiliKisiMuafiyet": {
+            "title": "Ilgilikisimuafiyet",
+            "type": "boolean"
+          },
+          "ilgiliKisiSinyaller": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ilgilikisisinyaller",
+            "type": "array"
+          },
+          "kurulGerekli": {
+            "title": "Kurulgerekli",
+            "type": "boolean"
+          },
+          "ozelNitelikliVar": {
+            "title": "Ozelniteliklivar",
+            "type": "boolean"
+          },
+          "saatKalan": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Saatkalan"
+          },
+          "sureAsildi": {
+            "title": "Sureasildi",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "kurulGerekli",
+          "ilgiliKisiGerekli",
+          "ilgiliKisiMuafiyet",
+          "ilgiliKisiSinyaller",
+          "ozelNitelikliVar",
+          "saatKalan",
+          "sureAsildi"
+        ],
+        "title": "IhlalPrepareOut",
+        "type": "object"
+      },
       "InventoryReplace": {
         "additionalProperties": false,
         "properties": {
@@ -2314,13 +2479,6 @@
       },
       "ValidationError": {
         "properties": {
-          "ctx": {
-            "title": "Context",
-            "type": "object"
-          },
-          "input": {
-            "title": "Input"
-          },
           "loc": {
             "items": {
               "anyOf": [
@@ -2465,6 +2623,31 @@
         "type": "object"
       },
       "app__modules__dpia__DocxIn": {
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "DocxIn",
+        "type": "object"
+      },
+      "app__modules__ihlal__DocxIn": {
         "additionalProperties": false,
         "properties": {
           "text": {
@@ -4069,6 +4252,194 @@
         "summary": "Prepare",
         "tags": [
           "dpia"
+        ]
+      }
+    },
+    "/api/clients/{client_id}/ihlal/docx": {
+      "post": {
+        "operationId": "docx_api_clients__client_id__ihlal_docx_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/app__modules__ihlal__DocxIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Docx",
+        "tags": [
+          "ihlal"
+        ]
+      }
+    },
+    "/api/clients/{client_id}/ihlal/generate": {
+      "post": {
+        "description": "İhlal bildirimi (kurul | ilgili kişi) akışı (SSE). KALICILIK YOK.",
+        "operationId": "generate_api_clients__client_id__ihlal_generate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Anthropic-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Anthropic-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IhlalGenerateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Generate",
+        "tags": [
+          "ihlal"
+        ]
+      }
+    },
+    "/api/clients/{client_id}/ihlal/prepare": {
+      "post": {
+        "operationId": "prepare_api_clients__client_id__ihlal_prepare_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IhlalPrepareIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IhlalPrepareOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prepare",
+        "tags": [
+          "ihlal"
         ]
       }
     },
