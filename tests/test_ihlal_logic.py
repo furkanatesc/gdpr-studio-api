@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from legal_core.generate import generate_ihlal_stream
 from legal_core.ihlal import (
     IhlalOlay,
     build_ihlal_ilgili_kisi_prompt,
@@ -86,3 +87,34 @@ def test_kurul_prompt_zorunlu_basliklar():
 def test_ilgili_kisi_prompt_sade_dil_basliklar():
     p = build_ihlal_ilgili_kisi_prompt(_olay(), _prof(), ["Kimlik"])
     assert "önlem" in p.lower()
+
+
+class _FakeProvider:
+    model = "claude-x"
+    last_result = None
+
+    def __init__(self, capture):
+        self._capture = capture
+
+    def stream(self, prompt, max_tokens):
+        self._capture.append(prompt)
+        yield "İhlal bildirim gövdesi..."
+
+
+def test_generate_ihlal_kurul_prompt_kullanir():
+    seen = []
+    events = list(generate_ihlal_stream(
+        _olay(), _prof(), ["Kimlik"], ["Ad"], ["1.Şifreleme"], ["kural1"],
+        "kurul", provider=_FakeProvider(seen), max_tokens=8000,
+    ))
+    assert "İHLAL BİLDİRİM FORMU" in seen[0]
+    assert events[-1][0] == "done"
+
+
+def test_generate_ihlal_ilgili_kisi_prompt_kullanir():
+    seen = []
+    list(generate_ihlal_stream(
+        _olay(), _prof(), ["Kimlik"], ["Ad"], [], [],
+        "ilgili_kisi", provider=_FakeProvider(seen), max_tokens=8000,
+    ))
+    assert "SİZİN ALABİLECEĞİNİZ" in seen[0].upper()

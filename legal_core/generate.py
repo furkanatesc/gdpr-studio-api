@@ -13,6 +13,7 @@ from typing import Any
 from .aggregate_sections import Section
 from .dpa_scope import DpaScope
 from .grounding import Grounding
+from .ihlal import build_ihlal_ilgili_kisi_prompt, build_ihlal_kurul_prompt
 from .models import (
     ClientProfile,
     GenerateRequest,
@@ -338,3 +339,38 @@ def generate_dpa_envanter_stream(
             "stopReason": last.stop_reason if last else None,
         },
     )
+
+
+def generate_ihlal_stream(
+    olay,
+    profile,
+    kategoriler,
+    veri_turleri,
+    measures,
+    rules,
+    bildirim_turu,
+    *,
+    provider: Any,
+    max_tokens: int = DEFAULT_MAX_TOKENS,
+) -> Iterator[tuple[str, Any]]:
+    """İhlal bildirimi üretir (kurul | ilgili_kisi) — dpia stream deseni, grounding'siz."""
+    if bildirim_turu == "kurul":
+        prompt = build_ihlal_kurul_prompt(olay, profile, kategoriler, veri_turleri, measures, rules)
+    else:
+        prompt = build_ihlal_ilgili_kisi_prompt(olay, profile, kategoriler)
+
+    chunks: list[str] = []
+    for delta in provider.stream(prompt, max_tokens=max_tokens):
+        chunks.append(delta)
+        yield ("delta", delta)
+    streamed = "".join(chunks)
+    final_text = ensure_disclaimer(streamed)
+    if final_text != streamed:
+        yield ("delta", final_text[len(streamed):])
+    last = getattr(provider, "last_result", None)
+    yield ("done", {
+        "model": getattr(provider, "model", "") or "",
+        "disclaimer": DISCLAIMER,
+        "usage": ({"inputTokens": last.input_tokens, "outputTokens": last.output_tokens} if last else None),
+        "stopReason": last.stop_reason if last else None,
+    })
