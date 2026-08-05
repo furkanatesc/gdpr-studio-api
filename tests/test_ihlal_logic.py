@@ -118,3 +118,16 @@ def test_generate_ihlal_ilgili_kisi_prompt_kullanir():
         "ilgili_kisi", provider=_FakeProvider(seen), max_tokens=8000,
     ))
     assert "SİZİN ALABİLECEĞİNİZ" in seen[0].upper()
+
+
+def test_ihlal_score_dolu_olay_tam():
+    from legal_core.scoring import ihlal_completeness_score
+    s = ihlal_completeness_score(_olay(nasil="x", onlemler="y", kisi_sayisi=5))
+    assert s == 1.0
+
+
+def test_ihlal_score_bos_alanlar_dusuk():
+    from legal_core.scoring import ihlal_completeness_score
+    s = ihlal_completeness_score(_olay(tur="", nasil="", onlemler="", kisi_sayisi=0,
+                                       etkilenen_kategoriler=[]))
+    assert s < 0.5
