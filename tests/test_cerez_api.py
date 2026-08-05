@@ -181,6 +181,24 @@ def test_cerez_generate_max_tokensta_uyum_kaydi_geri_alinir(db_session, monkeypa
     assert len(rows) == 1
 
 
+def test_cerez_generate_max_tokensta_belge_sayaci_geri_alinir(db_session, monkeypatch):
+    """Defekt 2: kesik uretimde belge SAKLANMADIGI icin dokuman kota sayaci (doc_count) da
+    GERI ALINMALI. reserve_generation_usage ilk delta'da doc_count'u artirir; kesmede
+    generated_documents geri alinir ama sayac geri alinmazsa '1/5 belge' kalir. Maliyet
+    sayaci ise KALIR (token gercekten harcandi)."""
+    from app.billing.entitlement import current_period
+    from app.billing.repositories import UsageRepository
+
+    _managed_billing_settings()
+    monkeypatch.setattr(cerezmod, "generate_document_stream", _fake_stream_truncated)
+    cid = _make_client(db_session)
+
+    resp = _generate(db_session, cid)
+    _consume(resp)
+
+    assert UsageRepository(db_session).get_count(IDENT.org_id, current_period()) == 0
+
+
 def _fake_stream_with_stop_reason(stop_reason):
     def _f(*a, **k):
         yield "grounding", []

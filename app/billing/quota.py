@@ -138,6 +138,20 @@ def settle_generation_usage(
     session.commit()
 
 
+def release_generation_document(
+    session: Session,
+    org_id: uuid.UUID,
+) -> None:
+    """Kesik/reddedilen üretimde reserve_generation_usage'in doküman sayacı (doc_count)
+    artışını geri alır. Belge SAKLANMADIĞI için kotadan sayılmamalı; aksi halde '1/5 belge'
+    kalır (canlı duman testinde gözlendi). Maliyet sayacına DOKUNULMAZ — token gerçekten
+    harcandı, guardrail bunu saymalı. reserve doc_count'u BYOK'ta da artırdığı için bu da
+    BYOK-agnostiktir."""
+    set_org_context(session, org_id)
+    UsageRepository(session).decrement(org_id, current_period())
+    session.commit()
+
+
 def enforce_cost_budget(
     identity: Identity = Depends(get_current_identity),
     session: Session = Depends(tenant_session),

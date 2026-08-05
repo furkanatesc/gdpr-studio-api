@@ -103,6 +103,11 @@ class UsageRepository:
     def increment(self, org_id: uuid.UUID, period: str) -> int:
         return self._bump(org_id, period, doc_count=1)
 
+    def decrement(self, org_id: uuid.UUID, period: str) -> int:
+        """Doküman sayacını atomik olarak 1 azaltır (kesik/reddedilen üretimin
+        reserve artışını geri alır). increment'in tersi; aynı satır kilidinde çalışır."""
+        return self._bump(org_id, period, doc_count=-1)
+
     def get_cost(self, org_id: uuid.UUID, period: str) -> int:
         row = self._row(org_id, period)
         return row.cost_micros if row else 0
