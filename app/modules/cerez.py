@@ -29,6 +29,7 @@ from ..auth.identity import Identity, get_current_identity
 from ..auth.tenant_session import set_org_context, tenant_session
 from ..billing.quota import (
     enforce_generation_quota,
+    release_generation_document,
     reserve_generation_usage,
     settle_generation_usage,
 )
@@ -186,6 +187,8 @@ def generate(
                                     identity.org_id, generated_doc_id
                                 )
                                 session.commit()
+                                # Belge saklanmadi -> reserve'in doc_count artisini da geri al.
+                                release_generation_document(session, identity.org_id)
                         except Exception as discard_err:  # best-effort; uyariyi bozma
                             _log.error(
                                 "generated_documents geri alma basarisiz (org=%s): %s",

@@ -150,6 +150,25 @@ def test_kayit_generate_max_tokensta_saklanmaz_ve_uyari_yayinlanir(db_session, m
     assert len(rows) == 0
 
 
+def test_kayit_generate_max_tokensta_belge_sayaci_geri_alinir(db_session, monkeypatch):
+    """Defekt 2: kesik uretimde belge SAKLANMADIGI icin dokuman kota sayaci (doc_count) da
+    GERI ALINMALI. reserve_generation_usage ilk delta'da doc_count'u artirir; kesmede
+    generated_documents geri alinir ama sayac geri alinmazsa '1/5 belge' kalir (canli
+    duman testinde gozlendi). Maliyet sayaci ise KALIR (token gercekten harcandi)."""
+    from app.billing.entitlement import current_period
+    from app.billing.repositories import UsageRepository
+
+    _managed_billing_settings()
+    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream", _fake_stream_truncated)
+    cid = _make_client(db_session)
+    _put_inventory(db_session, cid)
+
+    resp = _generate(db_session, cid)
+    _consume(resp)
+
+    assert UsageRepository(db_session).get_count(IDENT.org_id, current_period()) == 0
+
+
 class _FakeRedis:
     """set(nx, ex) + delete destekleyen minimum sahte Redis (TTL simüle edilmez)."""
 

@@ -23,7 +23,7 @@ def _swap_userinfo(url: str, user: str, password: str) -> str:
 
 
 # Uzunlugu envanter hacmiyle dogrusal buyuyen belge turleri (yuksek cikti tavani).
-ENVANTER_TUREVLI_BELGELER = frozenset({"kayit", "aydinlatma", "dpia"})
+ENVANTER_TUREVLI_BELGELER = frozenset({"kayit", "aydinlatma", "dpia", "dpa"})
 
 
 class Settings(BaseSettings):

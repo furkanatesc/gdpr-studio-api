@@ -28,7 +28,7 @@ def test_max_tokens_for_kayit_ozel_tavan_kullanir():
 def test_max_tokens_for_sabit_boyutlu_turler_degismez():
     """Yuksek tavan yalniz envanterden tureyen turler icin; sabit boyutlu turler 8000'de kalir."""
     s = Settings(_env_file=None)
-    for doc_type in ("cerez", "dpa", "ihlal"):
+    for doc_type in ("cerez", "ihlal"):
         assert s.max_tokens_for(doc_type) == 8000
 
 
@@ -36,3 +36,11 @@ def test_max_tokens_for_dpia_envanter_tavani_kullanir():
     """DPIA da kayit/aydinlatma gibi surec basina uretim yapar -> envanterle dogrusal buyur."""
     s = Settings(_env_file=None)
     assert s.max_tokens_for("dpia") == 32000
+
+
+def test_max_tokens_for_dpa_envanter_tavani_kullanir():
+    """DPA, isleyene aktarilan surec kapsamindan uretilir; 15-madde sabit iskelet + kapsam
+    tablolari uzunlugu surec sayisiyla buyur. Canli duman testinde 3 surecle bile 8000
+    tavanina takilip 11.3'te kesildi -> envanterden tureyen tavani (32000) kullanmali."""
+    s = Settings(_env_file=None)
+    assert s.max_tokens_for("dpa") == 32000
