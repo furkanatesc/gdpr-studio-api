@@ -43,6 +43,10 @@ def _ozel_nitelikli(olay: IhlalOlay) -> bool:
     return any(norm(k) in _OZEL_NORM for k in olay.etkilenen_kategoriler)
 
 
+def _naif(dt: datetime) -> datetime:
+    return dt.replace(tzinfo=None) if dt.tzinfo is not None else dt
+
+
 def evaluate_ihlal_bildirim(olay: IhlalOlay, *, simdi: datetime) -> IhlalVerdict:
     ozel = _ozel_nitelikli(olay)
     sinyaller: list[str] = []
@@ -57,7 +61,7 @@ def evaluate_ihlal_bildirim(olay: IhlalOlay, *, simdi: datetime) -> IhlalVerdict
 
     muafiyet = olay.sifreli
     ilgili_gerekli = bool(sinyaller) and not muafiyet
-    saat = (simdi - olay.tespit).total_seconds() / 3600.0
+    saat = (_naif(simdi) - _naif(olay.tespit)).total_seconds() / 3600.0
     saat_kalan = 72.0 - saat
     return IhlalVerdict(
         kurul_gerekli=True,

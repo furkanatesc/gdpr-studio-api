@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from legal_core.generate import generate_ihlal_stream
 from legal_core.ihlal import (
@@ -73,6 +73,23 @@ def test_72_saat_asildi():
     )
     assert v.sure_asildi is True
     assert v.saat_kalan < 0
+
+
+def test_tz_aware_tespit_ve_simdi_patlamaz():
+    v = evaluate_ihlal_bildirim(
+        _olay(tespit=datetime(2026, 8, 5, 10, 0, tzinfo=UTC)),
+        simdi=datetime(2026, 8, 5, 12, 0, tzinfo=UTC),
+    )
+    assert v.saat_kalan == 70.0
+    assert v.sure_asildi is False
+
+
+def test_tz_aware_tespit_naif_simdi_karisik_patlamaz():
+    v = evaluate_ihlal_bildirim(
+        _olay(tespit=datetime(2026, 8, 5, 10, 0, tzinfo=UTC)),
+        simdi=datetime(2026, 8, 5, 12, 0),
+    )
+    assert v.saat_kalan == 70.0
 
 
 def test_kurul_prompt_zorunlu_basliklar():
