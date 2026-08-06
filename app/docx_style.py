@@ -20,6 +20,7 @@ _BASLIK = {
     "kayit": "Kişisel Veri İşleme Kaydı",
     "dpia": "Veri Koruma Etki Değerlendirmesi",
     "dpa": "Veri İşleyen Sözleşmesi",
+    "ihlal": "Kişisel Veri İhlali Bildirimi",
 }
 
 

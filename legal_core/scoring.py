@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from legal_core.aggregate_sections import Section
 from legal_core.dpa_scope import DpaScope
+from legal_core.ihlal import IhlalOlay
 from legal_core.models import ProcessRecord
 
 
@@ -79,3 +80,15 @@ def dpa_completeness_score(scope: DpaScope) -> float | None:
     filled += bool(scope.teknik_tedbirler or scope.idari_tedbirler)
     filled += len(scope.eslesen_surecler) >= 1
     return filled / 5
+
+
+def ihlal_completeness_score(olay: IhlalOlay) -> float:
+    """İhlal olay formunun dolu slot oranı (5 slot)."""
+    slots = [
+        bool(olay.tur),
+        bool(olay.etkilenen_kategoriler),
+        olay.kisi_sayisi > 0,
+        bool(olay.nasil),
+        bool(olay.onlemler),
+    ]
+    return sum(slots) / len(slots)

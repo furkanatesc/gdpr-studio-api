@@ -44,3 +44,13 @@ def test_kapak_bos_veri_sorumlusu_placeholder():
     build_cover(doc, "aydinlatma", veri_sorumlusu=None, ilgili_kisi=None,
                 site=None, tarih="24.07.2026", versiyon="1.0")
     assert "[Avukat tarafından doldurulacak]" in _text(doc)
+
+
+def test_kapak_ihlal_baslik():
+    doc = Document()
+    build_cover(doc, "ihlal", veri_sorumlusu="ACME A.S.", ilgili_kisi=None,
+                site=None, tarih="05.08.2026", versiyon="Taslak")
+    t = _text(doc)
+    assert "Kişisel Veri İhlali Bildirimi" in t
+    assert "ACME A.S." in t
+    assert "05.08.2026" in t

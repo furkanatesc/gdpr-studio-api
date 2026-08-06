@@ -22,6 +22,7 @@ from .modules import (
     generation,
     grounding,
     health,
+    ihlal,
     inventory,
     inventory_suggestions,
     invitations,
@@ -90,6 +91,7 @@ app.include_router(inventory_suggestions.router)
 app.include_router(kayit.router)
 app.include_router(dpia.router)
 app.include_router(dpa.router)
+app.include_router(ihlal.router)
 app.include_router(processors.router)
 
 
