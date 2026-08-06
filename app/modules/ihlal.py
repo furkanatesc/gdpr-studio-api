@@ -159,7 +159,7 @@ def generate(
 
     bildirim_turu = body.bildirim_turu
     if bildirim_turu not in ("kurul", "ilgili_kisi"):
-        raise HTTPException(status_code=422, detail="bildirimTuru 'kurul' veya 'ilgiliKisi' olmalı.")
+        raise HTTPException(status_code=422, detail="bildirimTuru 'kurul' veya 'ilgili_kisi' olmalı.")
 
     olay, kategoriler, veri_turleri = _olay_ve_kapsam(session, client_id, body)
 
