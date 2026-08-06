@@ -12,7 +12,11 @@ dependencies = [
 anthropic = ["anthropic>=0.40"]
 # API katmanı (sonraki adım: FastAPI + Postgres + Redis)
 api = [
-    "fastapi>=0.115",
+    # Pinned exact: openapi.json golden test (test_openapi_json_guncel) fastapi
+    # sürümüne duyarlı (file-upload alanları + Form-alias render). Yerel/CI sapması
+    # openapi.json'ı bozuyordu; committed openapi bu sürümle üretilir. Bilinçli bump +
+    # `python -m app.export_openapi` regen ile yükseltilir.
+    "fastapi==0.141.1",
     "uvicorn[standard]>=0.32",
     "pydantic-settings>=2.5",
     "sqlalchemy>=2.0",
