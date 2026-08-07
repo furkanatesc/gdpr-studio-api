@@ -24,6 +24,7 @@ from legal_core.provider import AnthropicProvider
 from legal_core.scoring import dpia_completeness_score
 
 from .. import idempotency
+from ..audit import record_generated_document
 from ..auth.identity import Identity, get_current_identity
 from ..auth.tenant_session import set_org_context, tenant_session
 from ..billing.quota import (
@@ -162,9 +163,9 @@ def generate(
                 elif kind == "delta":
                     if not started:
                         started = True
-                        generated_doc_id = GeneratedDocumentRepository(session).record(
-                            identity.org_id, DocType.dpia
-                        ).id
+                        generated_doc_id = record_generated_document(
+                            session, identity.org_id, DocType.dpia, identity.user_id
+                        )
                         reserved = reserve_generation_usage(
                             session, settings, identity.org_id,
                             model=settings.default_model, byok=byok,

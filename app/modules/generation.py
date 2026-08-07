@@ -19,6 +19,7 @@ from legal_core.grounding import Grounding
 from legal_core.provider import AnthropicProvider
 
 from .. import idempotency
+from ..audit import record_generated_document
 from ..auth.identity import Identity
 from ..auth.tenant_session import tenant_session
 from ..billing.quota import (
@@ -32,7 +33,6 @@ from ..models import Organization
 from ..observability import capture_exception
 from ..redis_client import generate_rate_limit
 from ..repositories import (
-    GeneratedDocumentRepository,
     PostgresBusinessRuleRepository,
     PostgresCategoryRepository,
     PostgresMeasureRepository,
@@ -150,7 +150,7 @@ def generate(
         raise HTTPException(status_code=502, detail=f"Üretim hatası: {e}") from e
     # Uyum sinyali: başarılı üretimi generated_documents'a yaz. record_generation_usage
     # commit ettiği için kayıt ONDAN ÖNCE flush'lanır → aynı işlemde persist olur (spec §4).
-    GeneratedDocumentRepository(session).record(identity.org_id, req.type)
+    record_generated_document(session, identity.org_id, req.type, identity.user_id)
     record_generation_usage(
         session,
         settings,
@@ -215,7 +215,7 @@ def generate_stream(
                     if not started:
                         started = True
                         # Uyum sinyali (aynı işlemde, rezervasyon commit'inden önce).
-                        GeneratedDocumentRepository(session).record(identity.org_id, req.type)
+                        record_generated_document(session, identity.org_id, req.type, identity.user_id)
                         reserved = reserve_generation_usage(
                             session,
                             settings,

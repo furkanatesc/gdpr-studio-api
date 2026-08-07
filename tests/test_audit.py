@@ -60,3 +60,17 @@ def test_record_audit_meta_none_ok(session):
     from app.audit import record_audit
     record_audit(session, org_id=ORG, action="invite.revoked", target_type="invite", target_id="x")
     session.flush()  # patlamaz
+
+
+def test_record_generated_document_writes_user_and_audit(session):
+    from app.audit import record_generated_document
+    from app.models import AuditLog, GeneratedDocument
+
+    doc_id = record_generated_document(session, org_id=ORG, doc_type="aydinlatma", user_id=USER)
+    session.flush()
+
+    gd = session.get(GeneratedDocument, doc_id)
+    assert gd.user_id == USER and gd.doc_type == "aydinlatma"
+
+    a = session.query(AuditLog).filter_by(action="document.generated").one()
+    assert a.actor_user_id == USER and a.target_type == "document" and a.target_id == "aydinlatma"

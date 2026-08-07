@@ -320,11 +320,11 @@ class GeneratedDocumentRepository:
     def __init__(self, session: Session) -> None:
         self._s = session
 
-    def record(self, org_id: uuid.UUID, doc_type: str) -> GeneratedDocument:
-        row = GeneratedDocument(org_id=org_id, doc_type=doc_type)
+    def record(self, org_id: uuid.UUID, doc_type: str, user_id: uuid.UUID | None = None) -> uuid.UUID:
+        row = GeneratedDocument(org_id=org_id, doc_type=doc_type, user_id=user_id)
         self._s.add(row)
         self._s.flush()
-        return row
+        return row.id
 
     def doc_types_for_org(self, org_id: uuid.UUID) -> set[str]:
         rows = self._s.scalars(

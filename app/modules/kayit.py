@@ -27,6 +27,7 @@ from legal_core.rules import kayit_aligned_global_rules
 from legal_core.scoring import kayit_completeness_score
 
 from .. import idempotency
+from ..audit import record_generated_document
 from ..auth.identity import Identity, get_current_identity
 from ..auth.tenant_session import set_org_context, tenant_session
 from ..billing.quota import (
@@ -131,9 +132,9 @@ def generate(
                 elif kind == "delta":
                     if not started:
                         started = True
-                        generated_doc_id = GeneratedDocumentRepository(session).record(
-                            identity.org_id, DocType.kayit
-                        ).id
+                        generated_doc_id = record_generated_document(
+                            session, identity.org_id, DocType.kayit, identity.user_id
+                        )
                         reserved = reserve_generation_usage(
                             session, settings, identity.org_id,
                             model=settings.default_model, byok=byok,
