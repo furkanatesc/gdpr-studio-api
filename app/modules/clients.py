@@ -102,6 +102,17 @@ def _record_to_row(r) -> dict:
     return row
 
 
+def _canonicalize_import_rows(rows: list[dict]) -> list[dict]:
+    for row in rows:
+        data = row.get("data")
+        if not isinstance(data, dict):
+            continue
+        for f in _CANON_FIELDS:
+            if data.get(f):
+                data[f] = _CANON.canonicalize_list(data[f], f)
+    return rows
+
+
 def _row_to_replace_dict(row: InventoryRow, sector: str) -> dict:
     data = {f: getattr(row, f) for f in _LIST_FIELDS}
     for f in _CANON_FIELDS:
@@ -157,6 +168,7 @@ async def import_inventory(client_id: uuid.UUID, file: UploadFile,
         rows = parse_inventory_xlsx(await file.read(), sector=client.sector or "sirket")
     except InventoryImportError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
+    rows = _canonicalize_import_rows(rows)
     repo = PostgresProcessRepository(session)
     repo.replace_client(identity.org_id, client_id, rows)
     # Özet commit'ten ÖNCE okunmalı: app.current_org_id transaction-local, commit'te sıfırlanır
@@ -177,6 +189,7 @@ async def import_workbook(client_id: uuid.UUID, file: UploadFile,
         parsed = parse_workbook_xlsx(await file.read(), sector=client.sector or "sirket")
     except WorkbookImportError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
+    parsed["processes"] = _canonicalize_import_rows(parsed["processes"])
     repo = PostgresProcessRepository(session)
     repo.replace_client(identity.org_id, client_id, parsed["processes"])
     # Özet commit'ten ÖNCE okunmalı: bkz. import_inventory yorumu (#22).

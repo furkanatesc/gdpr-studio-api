@@ -143,6 +143,26 @@ def test_inventory_put_bos_kisi_grubu_reddedilir(client_fresh):
     assert r.status_code == 422, "kişi grubu zorunlu (sorgu ekseni)"
 
 
+def test_import_inventory_canonicalizes_islem(client_fresh):
+    client_fresh.post("/api/auth/bootstrap", json={"orgName": "Büro"})
+    cid = client_fresh.post("/api/clients", json={"name": "Otel", "sector": "otel"}).json()["id"]
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Envanter"
+    ws.append(["Departman", "İş Süreci", "Alt Süreç", "Veri Konusu Kişi Grubu", "İşlem"])
+    ws.append(["BT", "Log", "Trafik", "Çalışan", "Yayınlama-Alenileştirme"])
+    buf = io.BytesIO()
+    wb.save(buf)
+
+    r = client_fresh.post(f"/api/clients/{cid}/inventory/import",
+                          files={"file": ("e.xlsx", buf.getvalue(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")})
+    assert r.status_code == 200, r.text
+
+    got = client_fresh.get(f"/api/clients/{cid}/inventory").json()["rows"]
+    assert got[0]["islem"] == ["Alenileştirme"]
+
+
 def test_import_workbook_to_client(client_fresh):
     client_fresh.post("/api/auth/bootstrap", json={"orgName": "Büro"})
     cid = client_fresh.post("/api/clients", json={"name": "Otel", "sector": "otel"}).json()["id"]
