@@ -11,7 +11,7 @@ from pathlib import Path
 
 from legal_core.normalize import norm
 
-FIELDS = ("veri_turleri", "kategoriler", "kisi_gruplari")
+FIELDS = ("veri_turleri", "kategoriler", "kisi_gruplari", "amaclar", "islem")
 
 _DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "canonical"
 
