@@ -1,0 +1,4 @@
+# Shell scriptleri Linux container'da koşar (start.sh) → satır sonu DAİMA LF olmalı.
+# core.autocrlf=true (Windows) LF'i CRLF'e çevirirse `sh /srv/start.sh` "bad interpreter"/
+# komut-bulunamadı ile kırılır ve deploy patlar. Bu kural onu önler.
+*.sh text eol=lf
