@@ -9,6 +9,8 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
+from legal_core.canonical import load_canonicalizer
+
 from ..auth.identity import Identity, get_current_identity, require_role
 from ..auth.tenant_session import tenant_session
 from ..inventory_import import InventoryImportError, parse_inventory_xlsx
@@ -16,6 +18,9 @@ from ..repositories import ClientRepository, PostgresProcessRepository
 from ..workbook_import import WorkbookImportError, parse_workbook_xlsx
 
 router = APIRouter(prefix="/api/clients", tags=["clients"])
+
+_CANON = load_canonicalizer()
+_CANON_FIELDS = ("amaclar", "islem")
 
 
 class ClientCreate(BaseModel):
@@ -98,9 +103,12 @@ def _record_to_row(r) -> dict:
 
 
 def _row_to_replace_dict(row: InventoryRow, sector: str) -> dict:
+    data = {f: getattr(row, f) for f in _LIST_FIELDS}
+    for f in _CANON_FIELDS:
+        if data.get(f):
+            data[f] = _CANON.canonicalize_list(data[f], f)
     return {"sector": sector, "kisi_grubu": row.kisi_grubu, "departman": row.departman,
-            "is_sureci": row.is_sureci, "alt_surec": row.alt_surec,
-            "data": {f: getattr(row, f) for f in _LIST_FIELDS}}
+            "is_sureci": row.is_sureci, "alt_surec": row.alt_surec, "data": data}
 
 
 @router.post("", response_model=ClientOut)

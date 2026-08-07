@@ -120,6 +120,21 @@ def test_inventory_get_and_put_roundtrip(client_fresh):
     assert len(again) == 1
 
 
+def test_inventory_put_canonicalizes_islem(client_fresh):
+    client_fresh.post("/api/auth/bootstrap", json={"orgName": "Büro"})
+    cid = client_fresh.post("/api/clients", json={"name": "Otel", "sector": "otel"}).json()["id"]
+
+    rows = [
+        {"departman": "BT", "is_sureci": "Log", "alt_surec": "Trafik", "kisi_grubu": "Çalışan",
+         "islem": ["Yayınlama-Alenileştirme"]},
+    ]
+    r = client_fresh.put(f"/api/clients/{cid}/inventory", json={"rows": rows})
+    assert r.status_code == 200, r.text
+
+    got = client_fresh.get(f"/api/clients/{cid}/inventory").json()["rows"]
+    assert got[0]["islem"] == ["Alenileştirme"]
+
+
 def test_inventory_put_bos_kisi_grubu_reddedilir(client_fresh):
     client_fresh.post("/api/auth/bootstrap", json={"orgName": "Büro"})
     cid = client_fresh.post("/api/clients", json={"name": "Otel", "sector": "otel"}).json()["id"]
