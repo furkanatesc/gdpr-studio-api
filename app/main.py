@@ -12,6 +12,7 @@ from .config import get_settings
 from .db import get_engine
 from .modules import (
     accounts,
+    audit,
     aydinlatma,
     billing,
     cerez,
@@ -82,6 +83,7 @@ app.include_router(billing.router)
 app.include_router(grounding.router)
 app.include_router(generation.router)
 app.include_router(compliance.router)
+app.include_router(audit.router)
 app.include_router(processes.router)
 app.include_router(clients.router)
 app.include_router(aydinlatma.router)
