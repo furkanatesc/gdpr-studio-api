@@ -13,13 +13,15 @@ def test_parse_source_lines_skips_comments_and_blanks():
 
 
 def test_build_table_shape_and_sorted():
+    from legal_core.normalize import norm
+
     table = build_table(
         canonical_lines=["Saklama", "Elde Etme", "Aktarma"],
         synonyms={"Yayınlama-Alenileştirme": "Aktarma"},
         local_terms=["Saklama", "Yayınlama-Alenileştirme"],
     )
     assert table["canonical"] == ["Aktarma", "Elde Etme", "Saklama"]  # sıralı
-    assert table["synonyms"] == {"Yayınlama-Alenileştirme": "Aktarma"}
+    assert table["synonyms"] == {norm("Yayınlama-Alenileştirme"): "Aktarma"}
 
 
 def test_build_table_orphan_synonym_raises():

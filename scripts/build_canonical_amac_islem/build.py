@@ -53,7 +53,7 @@ def build_table(
     if unresolved:
         raise ValueError(f"çözülemeyen yerel terim(ler): {sorted(set(unresolved))}")
 
-    return {"canonical": canonical, "synonyms": dict(synonyms)}
+    return {"canonical": canonical, "synonyms": {norm(k): v for k, v in synonyms.items()}}
 
 
 _HERE = Path(__file__).resolve().parent
