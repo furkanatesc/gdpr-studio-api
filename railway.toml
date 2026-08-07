@@ -1,2 +1,4 @@
+# preDeployCommand KALDIRILDI (2026-08-07): Railway pre-deploy adımı seed'i sessizce
+# çalıştırmıyordu → prod haftalarca seed'siz/bayat grounding'le kaldı. migrate+seed artık
+# runtime container start'ında koşuyor (bkz. start.sh + Dockerfile CMD), env kanıtlı çalışır.
 [deploy]
-preDeployCommand = "alembic upgrade head && python -m app.seed"
