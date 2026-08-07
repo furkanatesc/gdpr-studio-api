@@ -27,7 +27,7 @@ from legal_core.rules import kayit_aligned_global_rules
 from legal_core.scoring import kayit_completeness_score
 
 from .. import idempotency
-from ..audit import record_generated_document
+from ..audit import record_audit
 from ..auth.identity import Identity, get_current_identity
 from ..auth.tenant_session import set_org_context, tenant_session
 from ..billing.quota import (
@@ -132,8 +132,8 @@ def generate(
                 elif kind == "delta":
                     if not started:
                         started = True
-                        generated_doc_id = record_generated_document(
-                            session, identity.org_id, DocType.kayit, identity.user_id
+                        generated_doc_id = GeneratedDocumentRepository(session).record(
+                            identity.org_id, DocType.kayit, identity.user_id
                         )
                         reserved = reserve_generation_usage(
                             session, settings, identity.org_id,
@@ -195,6 +195,12 @@ def generate(
                         idempotency.release(identity.org_id, idempotency_key)
                     else:
                         try:
+                            set_org_context(session, identity.org_id)
+                            record_audit(
+                                session, org_id=identity.org_id, action="document.generated",
+                                actor_user_id=identity.user_id, target_type="document",
+                                target_id=DocType.kayit,
+                            )
                             store_client_document(
                                 session, identity.org_id, client_id, "kayit", "İşleme Kaydı",
                                 ensure_disclaimer(full_text), kayit_completeness_score(scored_records),
