@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.modules.kayit import _canonicalize_records
 from legal_core.generate import generate_kayit_envanter_stream
 from legal_core.models import ClientProfile, ProcessRecord
 from legal_core.prompt import DISCLAIMER, ONAY_BEKLEYEN_PLACEHOLDER, build_kayit_envanter_prompt
@@ -170,3 +171,17 @@ def test_kayit_stream_grounding_cap_sifir_sinirsiz():
     )
     grounding = events[0][1]
     assert len(grounding) == 65
+
+
+def test_canonicalize_records_kanoniklestirir_amac_ve_islem():
+    """S5: eski/import edilmis ham envanter (islem='Uretme', amac ham varyant) VERBIS
+    uretiminde kanonik cikmali (karar: uretim yolu da kanoniklestirir)."""
+    rec = ProcessRecord(
+        departman="Finans", is_sureci="Muhasebe", alt_surec="Fatura", kisi_grubu="Calisan",
+        amaclar=["Finans ve Muhasebe Süreçlerinin Yürütülmesi"], islem=["Üretme"],
+    )
+
+    result = _canonicalize_records([rec])
+
+    assert result[0].islem == ["Oluşturma"]
+    assert result[0].amaclar == ["Finans Ve Muhasebe İşlerinin Yürütülmesi"]

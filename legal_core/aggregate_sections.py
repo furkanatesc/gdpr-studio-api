@@ -102,10 +102,12 @@ def aggregate_sections(
         kategoriler = _merge_dedup(*(r.kategoriler for r in group_records))
         veri_turleri = _merge_dedup(*(r.veri_turleri for r in group_records))
         kisi_gruplari = _merge_dedup([r.kisi_grubu for r in group_records])
+        amaclar = _merge_dedup(*(r.amaclar for r in group_records))
         if canonicalizer is not None:
             kategoriler = canonicalizer.canonicalize_list(kategoriler, "kategoriler")
             veri_turleri = canonicalizer.canonicalize_list(veri_turleri, "veri_turleri")
             kisi_gruplari = canonicalizer.canonicalize_list(kisi_gruplari, "kisi_gruplari")
+            amaclar = canonicalizer.canonicalize_list(amaclar, "amaclar")
 
         # S5b: baglama gore ham Ziyaretci -> Site/Ofis Ziyaretcisi (canonicalize'dan sonra).
         ziy = _resolve_ziyaretci(
@@ -123,7 +125,7 @@ def aggregate_sections(
                 kisi_gruplari=kisi_gruplari,
                 kategoriler=kategoriler,
                 veri_turleri=veri_turleri,
-                amaclar=_merge_dedup(*(r.amaclar for r in group_records)),
+                amaclar=amaclar,
                 hukuki_sebepler=_merge_dedup(*(r.hukuki_sebepler for r in group_records)),
                 saklama_sureleri=_merge_dedup(*(r.saklama_sureleri for r in group_records)),
                 aktarim=_merge_dedup(*(r.aktarim for r in group_records)),

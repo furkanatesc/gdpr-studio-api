@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from dataclasses import replace
 from datetime import date
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Response
@@ -17,8 +18,9 @@ from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 from sqlalchemy.orm import Session
 
+from legal_core.canonical import load_canonicalizer
 from legal_core.generate import generate_kayit_envanter_stream
-from legal_core.models import DocType
+from legal_core.models import DocType, ProcessRecord
 from legal_core.prompt import ensure_disclaimer
 from legal_core.provider import AnthropicProvider
 from legal_core.rules import kayit_aligned_global_rules
@@ -49,6 +51,20 @@ from .generation import _claim_idempotency, _resolve_api_key, _sse, classify_inc
 
 router = APIRouter(prefix="/api/clients", tags=["kayit"])
 _log = logging.getLogger("app.kayit")
+_CANON = load_canonicalizer()
+
+
+def _canonicalize_records(records: list[ProcessRecord]) -> list[ProcessRecord]:
+    """Eski/import edilmis ham envanterin amac/islemini VERBIS uretiminden once
+    kanoniklestirir (karar: uretim yolu da kanoniklestirir)."""
+    return [
+        replace(
+            r,
+            amaclar=_CANON.canonicalize_list(r.amaclar, "amaclar"),
+            islem=_CANON.canonicalize_list(r.islem, "islem"),
+        )
+        for r in records
+    ]
 
 
 class _Camel(BaseModel):
@@ -81,6 +97,7 @@ def generate(
             status_code=422,
             detail="Envanterde işleme kaydı için süreç bulunamadı — önce envanter girin.",
         )
+    records = _canonicalize_records(records)
 
     api_key = _resolve_api_key(x_anthropic_key)
     _claim_idempotency(identity, idempotency_key)
