@@ -19,10 +19,15 @@ from contextvars import ContextVar
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 _request_id: ContextVar[str | None] = ContextVar("request_id", default=None)
+_client_ip: ContextVar[str | None] = ContextVar("client_ip", default=None)
 
 
 def get_request_id() -> str | None:
     return _request_id.get()
+
+
+def get_client_ip() -> str | None:
+    return _client_ip.get()
 
 
 def capture_exception(exc: BaseException) -> None:
@@ -154,6 +159,13 @@ class RequestContextMiddleware:
         rid_bytes = headers.get(b"x-request-id")
         rid = rid_bytes.decode("latin-1") if rid_bytes else uuid.uuid4().hex
         token = _request_id.set(rid)
+        xff = headers.get(b"x-forwarded-for")
+        if xff:
+            ip = xff.decode("latin-1").split(",")[0].strip()
+        else:
+            client = scope.get("client")
+            ip = client[0] if client else None
+        ip_token = _client_ip.set(ip)
         start = time.perf_counter()
         status = {"code": 500}
 
@@ -189,3 +201,4 @@ class RequestContextMiddleware:
             )
         finally:
             _request_id.reset(token)
+            _client_ip.reset(ip_token)
