@@ -18,6 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
+from ..audit import record_audit
 from ..auth.identity import Identity, get_current_identity, require_role
 from ..auth.tenant_session import tenant_session
 from ..repositories import MembershipRepository
@@ -80,7 +81,13 @@ def update_member_role(
                 detail={"code": "last_admin", "message": "Son yöneticinin rolü değiştirilemez."},
             )
 
+    old_role = member.role
     repo.set_role(member, body.role)
+    record_audit(
+        session, org_id=identity.org_id, action="membership.role_changed",
+        actor_user_id=identity.user_id, target_type="membership", target_id=str(user_id),
+        meta={"from": old_role, "to": body.role},
+    )
     session.commit()
     # user bilgisini tekrar çekmemek için: e-postayı listeden değil, hafif okuma ile döneriz.
     from ..models import User
@@ -108,5 +115,9 @@ def remove_member(
         )
 
     repo.remove(member)
+    record_audit(
+        session, org_id=identity.org_id, action="membership.removed",
+        actor_user_id=identity.user_id, target_type="membership", target_id=str(user_id),
+    )
     session.commit()
     return Response(status_code=204)

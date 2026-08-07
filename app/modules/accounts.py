@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy.orm import Session
 
+from ..audit import record_audit
 from ..auth.identity import Identity, _claims_from_request, get_current_identity, require_role
 from ..auth.tenant_session import begin_provisioning, tenant_session
 from ..db import get_session
@@ -117,5 +118,10 @@ def update_org(
     if org is None or user is None:
         raise HTTPException(status_code=404, detail="Hesap verisi bulunamadı.")
     org.sector = body.sector
+    record_audit(
+        session, org_id=identity.org_id, action="org.profile_updated",
+        actor_user_id=identity.user_id, target_type="org", target_id=str(identity.org_id),
+        meta={"fields": sorted(body.model_dump(exclude_unset=True).keys())},
+    )
     session.commit()
     return _to_out(user, org, identity.role)

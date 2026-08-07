@@ -9,7 +9,7 @@ import app.config as config_module
 from app.auth.identity import Identity, get_current_identity
 from app.db import get_session
 from app.main import app
-from app.models import ComplianceRequirement, GeneratedDocument
+from app.models import AuditLog, ComplianceRequirement, GeneratedDocument
 from app.redis_client import reset_redis
 
 _ORG = uuid.UUID("00000000-0000-0000-0000-000000000002")  # _DEV_IDENTITY org
@@ -85,6 +85,18 @@ def test_put_status_updates_and_score(client, db_session):
     assert body["groupScores"]["Teknik/İdari"] == 0.0
 
 
+def test_put_status_writes_audit(client, db_session):
+    _seed_two_requirements(db_session)
+    r = client.put("/api/compliance/status/aydinlatma_x", json={"status": "yapildi", "note": "kanit"})
+    assert r.status_code == 200, r.text
+
+    row = db_session.query(AuditLog).filter_by(action="compliance.status_changed").one()
+    assert row.target_type == "compliance"
+    assert row.target_id == "aydinlatma_x"
+    assert row.meta == {"status": "yapildi"}
+    assert row.org_id == _ORG
+
+
 def test_uygulanmaz_excluded_from_denominator(client, db_session):
     _seed_two_requirements(db_session)
     client.put("/api/compliance/status/aydinlatma_x", json={"status": "yapildi"})
@@ -116,6 +128,7 @@ def test_invalid_key_404(client, db_session):
     _seed_two_requirements(db_session)
     r = client.put("/api/compliance/status/yok_boyle", json={"status": "yapildi"})
     assert r.status_code == 404
+    assert db_session.query(AuditLog).count() == 0
 
 
 def test_invalid_status_422(client, db_session):

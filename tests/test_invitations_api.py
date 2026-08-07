@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from app.models import AuditLog
+
 
 def test_admin_creates_and_lists_invitation(client_fresh):
     client_fresh.post("/api/auth/bootstrap", json={"orgName": "Acme"})
@@ -10,6 +12,47 @@ def test_admin_creates_and_lists_invitation(client_fresh):
     assert r.json()["status"] == "pending"
     lst = client_fresh.get("/api/invitations").json()
     assert len(lst) == 1 and lst[0]["email"] == "yeni@b.com"
+
+
+def test_create_invitation_writes_audit_without_email(client_fresh, db_session):
+    client_fresh.post("/api/auth/bootstrap", json={"orgName": "Acme"})
+    inv = client_fresh.post("/api/invitations", json={"email": "yeni@b.com", "role": "avukat"}).json()
+
+    row = db_session.query(AuditLog).filter_by(action="invite.sent").one()
+    assert row.target_type == "invite"
+    assert row.target_id == inv["id"]
+    assert row.meta == {"role": "avukat"}
+    assert "yeni@b.com" not in (row.meta or {}).values()
+
+
+def test_create_invitation_invalid_role_writes_no_audit(client_fresh, db_session):
+    client_fresh.post("/api/auth/bootstrap", json={"orgName": "Acme"})
+    r = client_fresh.post("/api/invitations", json={"email": "yeni@b.com", "role": "hacker"})
+    assert r.status_code == 422, r.text
+    assert db_session.query(AuditLog).count() == 0
+
+
+def test_revoke_invitation_writes_audit(client_fresh, db_session):
+    client_fresh.post("/api/auth/bootstrap", json={"orgName": "Acme"})
+    inv = client_fresh.post("/api/invitations", json={"email": "yeni@b.com", "role": "avukat"}).json()
+    r = client_fresh.delete(f"/api/invitations/{inv['id']}")
+    assert r.status_code == 204, r.text
+
+    row = db_session.query(AuditLog).filter_by(action="invite.revoked").one()
+    assert row.target_type == "invite"
+    assert row.target_id == inv["id"]
+
+
+def test_accept_invitation_writes_audit(client_fresh, accept_as, db_session):
+    client_fresh.post("/api/auth/bootstrap", json={"orgName": "Acme"})
+    inv = client_fresh.post("/api/invitations", json={"email": "yeni@b.com", "role": "avukat"}).json()
+    out = accept_as(sub="sb-2", email="yeni@b.com", token=inv["token"])
+    assert out.status_code == 200, out.text
+
+    row = db_session.query(AuditLog).filter_by(action="invite.accepted").one()
+    assert row.target_type == "invite"
+    assert row.target_id == inv["id"]
+    assert str(row.actor_user_id) == out.json()["userId"]
 
 
 def test_accept_invitation_creates_membership(client_fresh, accept_as):
