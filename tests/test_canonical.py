@@ -53,3 +53,39 @@ def test_load_canonicalizer_gercek_dosya():
     real = load_canonicalizer()
     assert real.canonicalize("ıp adresi", "veri_turleri") == "IP adresi"
     assert real.canonicalize("IP ADRESI", "veri_turleri") == "IP adresi"
+
+
+def test_canonicalize_amac_islem_exact_synonym_ham():
+    canon = load_canonicalizer()
+    # exact (norm-eşleşme)
+    assert canon.canonicalize("saklama", "islem") == "Saklama"
+    # synonym varyantı -> kanonik (küratörlü)
+    assert canon.canonicalize("Yayınlama-Alenileştirme", "islem") == "Alenileştirme"
+    # uydurma yok: bilinmeyen HAM kalır
+    assert canon.canonicalize("Zıpzıp İşlemi", "islem") == "Zıpzıp İşlemi"
+
+
+def test_seed_islem_variants_all_resolve():
+    canon = load_canonicalizer()
+    variants = [
+        "Elde Etme", "Saklama", "Kullanma", "Doğrulama", "Oluşturma",
+        "Üretme", "Aktarma", "Alenileştirme", "Yayınlama-Alenileştirme",
+        "Aktarma/ Alenileştirme",
+    ]
+    for v in variants:
+        out = canon.canonicalize(v, "islem")
+        assert out in set(canon._norm_maps["islem"].values()), f"{v!r} -> {out!r} kanonik değil"
+
+
+def test_seed_amac_terms_all_resolve():
+    import json
+    from pathlib import Path
+
+    canon = load_canonicalizer()
+    processes = json.loads(
+        (Path(__file__).resolve().parent.parent / "data" / "processes.json").read_text("utf-8")
+    )
+    seed_amac = {a for r in processes for a in (r.get("data", {}).get("amaclar") or [])}
+    canonical_amac = set(canon._norm_maps["amaclar"].values())
+    for a in seed_amac:
+        assert canon.canonicalize(a, "amaclar") in canonical_amac, f"{a!r} kanoniğe çözülmedi"

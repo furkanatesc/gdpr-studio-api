@@ -1,0 +1,16 @@
+{
+  "canonical": [
+    "Aktarma",
+    "Alenileştirme",
+    "Doğrulama",
+    "Elde Etme",
+    "Kullanma",
+    "Oluşturma",
+    "Saklama"
+  ],
+  "synonyms": {
+    "üretme": "Oluşturma",
+    "yayinlama-alenileştirme": "Alenileştirme",
+    "aktarma/ alenileştirme": "Aktarma"
+  }
+}

@@ -9,6 +9,8 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
+from legal_core.canonical import load_canonicalizer
+
 from ..auth.identity import Identity, get_current_identity, require_role
 from ..auth.tenant_session import tenant_session
 from ..inventory_import import InventoryImportError, parse_inventory_xlsx
@@ -16,6 +18,9 @@ from ..repositories import ClientRepository, PostgresProcessRepository
 from ..workbook_import import WorkbookImportError, parse_workbook_xlsx
 
 router = APIRouter(prefix="/api/clients", tags=["clients"])
+
+_CANON = load_canonicalizer()
+_CANON_FIELDS = ("amaclar", "islem")
 
 
 class ClientCreate(BaseModel):
@@ -97,10 +102,24 @@ def _record_to_row(r) -> dict:
     return row
 
 
+def _canonicalize_import_rows(rows: list[dict]) -> list[dict]:
+    for row in rows:
+        data = row.get("data")
+        if not isinstance(data, dict):
+            continue
+        for f in _CANON_FIELDS:
+            if data.get(f):
+                data[f] = _CANON.canonicalize_list(data[f], f)
+    return rows
+
+
 def _row_to_replace_dict(row: InventoryRow, sector: str) -> dict:
+    data = {f: getattr(row, f) for f in _LIST_FIELDS}
+    for f in _CANON_FIELDS:
+        if data.get(f):
+            data[f] = _CANON.canonicalize_list(data[f], f)
     return {"sector": sector, "kisi_grubu": row.kisi_grubu, "departman": row.departman,
-            "is_sureci": row.is_sureci, "alt_surec": row.alt_surec,
-            "data": {f: getattr(row, f) for f in _LIST_FIELDS}}
+            "is_sureci": row.is_sureci, "alt_surec": row.alt_surec, "data": data}
 
 
 @router.post("", response_model=ClientOut)
@@ -149,6 +168,7 @@ async def import_inventory(client_id: uuid.UUID, file: UploadFile,
         rows = parse_inventory_xlsx(await file.read(), sector=client.sector or "sirket")
     except InventoryImportError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
+    rows = _canonicalize_import_rows(rows)
     repo = PostgresProcessRepository(session)
     repo.replace_client(identity.org_id, client_id, rows)
     # Özet commit'ten ÖNCE okunmalı: app.current_org_id transaction-local, commit'te sıfırlanır
@@ -169,6 +189,7 @@ async def import_workbook(client_id: uuid.UUID, file: UploadFile,
         parsed = parse_workbook_xlsx(await file.read(), sector=client.sector or "sirket")
     except WorkbookImportError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
+    parsed["processes"] = _canonicalize_import_rows(parsed["processes"])
     repo = PostgresProcessRepository(session)
     repo.replace_client(identity.org_id, client_id, parsed["processes"])
     # Özet commit'ten ÖNCE okunmalı: bkz. import_inventory yorumu (#22).

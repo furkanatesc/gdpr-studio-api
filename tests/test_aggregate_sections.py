@@ -3,6 +3,7 @@ import unicodedata
 from legal_core.aggregate_sections import Section, aggregate_sections
 from legal_core.canonical import Canonicalizer
 from legal_core.models import ProcessRecord
+from legal_core.normalize import norm
 
 
 def _record(**overrides):
@@ -266,6 +267,13 @@ def _canonicalizer():
         {
             "veri_turleri": {"canonical": ["Ad-soyad"], "synonyms": {}},
             "kategoriler": {"canonical": ["Kimlik Bilgisi"], "synonyms": {}},
+            "amaclar": {
+                "canonical": ["İş Faaliyetlerinin Yürütülmesi / Denetimi"],
+                "synonyms": {
+                    norm("İş Faaliyetlerinin Yürütülmesi / Denetimi Amacıyla"):
+                        "İş Faaliyetlerinin Yürütülmesi / Denetimi",
+                },
+            },
         }
     )
 
@@ -322,3 +330,17 @@ def test_aggregate_sections_with_canonicalizer_unknown_value_stays_raw():
     result = aggregate_sections(records, ["Calisan"], canonicalizer=_canonicalizer())
 
     assert result[0].veri_turleri == ["Bilinmeyen Deger XYZ"]
+
+
+def test_aggregate_sections_canonicalizes_amaclar():
+    records = [
+        _record(
+            is_sureci="Ise Giris Islemleri",
+            kisi_grubu="Calisan",
+            amaclar=["İş Faaliyetlerinin Yürütülmesi / Denetimi Amacıyla"],
+        ),
+    ]
+
+    result = aggregate_sections(records, ["Calisan"], canonicalizer=_canonicalizer())
+
+    assert result[0].amaclar == ["İş Faaliyetlerinin Yürütülmesi / Denetimi"]
