@@ -1,0 +1,9 @@
+# Kaynak: Grounding seed'in (data/processes.json) distinct işleme fiilleri, baz forma indirgenmiş
+# Karar 2026-08-07: resmi kapalı işlem listesi yok; kanonik = seed baz fiilleri (m.3 çapraz-not)
+Elde Etme
+Saklama
+Kullanma
+Doğrulama
+Oluşturma
+Aktarma
+Alenileştirme
