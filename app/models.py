@@ -234,6 +234,9 @@ class GeneratedDocument(Base):
         Uuid(as_uuid=True), ForeignKey("organizations.id"), nullable=False, index=True
     )
     doc_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -360,3 +363,26 @@ class Measure(Base):
     __tablename__ = "measures"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     tedbir: Mapped[str] = mapped_column(Text, nullable=False)
+
+
+class AuditLog(Base):
+    """Append-only denetim izi (KVKK m.12). UPDATE/DELETE RLS+REVOKE ile reddedilir.
+    Veri minimizasyonu: içerik/e-posta yazılmaz; meta küçük PII-olmayan bağlam."""
+
+    __tablename__ = "audit_logs"
+    __table_args__ = (Index("ix_audit_logs_org_created", "org_id", "created_at"),)
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("organizations.id"), nullable=False, index=True
+    )
+    actor_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    action: Mapped[str] = mapped_column(String(64), nullable=False)
+    target_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    target_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    ip: Mapped[str | None] = mapped_column(String(45), nullable=True)
+    request_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    meta: Mapped[dict | None] = mapped_column(_JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
