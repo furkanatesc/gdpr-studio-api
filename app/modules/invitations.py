@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict, EmailStr
 from sqlalchemy.orm import Session
 
+from ..audit import record_audit
 from ..auth.identity import Identity, _claims_from_request, require_role
 from ..auth.tenant_session import begin_provisioning, tenant_session
 from ..config import get_settings
@@ -54,6 +55,11 @@ def create_invitation(
     exp = datetime.now(UTC) + timedelta(hours=settings.invite_ttl_hours)
     invs = InvitationRepository(session)
     inv = invs.create(identity.org_id, str(body.email), body.role, token, exp, identity.user_id)
+    record_audit(
+        session, org_id=identity.org_id, action="invite.sent",
+        actor_user_id=identity.user_id, target_type="invite", target_id=str(inv.id),
+        meta={"role": body.role},
+    )
     session.commit()
 
     link = f"{settings.app_base_url.rstrip('/')}/davet/{token}"
@@ -88,6 +94,10 @@ def revoke_invitation(
     ok = InvitationRepository(session).revoke(inv_id, identity.org_id)
     if not ok:
         raise HTTPException(status_code=404, detail="Davet bulunamadı veya zaten işlenmiş.")
+    record_audit(
+        session, org_id=identity.org_id, action="invite.revoked",
+        actor_user_id=identity.user_id, target_type="invite", target_id=str(inv_id),
+    )
     session.commit()
     return Response(status_code=204)
 
@@ -124,6 +134,10 @@ def accept_invitation(
     invs.mark_accepted(inv)
     # org okuması commit'ten ÖNCE: commit'te bypass GUC sıfırlanır, sonrası fail-closed olur.
     org = session.get(Organization, inv.org_id)
+    record_audit(
+        session, org_id=inv.org_id, action="invite.accepted",
+        actor_user_id=user.id, target_type="invite", target_id=str(inv.id),
+    )
     session.commit()
 
     return {

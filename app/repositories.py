@@ -6,12 +6,13 @@ import unicodedata
 import uuid
 from datetime import datetime
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.orm import Session
 
 from legal_core.models import ProcessRecord
 
 from .models import (
+    AuditLog,
     BusinessRule,
     Category,
     Client,
@@ -320,11 +321,11 @@ class GeneratedDocumentRepository:
     def __init__(self, session: Session) -> None:
         self._s = session
 
-    def record(self, org_id: uuid.UUID, doc_type: str) -> GeneratedDocument:
-        row = GeneratedDocument(org_id=org_id, doc_type=doc_type)
+    def record(self, org_id: uuid.UUID, doc_type: str, user_id: uuid.UUID | None = None) -> uuid.UUID:
+        row = GeneratedDocument(org_id=org_id, doc_type=doc_type, user_id=user_id)
         self._s.add(row)
         self._s.flush()
-        return row
+        return row.id
 
     def doc_types_for_org(self, org_id: uuid.UUID) -> set[str]:
         rows = self._s.scalars(
@@ -536,3 +537,40 @@ class ClientDocumentVersionRepository:
             if doc_id not in latest:
                 latest[doc_id] = (ver, pub)
         return latest
+
+
+class AuditLogRepository:
+    def __init__(self, session: Session) -> None:
+        self._s = session
+
+    def list(
+        self,
+        org_id: uuid.UUID,
+        *,
+        limit: int = 50,
+        before: tuple[datetime, uuid.UUID] | None = None,
+        action: str | None = None,
+    ) -> list[tuple[AuditLog, str | None]]:
+        """AuditLog LEFT JOIN User(actor_user_id) -> (AuditLog, actor_email|None).
+
+        created_at DESC, id DESC; LIMIT limit+1 (çağıran +1'i sonraki-sayfa sinyali
+        olarak kullanır). org_id filtresi uygulama katmanında da uygulanır (RLS zaten
+        org'a daraltır; savunma katmanı).
+        """
+        stmt = (
+            select(AuditLog, User.email)
+            .outerjoin(User, User.id == AuditLog.actor_user_id)
+            .where(AuditLog.org_id == org_id)
+        )
+        if action is not None:
+            stmt = stmt.where(AuditLog.action == action)
+        if before is not None:
+            before_created_at, before_id = before
+            stmt = stmt.where(
+                or_(
+                    AuditLog.created_at < before_created_at,
+                    and_(AuditLog.created_at == before_created_at, AuditLog.id < before_id),
+                )
+            )
+        stmt = stmt.order_by(AuditLog.created_at.desc(), AuditLog.id.desc()).limit(limit + 1)
+        return [(log, email) for log, email in self._s.execute(stmt).all()]

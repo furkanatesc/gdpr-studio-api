@@ -23,6 +23,7 @@ from legal_core.models import DocType
 from legal_core.provider import AnthropicProvider
 
 from .. import idempotency
+from ..audit import record_audit
 from ..auth.identity import Identity, get_current_identity
 from ..auth.tenant_session import set_org_context, tenant_session
 from ..billing.quota import (
@@ -191,8 +192,8 @@ def generate(
                     if not started:
                         started = True
                         generated_doc_id = GeneratedDocumentRepository(session).record(
-                            identity.org_id, DocType.ihlal
-                        ).id
+                            identity.org_id, DocType.ihlal, identity.user_id
+                        )
                         reserved = reserve_generation_usage(
                             session, settings, identity.org_id,
                             model=settings.default_model, byok=byok,
@@ -248,7 +249,21 @@ def generate(
                                 identity.org_id, type(discard_err).__name__,
                             )
                         idempotency.release(identity.org_id, idempotency_key)
-                    # Başarı dalı: KALICILIK YOK — ClientDocument'a yazılmaz.
+                    else:
+                        # Başarı dalı: KALICILIK YOK — ClientDocument'a yazılmaz; yalniz audit.
+                        try:
+                            set_org_context(session, identity.org_id)
+                            record_audit(
+                                session, org_id=identity.org_id, action="document.generated",
+                                actor_user_id=identity.user_id, target_type="document",
+                                target_id=DocType.ihlal,
+                            )
+                            session.commit()
+                        except Exception as audit_err:  # best-effort; basariyi bozma
+                            _log.error(
+                                "document.generated audit basarisiz (org=%s): %s",
+                                identity.org_id, type(audit_err).__name__,
+                            )
         except Exception as e:
             if not started:
                 idempotency.release(identity.org_id, idempotency_key)

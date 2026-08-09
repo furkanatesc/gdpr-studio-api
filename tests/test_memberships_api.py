@@ -10,6 +10,7 @@ import uuid
 
 from app.auth.identity import Identity, get_current_identity
 from app.main import app
+from app.models import AuditLog
 
 
 def _two_member_org(client_fresh, accept_as):
@@ -39,6 +40,17 @@ def test_admin_changes_member_role(client_fresh, accept_as):
     assert r.json()["role"] == "yonetici"
 
 
+def test_admin_changes_member_role_writes_audit(client_fresh, accept_as, db_session):
+    avukat_id = _two_member_org(client_fresh, accept_as)
+    r = client_fresh.patch(f"/api/memberships/{avukat_id}", json={"role": "yonetici"})
+    assert r.status_code == 200, r.text
+
+    row = db_session.query(AuditLog).filter_by(action="membership.role_changed").one()
+    assert row.target_type == "membership"
+    assert row.target_id == avukat_id
+    assert row.meta == {"from": "avukat", "to": "yonetici"}
+
+
 def test_cannot_demote_last_admin(client_fresh, accept_as):
     _two_member_org(client_fresh, accept_as)
     # dev-user tek yönetici; kendini avukata düşürmeye çalış → 409 last_admin
@@ -57,6 +69,16 @@ def test_admin_removes_member(client_fresh, accept_as):
     assert members[0]["email"] == "dev@kvkkyonetim.local"
 
 
+def test_admin_removes_member_writes_audit(client_fresh, accept_as, db_session):
+    avukat_id = _two_member_org(client_fresh, accept_as)
+    r = client_fresh.delete(f"/api/memberships/{avukat_id}")
+    assert r.status_code == 204, r.text
+
+    row = db_session.query(AuditLog).filter_by(action="membership.removed").one()
+    assert row.target_type == "membership"
+    assert row.target_id == avukat_id
+
+
 def test_cannot_remove_last_admin(client_fresh, accept_as):
     _two_member_org(client_fresh, accept_as)
     me = next(m for m in client_fresh.get("/api/memberships").json() if m["isSelf"])
@@ -69,6 +91,14 @@ def test_remove_unknown_member_404(client_fresh, accept_as):
     _two_member_org(client_fresh, accept_as)
     r = client_fresh.delete(f"/api/memberships/{uuid.uuid4()}")
     assert r.status_code == 404, r.text
+
+
+def test_patch_unknown_member_404_writes_no_audit(client_fresh, accept_as, db_session):
+    _two_member_org(client_fresh, accept_as)
+    before = db_session.query(AuditLog).count()
+    r = client_fresh.patch(f"/api/memberships/{uuid.uuid4()}", json={"role": "yonetici"})
+    assert r.status_code == 404, r.text
+    assert db_session.query(AuditLog).count() == before
 
 
 def test_invalid_role_rejected(client_fresh, accept_as):

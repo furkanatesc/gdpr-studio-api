@@ -248,6 +248,23 @@ def test_generate_olay_sirasi_ve_uyum_kaydi(db_session, monkeypatch):
     assert str(rows[0].org_id) == str(IDENT.org_id)
 
 
+def test_generate_basaride_document_generated_audit_yazilir(db_session, monkeypatch):
+    """Basarili uretimde (kesme/reddedilme yok) document.generated audit tam olarak 1 kez yazilir."""
+    from app.models import AuditLog
+
+    _managed_billing_settings()
+    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream", _fake_stream)
+    cid = _make_client(db_session)
+
+    resp = _generate(db_session, cid)
+    _consume(resp)
+
+    rows = db_session.query(AuditLog).filter_by(action="document.generated").all()
+    assert len(rows) == 1
+    assert rows[0].actor_user_id == IDENT.user_id
+    assert rows[0].target_type == "document" and rows[0].target_id == "aydinlatma"
+
+
 def _fake_stream_truncated(*a, **k):
     yield "grounding", []
     yield "delta", "Kesik aydinlatma metni..."
@@ -311,6 +328,23 @@ def test_generate_max_tokensta_uyum_kaydi_geri_alinir(db_session, monkeypatch):
 
     rows = db_session.query(GeneratedDocument).filter_by(doc_type="aydinlatma").all()
     assert len(rows) == 1  # yalniz onceki gecerli kayit kaldi
+
+
+def test_generate_max_tokensta_document_generated_audit_yazilmaz(db_session, monkeypatch):
+    """Kritik regresyon: kesik/reddedilen uretimde document.generated audit YAZILMAMALI —
+    belge fiilen teslim edilmedi (discard yolu). record_generated_document ilk delta'da
+    (sonuc belli olmadan) cagrilirsa bu ihlal edilir; audit ancak basari dalinda yazilmali."""
+    from app.models import AuditLog
+
+    _managed_billing_settings()
+    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream", _fake_stream_truncated)
+    cid = _make_client(db_session)
+
+    resp = _generate(db_session, cid)
+    _consume(resp)
+
+    rows = db_session.query(AuditLog).filter_by(action="document.generated").all()
+    assert len(rows) == 0
 
 
 def test_generate_max_tokensta_belge_sayaci_geri_alinir(db_session, monkeypatch):

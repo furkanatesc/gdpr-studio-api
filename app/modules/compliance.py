@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from legal_core.models import _CamelModel
 
+from ..audit import record_audit
 from ..auth.identity import Identity, get_current_identity
 from ..auth.tenant_session import tenant_session
 from ..repositories import ComplianceRepository, GeneratedDocumentRepository
@@ -132,6 +133,11 @@ def put_status(
     if req is None:
         raise HTTPException(status_code=404, detail="Gereksinim bulunamadı.")
     row = repo.upsert_status(identity.org_id, key, body.status, "user", body.note, identity.user_id)
+    record_audit(
+        session, org_id=identity.org_id, action="compliance.status_changed",
+        actor_user_id=identity.user_id, target_type="compliance", target_id=key,
+        meta={"status": body.status},
+    )
     session.commit()  # durability: get_session commit etmez → uç kendi işlemini kapatır
     doc_types = GeneratedDocumentRepository(session).doc_types_for_org(identity.org_id)
     return _build_item(req, row, doc_types)

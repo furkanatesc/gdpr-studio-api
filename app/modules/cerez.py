@@ -25,6 +25,7 @@ from legal_core.provider import AnthropicProvider
 from legal_core.scoring import cerez_completeness_score
 
 from .. import idempotency
+from ..audit import record_audit
 from ..auth.identity import Identity, get_current_identity
 from ..auth.tenant_session import set_org_context, tenant_session
 from ..billing.quota import (
@@ -136,8 +137,8 @@ def generate(
                     if not started:
                         started = True
                         generated_doc_id = GeneratedDocumentRepository(session).record(
-                            identity.org_id, DocType.cerez
-                        ).id
+                            identity.org_id, DocType.cerez, identity.user_id
+                        )
                         reserved = reserve_generation_usage(
                             session, settings, identity.org_id,
                             model=settings.default_model, byok=byok,
@@ -197,6 +198,12 @@ def generate(
                         idempotency.release(identity.org_id, idempotency_key)
                     else:
                         try:
+                            set_org_context(session, identity.org_id)
+                            record_audit(
+                                session, org_id=identity.org_id, action="document.generated",
+                                actor_user_id=identity.user_id, target_type="document",
+                                target_id=DocType.cerez,
+                            )
                             store_client_document(
                                 session, identity.org_id, client_id, "cerez",
                                 (body.site or "Genel")[:255], ensure_disclaimer(full_text),

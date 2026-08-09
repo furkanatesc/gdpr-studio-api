@@ -29,6 +29,7 @@ from legal_core.provider import AnthropicProvider
 from legal_core.scoring import completeness_score
 
 from .. import idempotency
+from ..audit import record_audit
 from ..auth.identity import Identity, get_current_identity
 from ..auth.tenant_session import set_org_context, tenant_session
 from ..aydinlatma_enrich import EnrichedSection, enrich_sections
@@ -276,8 +277,8 @@ def generate(
                         started = True
                         # Uyum sinyali (aynı işlemde, rezervasyon commit'inden önce).
                         generated_doc_id = GeneratedDocumentRepository(session).record(
-                            identity.org_id, DocType.aydinlatma
-                        ).id
+                            identity.org_id, DocType.aydinlatma, identity.user_id
+                        )
                         reserved = reserve_generation_usage(
                             session,
                             settings,
@@ -345,6 +346,12 @@ def generate(
                         idempotency.release(identity.org_id, idempotency_key)
                     else:
                         try:
+                            set_org_context(session, identity.org_id)
+                            record_audit(
+                                session, org_id=identity.org_id, action="document.generated",
+                                actor_user_id=identity.user_id, target_type="document",
+                                target_id=DocType.aydinlatma,
+                            )
                             _store_generated_document(
                                 session, identity.org_id, client_id, sections, ensure_disclaimer(full_text)
                             )
