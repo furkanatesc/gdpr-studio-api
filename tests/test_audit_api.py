@@ -133,3 +133,8 @@ def test_audit_action_filter(client, seeded_audit_rows):
     items = r.json()["items"]
     assert items
     assert all(it["action"] == "membership.role_changed" for it in items)
+
+
+@pytest.mark.parametrize("bad_limit", [0, -1, 201])
+def test_audit_rejects_out_of_range_limit(client, bad_limit):
+    assert client.get("/api/audit", params={"limit": bad_limit}).status_code == 422

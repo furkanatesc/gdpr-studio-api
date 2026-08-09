@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 from sqlalchemy.orm import Session
@@ -50,7 +50,7 @@ def _parse_cursor(cursor: str) -> tuple[datetime, uuid.UUID]:
 
 @router.get("", response_model=AuditPage)
 def list_audit(
-    limit: int = 50,
+    limit: int = Query(50, ge=1, le=_MAX_LIMIT),
     before: str | None = None,
     action: str | None = None,
     identity: Identity = Depends(require_role("yonetici")),
