@@ -59,7 +59,9 @@ class StatusUpdate(BaseModel):
     # Tanımsız (çöp) alan sessizce yutulmaz → 422.
     model_config = ConfigDict(extra="forbid")
 
-    status: Literal["yapildi", "eksik", "uygulanmaz"]
+    # status opsiyonel: yalnız not (kanıt/gerekçe) kaydetmek statüyü değiştirmemeli.
+    # null → gereksinim "değerlendirilmedi" kalır, skora sayılmaz (P0-1 sessiz 'eksik' sızıntısı giderildi).
+    status: Literal["yapildi", "eksik", "uygulanmaz"] | None = None
     note: str | None = None
 
 

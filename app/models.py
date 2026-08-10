@@ -212,7 +212,9 @@ class ComplianceStatus(Base):
         Uuid(as_uuid=True), ForeignKey("organizations.id"), nullable=False, index=True
     )
     requirement_key: Mapped[str] = mapped_column(String(100), nullable=False)
-    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    # nullable: not (kanıt/gerekçe) statü seçilmeden kaydedilebilir → null statü skora sayılmaz
+    # (satır-yok ile aynı). CHECK 'status IN (...)' NULL'ı geçirir (bilinmeyen = false değil).
+    status: Mapped[str | None] = mapped_column(String(20), nullable=True)
     source: Mapped[str] = mapped_column(String(20), nullable=False, default="user")
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     updated_by: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id"), nullable=True)

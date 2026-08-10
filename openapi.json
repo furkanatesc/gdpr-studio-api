@@ -2525,18 +2525,22 @@
             "title": "Note"
           },
           "status": {
-            "enum": [
-              "yapildi",
-              "eksik",
-              "uygulanmaz"
+            "anyOf": [
+              {
+                "enum": [
+                  "yapildi",
+                  "eksik",
+                  "uygulanmaz"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
             ],
-            "title": "Status",
-            "type": "string"
+            "title": "Status"
           }
         },
-        "required": [
-          "status"
-        ],
         "title": "StatusUpdate",
         "type": "object"
       },

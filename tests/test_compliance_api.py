@@ -85,6 +85,28 @@ def test_put_status_updates_and_score(client, db_session):
     assert body["groupScores"]["Teknik/İdari"] == 0.0
 
 
+def test_put_note_only_keeps_status_null(client, db_session):
+    """P0-1: yalnız not (kanıt/gerekçe) kaydetmek gereksinimi sessizce 'eksik' YAPMAMALI.
+    status null gönderilince null kalır (değerlendirilmedi) — yanlış 'uyumsuz' kaydı oluşmaz."""
+    _seed_two_requirements(db_session)
+    r = client.put("/api/compliance/status/aydinlatma_x", json={"note": "sonra bakılacak"})
+    assert r.status_code == 200, r.text
+    assert r.json()["status"] is None
+    assert r.json()["note"] == "sonra bakılacak"
+
+    items = {i["key"]: i for g in client.get("/api/compliance/checklist").json()["groups"] for i in g["items"]}
+    assert items["aydinlatma_x"]["status"] is None  # 'eksik'e kaymadı
+    assert items["aydinlatma_x"]["note"] == "sonra bakılacak"
+
+
+def test_put_status_omitted_defaults_null(client, db_session):
+    """status alanı hiç gönderilmese de (opsiyonel) 422 değil, null statü kabul edilir."""
+    _seed_two_requirements(db_session)
+    r = client.put("/api/compliance/status/aydinlatma_x", json={})
+    assert r.status_code == 200, r.text
+    assert r.json()["status"] is None
+
+
 def test_put_status_writes_audit(client, db_session):
     _seed_two_requirements(db_session)
     r = client.put("/api/compliance/status/aydinlatma_x", json={"status": "yapildi", "note": "kanit"})
