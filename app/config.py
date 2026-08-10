@@ -68,6 +68,13 @@ class Settings(BaseSettings):
     supabase_project_url: str = ""  # boşsa + dev → dev bypass devreye girer
     supabase_jwt_aud: str = "authenticated"
     auth_dev_bypass: bool = False  # True → JWT doğrulamadan dev kimliği
+    # DSAR purge (H3-2 Part 2): Supabase Admin API auth silme (boşsa atlanır + log).
+    supabase_service_role_key: str = ""
+
+    # --- DSAR purge (H3-2 Part 2) ---
+    dsar_purge_grace_days: int = 14  # soft-delete'ten sonra kalıcı silme bekleme süresi
+    dsar_purge_on_startup: bool = False  # startup taraması (varsayılan kapalı — korumalı uçtan tetikle)
+    internal_api_token: str = ""  # /api/internal/* korumalı uç token'ı (boşsa uç 403)
 
     # --- Davet ---
     invite_secret: str = "dev-invite-secret-change-me"  # itsdangerous imza anahtarı
