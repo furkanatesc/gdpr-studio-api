@@ -5648,6 +5648,29 @@
         ]
       }
     },
+    "/api/internal/purge": {
+      "post": {
+        "operationId": "run_purge_api_internal_purge_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Run Purge Api Internal Purge Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Run Purge",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/api/inventory/survey-schema": {
       "get": {
         "operationId": "survey_schema_api_inventory_survey_schema_get",

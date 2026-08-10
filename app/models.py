@@ -381,8 +381,10 @@ class AuditLog(Base):
     __table_args__ = (Index("ix_audit_logs_org_created", "org_id", "created_at"),)
 
     id: Mapped[uuid.UUID] = _uuid_pk()
+    # ondelete CASCADE: migration 0014 ile birebir (DSAR purge org-satırı silince audit gider;
+    # append-only REVOKE'u FK-aksiyonu bypass eder). Model↔migration paritesi.
     org_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid(as_uuid=True), ForeignKey("organizations.id"), nullable=False, index=True
+        Uuid(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
     )
     actor_user_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True

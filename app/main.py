@@ -25,6 +25,7 @@ from .modules import (
     grounding,
     health,
     ihlal,
+    internal,
     inventory,
     inventory_suggestions,
     invitations,
@@ -54,7 +55,29 @@ async def lifespan(app: FastAPI):
     ve uygulama başlamaz (fail-closed, fail-fast). Dev/test/sqlite'ta no-op.
     """
     verify_rls_enforcement(get_engine(), settings)
+    if settings.dsar_purge_on_startup:
+        _run_startup_purge()
     yield
+
+
+def _run_startup_purge() -> None:
+    """DSAR gecikmeli purge startup taraması (flag-gated). Hata app başlatmayı bloke etmez."""
+    import logging
+
+    from sqlalchemy.orm import Session
+
+    from .dsar_purge import purge_expired_orgs
+    from .supabase_admin import delete_supabase_user
+
+    try:
+        with Session(bind=get_engine()) as session:
+            purge_expired_orgs(
+                session,
+                grace_days=settings.dsar_purge_grace_days,
+                supabase_delete=delete_supabase_user,
+            )
+    except Exception:
+        logging.getLogger("app.dsar").exception("startup purge taraması başarısız")
 
 
 app = FastAPI(
@@ -97,6 +120,7 @@ app.include_router(dpa.router)
 app.include_router(ihlal.router)
 app.include_router(processors.router)
 app.include_router(dsar.router)
+app.include_router(internal.router)
 
 
 @app.get("/")
