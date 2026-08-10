@@ -65,12 +65,18 @@ def _uuid_pk() -> Mapped[uuid.UUID]:
 
 class Organization(Base):
     __tablename__ = "organizations"
+    __table_args__ = (
+        CheckConstraint("status IN ('active', 'deleting')", name="ck_organizations_status"),
+    )
     id: Mapped[uuid.UUID] = _uuid_pk()
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     # Süreç şablonu seçimi için (grounding ekseni). None → süreç grounding'i devre dışı,
     # kategori fallback'i çalışır. Kapalı liste: app.sectors.SECTORS.
     sector: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    # DSAR (H3-2): soft-delete. 'deleting' → erişim fail-closed; deleted_at + 14 gün = purge (Part 2).
+    status: Mapped[str] = mapped_column(String(20), nullable=False, server_default="active")
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class Client(Base):

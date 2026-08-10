@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from ..config import get_settings
 from ..db import get_session
+from ..models import Organization
 from ..repositories import AccountRepository
 from .jwt import AuthClaims, verify_token
 
@@ -56,12 +57,16 @@ def get_current_identity(
         begin_provisioning(session)
         user = accounts.get_user_by_supabase_id(claims.sub)
         membership = accounts.get_membership_for_user(user.id) if user is not None else None
+        org = session.get(Organization, membership.org_id) if membership is not None else None
     finally:
         end_provisioning(session)
     if user is None:
         raise HTTPException(status_code=403, detail="Önce kurum oluşturun (kayıt tamamlanmamış).")
     if membership is None:
         raise HTTPException(status_code=403, detail="Bir kuruma ait değilsiniz.")
+    # DSAR (H3-2) fail-closed: hesap kapatılma sürecindeyse hiçbir authed uca erişilemez.
+    if org is not None and org.status == "deleting":
+        raise HTTPException(status_code=403, detail="Bu hesap kapatılma sürecinde; erişim durduruldu.")
     return Identity(user_id=user.id, org_id=membership.org_id, role=membership.role, email=user.email)
 
 
