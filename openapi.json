@@ -1377,6 +1377,20 @@
         "title": "EnrichedSectionOut",
         "type": "object"
       },
+      "EraseRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "confirm": {
+            "title": "Confirm",
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirm"
+        ],
+        "title": "EraseRequest",
+        "type": "object"
+      },
       "GenerateIn": {
         "additionalProperties": false,
         "properties": {
@@ -5397,6 +5411,68 @@
         "summary": "Put Status",
         "tags": [
           "compliance"
+        ]
+      }
+    },
+    "/api/dsar/erase": {
+      "post": {
+        "operationId": "erase_account_api_dsar_erase_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EraseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Erase Account Api Dsar Erase Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Erase Account",
+        "tags": [
+          "dsar"
+        ]
+      }
+    },
+    "/api/dsar/export": {
+      "get": {
+        "operationId": "export_account_api_dsar_export_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Export Account",
+        "tags": [
+          "dsar"
         ]
       }
     },

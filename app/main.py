@@ -20,6 +20,7 @@ from .modules import (
     compliance,
     dpa,
     dpia,
+    dsar,
     generation,
     grounding,
     health,
@@ -95,6 +96,7 @@ app.include_router(dpia.router)
 app.include_router(dpa.router)
 app.include_router(ihlal.router)
 app.include_router(processors.router)
+app.include_router(dsar.router)
 
 
 @app.get("/")
