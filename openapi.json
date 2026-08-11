@@ -192,7 +192,7 @@
       "Body_import_inventory_api_clients__client_id__inventory_import_post": {
         "properties": {
           "file": {
-            "contentMediaType": "application/octet-stream",
+            "format": "binary",
             "title": "File",
             "type": "string"
           }
@@ -206,7 +206,7 @@
       "Body_import_workbook_api_clients__client_id__inventory_import_workbook_post": {
         "properties": {
           "file": {
-            "contentMediaType": "application/octet-stream",
+            "format": "binary",
             "title": "File",
             "type": "string"
           }
@@ -222,7 +222,7 @@
           "file": {
             "anyOf": [
               {
-                "contentMediaType": "application/octet-stream",
+                "format": "binary",
                 "type": "string"
               },
               {
@@ -231,7 +231,7 @@
             ],
             "title": "File"
           },
-          "processorId": {
+          "processor_id": {
             "anyOf": [
               {
                 "format": "uuid",
@@ -241,7 +241,7 @@
                 "type": "null"
               }
             ],
-            "title": "Processorid"
+            "title": "Processor Id"
           },
           "text": {
             "anyOf": [
@@ -2616,13 +2616,6 @@
       },
       "ValidationError": {
         "properties": {
-          "ctx": {
-            "title": "Context",
-            "type": "object"
-          },
-          "input": {
-            "title": "Input"
-          },
           "loc": {
             "items": {
               "anyOf": [
@@ -5648,16 +5641,106 @@
         ]
       }
     },
-    "/api/internal/purge": {
+    "/api/internal/orgs/{org_id}/reactivate": {
       "post": {
-        "operationId": "run_purge_api_internal_purge_post",
+        "operationId": "reactivate_org_api_internal_orgs__org_id__reactivate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Org Id",
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
                   "additionalProperties": true,
-                  "title": "Response Run Purge Api Internal Purge Post",
+                  "title": "Response Reactivate Org Api Internal Orgs  Org Id  Reactivate Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reactivate Org",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
+    "/api/internal/orgs/{org_id}/suspend": {
+      "post": {
+        "operationId": "suspend_org_api_internal_orgs__org_id__suspend_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Org Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Suspend Org Api Internal Orgs  Org Id  Suspend Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Suspend Org",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
+    "/api/internal/purge": {
+      "post": {
+        "operationId": "run_sweep_api_internal_purge_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Run Sweep Api Internal Purge Post",
                   "type": "object"
                 }
               }
@@ -5665,7 +5748,7 @@
             "description": "Successful Response"
           }
         },
-        "summary": "Run Purge",
+        "summary": "Run Sweep",
         "tags": [
           "internal"
         ]
