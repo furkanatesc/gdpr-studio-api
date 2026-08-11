@@ -13,6 +13,7 @@ from sqlalchemy import and_, delete, or_
 from sqlalchemy.orm import Session
 
 from .auth.tenant_session import begin_provisioning, end_provisioning
+from .dsar_purge import purge_expired_orgs
 from .models import Invitation
 
 
@@ -36,3 +37,16 @@ def purge_terminal_invitations(
     finally:
         end_provisioning(session)
     return {"invitationsPurged": result.rowcount or 0}
+
+
+def retention_sweep(
+    session: Session, *, invite_retention_days: int, org_grace_days: int,
+    supabase_delete=None,
+) -> dict[str, Any]:
+    inv = purge_terminal_invitations(session, retention_days=invite_retention_days)
+    org = purge_expired_orgs(session, grace_days=org_grace_days, supabase_delete=supabase_delete)
+    return {
+        "invitationsPurged": inv["invitationsPurged"],
+        "orgsPurged": org["count"],
+        "purged": org["purged"],
+    }

@@ -59,3 +59,29 @@ def test_purges_terminal_beyond_grace_keeps_live_and_recent():
 
     assert res["invitationsPurged"] == 3
     assert s.scalar(select(func.count()).select_from(Invitation)) == 2
+
+
+def test_retention_sweep_purges_invitations_and_orgs():
+    from app.models import Membership
+    from app.retention import retention_sweep
+
+    s = _fk_session()
+    # süresi dolmuş silinecek org
+    dead = uuid.uuid4()
+    s.add(Organization(id=dead, name="Dead", status="deleting",
+                       deleted_at=datetime.now(UTC) - timedelta(days=20)))
+    du = User(supabase_user_id="d", email="d@x.io")
+    s.add(du)
+    s.flush()
+    s.add(Membership(user_id=du.id, org_id=dead, role="yonetici"))
+    # ayrı canlı org + eski terminal davet
+    live, uid = _org_user(s)
+    _invite(s, live, uid, status="accepted", created_days_ago=40, expires_days=-38)
+    s.commit()
+
+    res = retention_sweep(s, invite_retention_days=30, org_grace_days=14)
+
+    assert res["invitationsPurged"] == 1
+    assert res["orgsPurged"] == 1
+    assert s.get(Organization, dead) is None
+    assert s.get(Organization, live) is not None
