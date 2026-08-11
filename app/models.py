@@ -66,7 +66,7 @@ def _uuid_pk() -> Mapped[uuid.UUID]:
 class Organization(Base):
     __tablename__ = "organizations"
     __table_args__ = (
-        CheckConstraint("status IN ('active', 'deleting')", name="ck_organizations_status"),
+        CheckConstraint("status IN ('active', 'deleting', 'suspended')", name="ck_organizations_status"),
     )
     id: Mapped[uuid.UUID] = _uuid_pk()
     name: Mapped[str] = mapped_column(String(255), nullable=False)
