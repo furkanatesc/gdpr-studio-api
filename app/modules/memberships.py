@@ -88,11 +88,11 @@ def update_member_role(
         actor_user_id=identity.user_id, target_type="membership", target_id=str(user_id),
         meta={"from": old_role, "to": body.role},
     )
-    session.commit()
-    # user bilgisini tekrar çekmemek için: e-postayı listeden değil, hafif okuma ile döneriz.
+    # user okuması commit'ten ÖNCE: commit'te bypass GUC sıfırlanır, sonrası fail-closed olur.
     from ..models import User
 
     user = session.get(User, user_id)
+    session.commit()
     return _to_out(member, user, identity.user_id)
 
 
