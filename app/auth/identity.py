@@ -67,6 +67,8 @@ def get_current_identity(
     # DSAR (H3-2) fail-closed: hesap kapatılma sürecindeyse hiçbir authed uca erişilemez.
     if org is not None and org.status == "deleting":
         raise HTTPException(status_code=403, detail="Bu hesap kapatılma sürecinde; erişim durduruldu.")
+    if org is not None and org.status == "suspended":
+        raise HTTPException(status_code=403, detail="Hesabınız askıya alındı; lütfen destek ile iletişime geçin.")
     return Identity(user_id=user.id, org_id=membership.org_id, role=membership.role, email=user.email)
 
 
