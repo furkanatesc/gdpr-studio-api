@@ -76,6 +76,9 @@ class Settings(BaseSettings):
     dsar_purge_on_startup: bool = False  # startup taraması (varsayılan kapalı — korumalı uçtan tetikle)
     internal_api_token: str = ""  # /api/internal/* korumalı uç token'ı (boşsa uç 403)
 
+    # --- Retention (H3-3) ---
+    invite_retention_days: int = 30  # terminal davet grace (gün)
+
     # --- Davet ---
     invite_secret: str = "dev-invite-secret-change-me"  # itsdangerous imza anahtarı
     invite_ttl_hours: int = 72
