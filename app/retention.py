@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from .auth.tenant_session import begin_provisioning, end_provisioning
 from .dsar_purge import purge_expired_orgs
-from .models import Invitation
+from .models import AuditLog, Invitation
 
 
 def purge_terminal_invitations(
@@ -37,6 +37,22 @@ def purge_terminal_invitations(
     finally:
         end_provisioning(session)
     return {"invitationsPurged": result.rowcount or 0}
+
+
+def purge_audit_logs(
+    session: Session, *, retention_days: int, now: datetime | None = None
+) -> dict[str, Any]:
+    if retention_days <= 0:
+        return {"auditLogsPurged": 0}
+    now = now or datetime.now(UTC)
+    cutoff = now - timedelta(days=retention_days)
+    begin_provisioning(session)
+    try:
+        result = session.execute(delete(AuditLog).where(AuditLog.created_at < cutoff))
+        session.commit()
+    finally:
+        end_provisioning(session)
+    return {"auditLogsPurged": result.rowcount or 0}
 
 
 def retention_sweep(

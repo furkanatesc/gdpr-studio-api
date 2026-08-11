@@ -85,3 +85,22 @@ def test_retention_sweep_purges_invitations_and_orgs():
     assert res["orgsPurged"] == 1
     assert s.get(Organization, dead) is None
     assert s.get(Organization, live) is not None
+
+
+def test_purge_audit_logs_deletes_old_keeps_recent_and_noop_on_zero():
+    from app.models import AuditLog
+    from app.retention import purge_audit_logs
+
+    s = _fk_session()
+    oid, _ = _org_user(s)
+    s.add(AuditLog(org_id=oid, action="old",
+                   created_at=datetime.now(UTC) - timedelta(days=800)))
+    s.add(AuditLog(org_id=oid, action="new",
+                   created_at=datetime.now(UTC) - timedelta(days=10)))
+    s.commit()
+
+    assert purge_audit_logs(s, retention_days=0)["auditLogsPurged"] == 0
+    res = purge_audit_logs(s, retention_days=730)
+    assert res["auditLogsPurged"] == 1
+    remaining = [a.action for a in s.scalars(select(AuditLog))]
+    assert remaining == ["new"]

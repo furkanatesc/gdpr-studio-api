@@ -78,6 +78,7 @@ class Settings(BaseSettings):
 
     # --- Retention (H3-3) ---
     invite_retention_days: int = 30  # terminal davet grace (gün)
+    audit_retention_days: int = 730  # audit log saklama (gün); 0 = kapalı
 
     # --- Davet ---
     invite_secret: str = "dev-invite-secret-change-me"  # itsdangerous imza anahtarı
