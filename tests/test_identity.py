@@ -56,3 +56,23 @@ def test_claims_non_production_dev_bypass_returns_dev_claims():
         assert claims.sub == _DEV_SUB
     finally:
         config_module._settings = prev
+
+
+def test_suspended_org_fail_closed(client_fresh, db_session):
+    """Askıya alınan org → 403 (fail-closed)."""
+    from sqlalchemy import select
+
+    from app.models import Organization
+
+    client_fresh.post("/api/auth/bootstrap", json={"orgName": "Askıya"})
+    assert client_fresh.get("/api/auth/me").status_code == 200
+
+    org = db_session.scalars(
+        select(Organization).where(Organization.name == "Askıya")
+    ).one()
+    org.status = "suspended"
+    db_session.commit()
+
+    r = client_fresh.get("/api/auth/me")
+    assert r.status_code == 403
+    assert "askıya" in r.json()["detail"].lower()
