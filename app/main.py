@@ -61,23 +61,24 @@ async def lifespan(app: FastAPI):
 
 
 def _run_startup_purge() -> None:
-    """DSAR gecikmeli purge startup taraması (flag-gated). Hata app başlatmayı bloke etmez."""
+    """Retention sweep startup taraması (flag-gated). Hata app başlatmayı bloke etmez."""
     import logging
 
     from sqlalchemy.orm import Session
 
-    from .dsar_purge import purge_expired_orgs
+    from .retention import retention_sweep
     from .supabase_admin import delete_supabase_user
 
     try:
         with Session(bind=get_engine()) as session:
-            purge_expired_orgs(
+            retention_sweep(
                 session,
-                grace_days=settings.dsar_purge_grace_days,
+                invite_retention_days=settings.invite_retention_days,
+                org_grace_days=settings.dsar_purge_grace_days,
                 supabase_delete=delete_supabase_user,
             )
     except Exception:
-        logging.getLogger("app.dsar").exception("startup purge taraması başarısız")
+        logging.getLogger("app.retention").exception("startup retention sweep başarısız")
 
 
 app = FastAPI(

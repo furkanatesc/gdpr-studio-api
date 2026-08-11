@@ -104,3 +104,18 @@ def test_purge_audit_logs_deletes_old_keeps_recent_and_noop_on_zero():
     assert res["auditLogsPurged"] == 1
     remaining = [a.action for a in s.scalars(select(AuditLog))]
     assert remaining == ["new"]
+
+
+def test_startup_sweep_via_flag(monkeypatch):
+    """dsar_purge_on_startup açıkken lifespan retention_sweep çağırır (davet dahil)."""
+    from app import main
+    called = {}
+    monkeypatch.setattr(main, "get_engine", lambda: None)
+    monkeypatch.setattr(
+        "app.retention.retention_sweep",
+        lambda *a, **k: called.setdefault("hit", True) or {"invitationsPurged": 0, "orgsPurged": 0, "purged": []},
+    )
+    main.settings.dsar_purge_on_startup = True
+    main._run_startup_purge()  # exception fırlatmamalı
+
+    assert called.get("hit") is True   # sweep GERÇEKTEN çağrıldı (yol doğrulandı)
