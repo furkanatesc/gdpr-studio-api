@@ -192,7 +192,7 @@
       "Body_import_inventory_api_clients__client_id__inventory_import_post": {
         "properties": {
           "file": {
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "File",
             "type": "string"
           }
@@ -206,7 +206,7 @@
       "Body_import_workbook_api_clients__client_id__inventory_import_workbook_post": {
         "properties": {
           "file": {
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "File",
             "type": "string"
           }
@@ -222,7 +222,7 @@
           "file": {
             "anyOf": [
               {
-                "format": "binary",
+                "contentMediaType": "application/octet-stream",
                 "type": "string"
               },
               {
@@ -231,7 +231,7 @@
             ],
             "title": "File"
           },
-          "processor_id": {
+          "processorId": {
             "anyOf": [
               {
                 "format": "uuid",
@@ -241,7 +241,7 @@
                 "type": "null"
               }
             ],
-            "title": "Processor Id"
+            "title": "Processorid"
           },
           "text": {
             "anyOf": [
@@ -2616,6 +2616,13 @@
       },
       "ValidationError": {
         "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
           "loc": {
             "items": {
               "anyOf": [
