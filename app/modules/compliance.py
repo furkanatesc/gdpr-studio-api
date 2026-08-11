@@ -140,6 +140,7 @@ def put_status(
         actor_user_id=identity.user_id, target_type="compliance", target_id=key,
         meta={"status": body.status},
     )
-    session.commit()  # durability: get_session commit etmez → uç kendi işlemini kapatır
+    # doc_types okuması commit'ten ÖNCE: commit'te bypass GUC sıfırlanır, sonrası fail-closed olur.
     doc_types = GeneratedDocumentRepository(session).doc_types_for_org(identity.org_id)
+    session.commit()  # durability: get_session commit etmez → uç kendi işlemini kapatır
     return _build_item(req, row, doc_types)
