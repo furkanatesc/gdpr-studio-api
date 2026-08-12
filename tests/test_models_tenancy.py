@@ -39,7 +39,7 @@ def test_invitation_defaults_pending():
         org_id=org.id,
         email="x@y.com",
         role="avukat",
-        token="tok-1",
+        token_hash="tok-1-hash",
         expires_at=dt.datetime(2026, 12, 31, tzinfo=dt.UTC),
         invited_by=user.id,
     )

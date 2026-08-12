@@ -246,7 +246,7 @@ def generate(
                 idempotency.release(identity.org_id, idempotency_key)
             _log.exception("dpia akis hatasi (org=%s)", identity.org_id)
             capture_exception(e)
-            yield _sse("error", {"detail": f"Üretim hatası: {e}"})
+            yield _sse("error", {"detail": "Belge üretilemedi; lütfen tekrar deneyin."})
 
     return StreamingResponse(
         event_stream(),

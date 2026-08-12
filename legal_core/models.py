@@ -9,8 +9,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 from pydantic.alias_generators import to_camel
 
 
@@ -45,10 +46,19 @@ class GenerateRequest(_CamelModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="forbid")
 
     type: DocType
-    fields: dict[str, str] = {}
-    veriler: list[str] = []
-    amaclar: list[str] = []
-    kisi_grubu: str | None = None  # wire: kisiGrubu — süreç grounding ekseni
+    fields: Annotated[
+        dict[str, Annotated[str, StringConstraints(max_length=5000)]],
+        Field(max_length=50),
+    ] = {}
+    veriler: Annotated[
+        list[Annotated[str, StringConstraints(max_length=500)]],
+        Field(max_length=200),
+    ] = []
+    amaclar: Annotated[
+        list[Annotated[str, StringConstraints(max_length=500)]],
+        Field(max_length=200),
+    ] = []
+    kisi_grubu: Annotated[str, StringConstraints(max_length=500)] | None = None  # wire: kisiGrubu — süreç grounding ekseni
 
 
 class Usage(_CamelModel):

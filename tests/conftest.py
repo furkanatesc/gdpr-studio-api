@@ -146,6 +146,35 @@ def accept_as(client_fresh, monkeypatch):
 
 
 @pytest.fixture()
+def create_invite(client_fresh, monkeypatch):
+    """Davet oluştur ve ham token'ı e-posta linkinden yakala.
+
+    API yanıtı artık token içermiyor (B5); ham token yalnız gönderim anında
+    üretilen e-posta linkinde bulunur — bu yüzden e-posta gönderimini
+    monkeypatch'le yakalayıp linkten çıkarırız.
+    """
+    import re
+
+    import app.modules.invitations as invmod
+
+    def _create(email: str, role: str = "avukat"):
+        captured: dict[str, str] = {}
+
+        class _CapturingSender:
+            def send(self, msg) -> None:
+                captured["html"] = msg.html
+
+        monkeypatch.setattr(invmod, "get_email_sender", lambda: _CapturingSender())
+        resp = client_fresh.post("/api/invitations", json={"email": email, "role": role})
+        inv = resp.json()
+        m = re.search(r"/davet/([^\"<\s]+)", captured["html"])
+        assert m, "davet e-postasında link bulunamadı"
+        return inv, m.group(1)
+
+    return _create
+
+
+@pytest.fixture()
 def client_fresh(db_session):
     """dev-bypass ile DB'den kimlik çözümlenir; bootstrap testi için temiz DB.
 

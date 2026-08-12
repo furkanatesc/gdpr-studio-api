@@ -37,7 +37,7 @@ def _org_user(session):
 
 def _invite(session, oid, uid, *, status, created_days_ago, expires_days):
     session.add(Invitation(
-        org_id=oid, email="i@x.io", role="avukat", token=str(uuid.uuid4()),
+        org_id=oid, email="i@x.io", role="avukat", token_hash=str(uuid.uuid4()),
         status=status,
         created_at=datetime.now(UTC) - timedelta(days=created_days_ago),
         expires_at=datetime.now(UTC) + timedelta(days=expires_days),

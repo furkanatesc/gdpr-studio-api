@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -9,6 +11,7 @@ from sqlalchemy.orm import Session
 from ..db import get_session
 
 router = APIRouter(tags=["health"])
+_log = logging.getLogger("app.health")
 
 
 @router.get("/healthz")
@@ -20,6 +23,7 @@ def healthz() -> dict:
 def readyz(session: Session = Depends(get_session)) -> dict:
     try:
         session.execute(text("SELECT 1"))
-    except Exception as e:  # pragma: no cover
-        raise HTTPException(status_code=503, detail=f"db not ready: {e}") from e
+    except Exception:  # DB hata detayı istemciye sızdırılmaz (bağlantı stringi/host içerebilir)
+        _log.exception("readyz DB kontrolü başarısız")
+        raise HTTPException(status_code=503, detail="db not ready") from None
     return {"status": "ready"}

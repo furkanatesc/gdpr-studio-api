@@ -43,10 +43,10 @@ def test_revoke_invitation_writes_audit(client_fresh, db_session):
     assert row.target_id == inv["id"]
 
 
-def test_accept_invitation_writes_audit(client_fresh, accept_as, db_session):
+def test_accept_invitation_writes_audit(client_fresh, accept_as, create_invite, db_session):
     client_fresh.post("/api/auth/bootstrap", json={"orgName": "Acme"})
-    inv = client_fresh.post("/api/invitations", json={"email": "yeni@b.com", "role": "avukat"}).json()
-    out = accept_as(sub="sb-2", email="yeni@b.com", token=inv["token"])
+    inv, token = create_invite("yeni@b.com", "avukat")
+    out = accept_as(sub="sb-2", email="yeni@b.com", token=token)
     assert out.status_code == 200, out.text
 
     row = db_session.query(AuditLog).filter_by(action="invite.accepted").one()
@@ -55,10 +55,10 @@ def test_accept_invitation_writes_audit(client_fresh, accept_as, db_session):
     assert str(row.actor_user_id) == out.json()["userId"]
 
 
-def test_accept_invitation_creates_membership(client_fresh, accept_as):
+def test_accept_invitation_creates_membership(client_fresh, accept_as, create_invite):
     client_fresh.post("/api/auth/bootstrap", json={"orgName": "Acme"})
-    inv = client_fresh.post("/api/invitations", json={"email": "yeni@b.com", "role": "avukat"}).json()
-    out = accept_as(sub="sb-2", email="yeni@b.com", token=inv["token"])
+    inv, token = create_invite("yeni@b.com", "avukat")
+    out = accept_as(sub="sb-2", email="yeni@b.com", token=token)
     assert out.status_code == 200, out.text
     assert out.json()["role"] == "avukat"
 
@@ -90,9 +90,9 @@ def test_avukat_cannot_create_invitation(client_fresh):
         app.dependency_overrides.pop(get_current_identity, None)
 
 
-def test_email_mismatch_on_accept_returns_403(client_fresh, accept_as):
+def test_email_mismatch_on_accept_returns_403(client_fresh, accept_as, create_invite):
     """Token farklı e-posta için oluşturulmuş; yanlış e-posta ile kabul → 403."""
     client_fresh.post("/api/auth/bootstrap", json={"orgName": "Acme"})
-    inv = client_fresh.post("/api/invitations", json={"email": "yeni@b.com", "role": "avukat"}).json()
-    out = accept_as(sub="sb-3", email="baska@b.com", token=inv["token"])
+    inv, token = create_invite("yeni@b.com", "avukat")
+    out = accept_as(sub="sb-3", email="baska@b.com", token=token)
     assert out.status_code == 403, out.text
