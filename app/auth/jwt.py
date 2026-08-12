@@ -32,12 +32,14 @@ def _signing_key_for(token: str) -> pyjwt.PyJWK:
         url = get_settings().supabase_jwks_url
         if not url:
             raise HTTPException(status_code=401, detail="Kimlik doğrulama yapılandırılmamış.")
-        _jwks_client = PyJWKClient(url)
+        _jwks_client = PyJWKClient(url, timeout=get_settings().jwks_timeout_s)
     return _jwks_client.get_signing_key_from_jwt(token)
 
 
 def verify_token(token: str) -> AuthClaims:
     settings = get_settings()
+    issuer = settings.supabase_issuer
+    require = ["sub", "iss"] if issuer else ["sub"]
     try:
         signing_key = _signing_key_for(token)
         payload = pyjwt.decode(
@@ -45,8 +47,9 @@ def verify_token(token: str) -> AuthClaims:
             signing_key.key,
             algorithms=["RS256", "ES256"],
             audience=settings.supabase_jwt_aud,
+            issuer=issuer or None,
             leeway=_CLOCK_SKEW_LEEWAY_S,
-            options={"require": ["sub"]},
+            options={"require": require},
         )
     except HTTPException:
         raise

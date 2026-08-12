@@ -68,6 +68,7 @@ class Settings(BaseSettings):
     supabase_project_url: str = ""  # boşsa + dev → dev bypass devreye girer
     supabase_jwt_aud: str = "authenticated"
     auth_dev_bypass: bool = False  # True → JWT doğrulamadan dev kimliği
+    jwks_timeout_s: float = 10.0  # PyJWKClient ağ zaman aşımı (JWKS fetch)
     # DSAR purge (H3-2 Part 2): Supabase Admin API auth silme (boşsa atlanır + log).
     supabase_service_role_key: str = ""
 
@@ -126,6 +127,11 @@ class Settings(BaseSettings):
     def supabase_jwks_url(self) -> str:
         base = self.supabase_project_url.rstrip("/")
         return f"{base}/auth/v1/.well-known/jwks.json" if base else ""
+
+    @property
+    def supabase_issuer(self) -> str:
+        base = self.supabase_project_url.rstrip("/")
+        return f"{base}/auth/v1" if base else ""
 
     @property
     def billing_enabled(self) -> bool:

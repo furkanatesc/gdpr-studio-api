@@ -35,8 +35,13 @@ def _patch_signing_key(monkeypatch, rsa_key):
         key = rsa_key.public_key()
 
     monkeypatch.setattr(jwtmod, "_signing_key_for", lambda token: _Key())
+    # Ayarları izole et: lokal .env'de gerçek supabase_project_url olabilir
+    # (issuer doğrulamasını devreye sokar) — bu testler issuer'dan bağımsızdır.
+    prev_settings = configmod._settings
+    configmod._settings = Settings(_env_file=None, supabase_project_url="")
     reset_jwks_cache()
     yield
+    configmod._settings = prev_settings
     reset_jwks_cache()
 
 
