@@ -1415,22 +1415,27 @@
           "amaclar": {
             "default": [],
             "items": {
+              "maxLength": 500,
               "type": "string"
             },
+            "maxItems": 200,
             "title": "Amaclar",
             "type": "array"
           },
           "fields": {
             "additionalProperties": {
+              "maxLength": 5000,
               "type": "string"
             },
             "default": {},
+            "maxProperties": 50,
             "title": "Fields",
             "type": "object"
           },
           "kisiGrubu": {
             "anyOf": [
               {
+                "maxLength": 500,
                 "type": "string"
               },
               {
@@ -1445,8 +1450,10 @@
           "veriler": {
             "default": [],
             "items": {
+              "maxLength": 500,
               "type": "string"
             },
+            "maxItems": 200,
             "title": "Veriler",
             "type": "array"
           }
