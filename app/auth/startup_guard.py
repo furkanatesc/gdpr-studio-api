@@ -90,3 +90,26 @@ def verify_rls_enforcement(engine, settings) -> None:  # type: ignore[type-arg]
     )
     if reason is not None:
         raise RuntimeError(reason)
+
+
+_DEFAULT_INVITE_SECRET = "dev-invite-secret-change-me"
+
+
+def invite_secret_violation(environment: str, invite_secret: str) -> str | None:
+    """Saf predikat: prod'da invite_secret boş/varsayılan ise Türkçe reason, yoksa None."""
+    if environment != "production":
+        return None
+    if not invite_secret or invite_secret == _DEFAULT_INVITE_SECRET:
+        return (
+            "invite_secret prod'da boş veya varsayılan: davet token imzası tahmin "
+            "edilebilir olur ve sahte davet üretilebilir. Prod'da güçlü, rastgele bir "
+            "INVITE_SECRET ayarlanmalı."
+        )
+    return None
+
+
+def verify_invite_secret(settings) -> None:  # type: ignore[no-untyped-def]
+    """DB-bağımsız doğrulayıcı: ihlalde RuntimeError (fail-closed, fail-fast)."""
+    reason = invite_secret_violation(settings.environment, settings.invite_secret)
+    if reason is not None:
+        raise RuntimeError(reason)

@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .auth.startup_guard import verify_rls_enforcement
+from .auth.startup_guard import verify_invite_secret, verify_rls_enforcement
 from .config import get_settings
 from .db import get_engine
 from .modules import (
@@ -49,12 +49,14 @@ init_sentry(settings.sentry_dsn, settings.environment)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Uygulama yaşam döngüsü: startup'ta RLS zorlama doğrulaması (prod+postgresql).
+    """Uygulama yaşam döngüsü: startup'ta RLS zorlama + invite_secret doğrulaması.
 
-    Prod'da DB bağlantı rolü SUPERUSER veya BYPASSRLS ise RuntimeError fırlatır
-    ve uygulama başlamaz (fail-closed, fail-fast). Dev/test/sqlite'ta no-op.
+    Prod'da DB bağlantı rolü SUPERUSER veya BYPASSRLS ise, ya da invite_secret
+    boş/varsayılan ise RuntimeError fırlatır ve uygulama başlamaz
+    (fail-closed, fail-fast). Dev/test/sqlite'ta no-op.
     """
     verify_rls_enforcement(get_engine(), settings)
+    verify_invite_secret(settings)
     if settings.dsar_purge_on_startup:
         _run_startup_purge()
     yield
