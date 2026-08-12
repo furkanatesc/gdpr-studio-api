@@ -39,7 +39,6 @@ class InviteOut(BaseModel):
     email: str
     role: str
     status: str
-    token: str
 
 
 @router.post("", status_code=201, response_model=InviteOut)
@@ -73,7 +72,7 @@ def create_invitation(
         )
     except Exception:
         _log.warning("Davet e-postası gönderilemedi: %s", body.email)
-    return InviteOut(id=str(inv.id), email=inv.email, role=inv.role, status=inv.status, token=token)
+    return InviteOut(id=str(inv.id), email=inv.email, role=inv.role, status=inv.status)
 
 
 @router.get("", response_model=list[InviteOut])
@@ -82,7 +81,7 @@ def list_invitations(
     identity: Identity = Depends(require_role("yonetici")),
 ) -> list[InviteOut]:
     invs = InvitationRepository(session).list_pending(identity.org_id)
-    return [InviteOut(id=str(i.id), email=i.email, role=i.role, status=i.status, token=i.token) for i in invs]
+    return [InviteOut(id=str(i.id), email=i.email, role=i.role, status=i.status) for i in invs]
 
 
 @router.delete("/{inv_id}", status_code=204)

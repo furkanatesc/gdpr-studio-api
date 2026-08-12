@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from legal_core.models import ProcessRecord
 
+from .invites.tokens import hash_invite_token
 from .models import (
     AuditLog,
     BusinessRule,
@@ -253,7 +254,8 @@ class InvitationRepository:
 
     def create(self, org_id, email, role, token, expires_at: datetime, invited_by) -> Invitation:
         inv = Invitation(
-            org_id=org_id, email=email, role=role, token=token,
+            org_id=org_id, email=email, role=role,
+            token_hash=hash_invite_token(token),
             expires_at=expires_at, invited_by=invited_by,
         )
         self._s.add(inv)
@@ -261,7 +263,9 @@ class InvitationRepository:
         return inv
 
     def get_by_token(self, token: str) -> Invitation | None:
-        return self._s.scalar(select(Invitation).where(Invitation.token == token))
+        return self._s.scalar(
+            select(Invitation).where(Invitation.token_hash == hash_invite_token(token))
+        )
 
     def list_pending(self, org_id) -> list[Invitation]:
         return list(

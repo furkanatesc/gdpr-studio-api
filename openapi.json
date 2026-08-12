@@ -2022,18 +2022,13 @@
           "status": {
             "title": "Status",
             "type": "string"
-          },
-          "token": {
-            "title": "Token",
-            "type": "string"
           }
         },
         "required": [
           "id",
           "email",
           "role",
-          "status",
-          "token"
+          "status"
         ],
         "title": "InviteOut",
         "type": "object"

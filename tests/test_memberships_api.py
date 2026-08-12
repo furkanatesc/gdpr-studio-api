@@ -13,18 +13,18 @@ from app.main import app
 from app.models import AuditLog
 
 
-def _two_member_org(client_fresh, accept_as):
+def _two_member_org(client_fresh, accept_as, create_invite):
     """dev-user (yönetici) + davetle katılan avukat. avukat'ın userId'sini döndürür."""
     client_fresh.post("/api/auth/bootstrap", json={"orgName": "Acme"})
-    inv = client_fresh.post("/api/invitations", json={"email": "avukat@b.com", "role": "avukat"}).json()
-    accept_as(sub="sb-2", email="avukat@b.com", token=inv["token"])
+    inv, token = create_invite("avukat@b.com", "avukat")
+    accept_as(sub="sb-2", email="avukat@b.com", token=token)
     members = client_fresh.get("/api/memberships").json()
     avukat = next(m for m in members if not m["isSelf"])
     return avukat["userId"]
 
 
-def test_list_members_returns_org_roster(client_fresh, accept_as):
-    _two_member_org(client_fresh, accept_as)
+def test_list_members_returns_org_roster(client_fresh, accept_as, create_invite):
+    _two_member_org(client_fresh, accept_as, create_invite)
     members = client_fresh.get("/api/memberships").json()
     assert len(members) == 2
     roles = {m["email"]: m["role"] for m in members}
@@ -33,15 +33,15 @@ def test_list_members_returns_org_roster(client_fresh, accept_as):
     assert sum(1 for m in members if m["isSelf"]) == 1  # tam olarak bir 'ben'
 
 
-def test_admin_changes_member_role(client_fresh, accept_as):
-    avukat_id = _two_member_org(client_fresh, accept_as)
+def test_admin_changes_member_role(client_fresh, accept_as, create_invite):
+    avukat_id = _two_member_org(client_fresh, accept_as, create_invite)
     r = client_fresh.patch(f"/api/memberships/{avukat_id}", json={"role": "yonetici"})
     assert r.status_code == 200, r.text
     assert r.json()["role"] == "yonetici"
 
 
-def test_admin_changes_member_role_writes_audit(client_fresh, accept_as, db_session):
-    avukat_id = _two_member_org(client_fresh, accept_as)
+def test_admin_changes_member_role_writes_audit(client_fresh, accept_as, create_invite, db_session):
+    avukat_id = _two_member_org(client_fresh, accept_as, create_invite)
     r = client_fresh.patch(f"/api/memberships/{avukat_id}", json={"role": "yonetici"})
     assert r.status_code == 200, r.text
 
@@ -51,8 +51,8 @@ def test_admin_changes_member_role_writes_audit(client_fresh, accept_as, db_sess
     assert row.meta == {"from": "avukat", "to": "yonetici"}
 
 
-def test_cannot_demote_last_admin(client_fresh, accept_as):
-    _two_member_org(client_fresh, accept_as)
+def test_cannot_demote_last_admin(client_fresh, accept_as, create_invite):
+    _two_member_org(client_fresh, accept_as, create_invite)
     # dev-user tek yönetici; kendini avukata düşürmeye çalış → 409 last_admin
     me = next(m for m in client_fresh.get("/api/memberships").json() if m["isSelf"])
     r = client_fresh.patch(f"/api/memberships/{me['userId']}", json={"role": "avukat"})
@@ -60,8 +60,8 @@ def test_cannot_demote_last_admin(client_fresh, accept_as):
     assert r.json()["detail"]["code"] == "last_admin"
 
 
-def test_admin_removes_member(client_fresh, accept_as):
-    avukat_id = _two_member_org(client_fresh, accept_as)
+def test_admin_removes_member(client_fresh, accept_as, create_invite):
+    avukat_id = _two_member_org(client_fresh, accept_as, create_invite)
     r = client_fresh.delete(f"/api/memberships/{avukat_id}")
     assert r.status_code == 204, r.text
     members = client_fresh.get("/api/memberships").json()
@@ -69,8 +69,8 @@ def test_admin_removes_member(client_fresh, accept_as):
     assert members[0]["email"] == "dev@kvkkyonetim.local"
 
 
-def test_admin_removes_member_writes_audit(client_fresh, accept_as, db_session):
-    avukat_id = _two_member_org(client_fresh, accept_as)
+def test_admin_removes_member_writes_audit(client_fresh, accept_as, create_invite, db_session):
+    avukat_id = _two_member_org(client_fresh, accept_as, create_invite)
     r = client_fresh.delete(f"/api/memberships/{avukat_id}")
     assert r.status_code == 204, r.text
 
@@ -79,36 +79,36 @@ def test_admin_removes_member_writes_audit(client_fresh, accept_as, db_session):
     assert row.target_id == avukat_id
 
 
-def test_cannot_remove_last_admin(client_fresh, accept_as):
-    _two_member_org(client_fresh, accept_as)
+def test_cannot_remove_last_admin(client_fresh, accept_as, create_invite):
+    _two_member_org(client_fresh, accept_as, create_invite)
     me = next(m for m in client_fresh.get("/api/memberships").json() if m["isSelf"])
     r = client_fresh.delete(f"/api/memberships/{me['userId']}")
     assert r.status_code == 409, r.text
     assert r.json()["detail"]["code"] == "last_admin"
 
 
-def test_remove_unknown_member_404(client_fresh, accept_as):
-    _two_member_org(client_fresh, accept_as)
+def test_remove_unknown_member_404(client_fresh, accept_as, create_invite):
+    _two_member_org(client_fresh, accept_as, create_invite)
     r = client_fresh.delete(f"/api/memberships/{uuid.uuid4()}")
     assert r.status_code == 404, r.text
 
 
-def test_patch_unknown_member_404_writes_no_audit(client_fresh, accept_as, db_session):
-    _two_member_org(client_fresh, accept_as)
+def test_patch_unknown_member_404_writes_no_audit(client_fresh, accept_as, create_invite, db_session):
+    _two_member_org(client_fresh, accept_as, create_invite)
     before = db_session.query(AuditLog).count()
     r = client_fresh.patch(f"/api/memberships/{uuid.uuid4()}", json={"role": "yonetici"})
     assert r.status_code == 404, r.text
     assert db_session.query(AuditLog).count() == before
 
 
-def test_invalid_role_rejected(client_fresh, accept_as):
-    avukat_id = _two_member_org(client_fresh, accept_as)
+def test_invalid_role_rejected(client_fresh, accept_as, create_invite):
+    avukat_id = _two_member_org(client_fresh, accept_as, create_invite)
     r = client_fresh.patch(f"/api/memberships/{avukat_id}", json={"role": "hacker"})
     assert r.status_code == 422, r.text
 
 
-def test_avukat_cannot_manage_members(client_fresh, accept_as):
-    avukat_id = _two_member_org(client_fresh, accept_as)
+def test_avukat_cannot_manage_members(client_fresh, accept_as, create_invite):
+    avukat_id = _two_member_org(client_fresh, accept_as, create_invite)
     # Kimliği avukat'a çevir → PATCH/DELETE 403, GET yine serbest
     app.dependency_overrides[get_current_identity] = lambda: Identity(
         user_id=uuid.uuid4(),
