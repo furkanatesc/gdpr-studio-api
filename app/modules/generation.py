@@ -43,6 +43,10 @@ from ..semantic import PostgresSemanticMatcher, get_embedder
 router = APIRouter(prefix="/api", tags=["generation"])
 _log = logging.getLogger("app.generation")
 
+# İstemciye giden generic hata mesajı — istisna detayı (traceback/DB/provider iç bilgisi)
+# yalnız log/Sentry'de kalır (B1: hata mesajı hijyeni).
+GENERIC_GENERATION_ERROR = "Belge üretilemedi; lütfen tekrar deneyin."
+
 # Belge SAKLANMAMASI gereken stop_reason'lar (aydinlatma/cerez/kayit generate uclarinin
 # ortak siniflandirmasi — kopyalanmasin, buradan import edilsin).
 # - max_tokens / model_context_window_exceeded: cikti kesildi (kapsam daraltma tavsiyesi anlamli).
@@ -147,7 +151,8 @@ def generate(
     except Exception as e:
         # Üretim başarısız → kilidi bırak: istemci aynı anahtarla yeniden deneyebilsin.
         idempotency.release(identity.org_id, idempotency_key)
-        raise HTTPException(status_code=502, detail=f"Üretim hatası: {e}") from e
+        _log.exception("üretim hatası (org=%s, type=%s)", identity.org_id, req.type)
+        raise HTTPException(status_code=502, detail=GENERIC_GENERATION_ERROR) from e
     # Uyum sinyali: başarılı üretimi generated_documents'a yaz. record_generation_usage
     # commit ettiği için kayıt ONDAN ÖNCE flush'lanır → aynı işlemde persist olur (spec §4).
     record_generated_document(session, identity.org_id, req.type, identity.user_id)
@@ -244,7 +249,7 @@ def generate_stream(
             # Yanıt 200 başladı → erişim middleware'i bu hatayı görmez; ops'a burada taşı.
             _log.exception("streaming üretim hatası (org=%s, type=%s)", identity.org_id, req.type)
             capture_exception(e)
-            yield _sse("error", {"detail": f"Üretim hatası: {e}"})
+            yield _sse("error", {"detail": GENERIC_GENERATION_ERROR})
 
     return StreamingResponse(
         event_stream(),

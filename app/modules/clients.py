@@ -167,6 +167,9 @@ async def import_inventory(client_id: uuid.UUID, file: UploadFile,
     try:
         rows = parse_inventory_xlsx(await file.read(), sector=client.sector or "sirket")
     except InventoryImportError as e:
+        # B1 incelemesi: InventoryImportError yalnız sabit, kasıtlı Türkçe domain-validation
+        # mesajları taşır (bkz. app/inventory_import.py) — ham istisna/traceback interpolasyonu
+        # YOK. str(e) burada güvenli; sızıntı değil.
         raise HTTPException(status_code=422, detail=str(e)) from e
     rows = _canonicalize_import_rows(rows)
     repo = PostgresProcessRepository(session)
@@ -188,6 +191,9 @@ async def import_workbook(client_id: uuid.UUID, file: UploadFile,
     try:
         parsed = parse_workbook_xlsx(await file.read(), sector=client.sector or "sirket")
     except WorkbookImportError as e:
+        # B1 incelemesi: WorkbookImportError yalnız sabit, kasıtlı Türkçe domain-validation
+        # mesajları taşır (bkz. app/workbook_import.py) — ham istisna/traceback interpolasyonu
+        # YOK. str(e) burada güvenli; sızıntı değil.
         raise HTTPException(status_code=422, detail=str(e)) from e
     parsed["processes"] = _canonicalize_import_rows(parsed["processes"])
     repo = PostgresProcessRepository(session)
