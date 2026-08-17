@@ -69,6 +69,9 @@ class Organization(Base):
     __tablename__ = "organizations"
     __table_args__ = (
         CheckConstraint("status IN ('active', 'deleting', 'suspended')", name="ck_organizations_status"),
+        # H5 platform admin (migration 0020) rollup job için — ORM'de deklare edilmezse
+        # autogenerate bu index'i DROP önerir (model↔DB drift).
+        Index("ix_org_status", "status"),
     )
     id: Mapped[uuid.UUID] = _uuid_pk()
     name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -152,6 +155,8 @@ class Subscription(Base):
         CheckConstraint("plan IN ('baslangic', 'standart', 'premium')", name="ck_subscriptions_plan"),
         CheckConstraint("interval IN ('month', 'year')", name="ck_subscriptions_interval"),
         CheckConstraint("status IN ('active', 'past_due', 'canceled')", name="ck_subscriptions_status"),
+        # H5 platform admin (migration 0020) rollup job için.
+        Index("ix_sub_plan_status", "plan", "status"),
     )
     id: Mapped[uuid.UUID] = _uuid_pk()
     org_id: Mapped[uuid.UUID] = mapped_column(
@@ -173,6 +178,8 @@ class UsageCounter(Base):
     __tablename__ = "usage_counters"
     __table_args__ = (
         UniqueConstraint("org_id", "period", name="uq_usage_org_period"),
+        # H5 platform admin (migration 0020) rollup job için.
+        Index("ix_usage_period", "period"),
     )
     id: Mapped[uuid.UUID] = _uuid_pk()
     org_id: Mapped[uuid.UUID] = mapped_column(
@@ -238,6 +245,8 @@ class GeneratedDocument(Base):
             "doc_type IN ('aydinlatma', 'cerez', 'kayit', 'dpa', 'dpia', 'ihlal')",
             name="ck_generated_documents_type",
         ),
+        # H5 platform admin (migration 0020) rollup job için.
+        Index("ix_gen_docs_created", "created_at"),
     )
     id: Mapped[uuid.UUID] = _uuid_pk()
     org_id: Mapped[uuid.UUID] = mapped_column(
