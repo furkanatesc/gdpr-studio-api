@@ -18,6 +18,12 @@ class AdminSettings(BaseSettings):
     admin_pool_size: int = 3
     admin_pool_max_overflow: int = 2
 
+    # Metrics rollup job — kvkk_admin_ro DEĞİL, ayrı en-az-yetki `kvkk_metrics_job` rolüyle
+    # bağlanır (bkz. migration 0020: bu role yalnız platform_metrics_daily'ye INSERT/UPDATE
+    # verilir). Prod bunu MUTLAKA ayarlamalı; boşsa metrics_job.main() admin_database_url'e
+    # düşer (dev/test kolaylığı — prod'da bu düşüş YANLIŞ role bağlanmak demektir).
+    metrics_job_database_url: str = ""
+
     # Auth — staff Supabase projesi kiracı projesinden AYRI; aud farklı.
     admin_supabase_project_url: str = ""
     admin_supabase_jwt_aud: str = "platform-admin"

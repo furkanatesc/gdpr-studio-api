@@ -7,6 +7,10 @@ Prod'da `kvkk_metrics_job` rolüyle, kendi `METRICS_JOB_DATABASE_URL`'iyle ayrı
 zamanlanmış işten çalışır (Railway cron / GitHub Actions / pg_cron) — servis
 açılışında ÇALIŞTIRILMAZ. `main()` tek-koşucu güvencesi için `pg_advisory_lock`
 kullanır (yalnız Postgres'te; sqlite/dev'de no-op).
+
+`main()` bağlantı motorunu `get_admin_engine()` (kvkk_admin_ro) İLE DEĞİL, doğrudan
+`METRICS_JOB_DATABASE_URL`'den kurar — rollup job, admin-api'nin salt-okunur rolünden
+ayrı, en-az-yetki `kvkk_metrics_job` rolüyle çalışmalıdır (bkz. migration 0020).
 """
 
 from __future__ import annotations
@@ -94,15 +98,24 @@ def _advisory_unlock(session) -> None:
 
 
 def main() -> None:
+    from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
 
-    from .db import get_admin_engine
+    from app.config import normalize_pg_url
+
+    from .config import get_admin_settings
 
     ap = argparse.ArgumentParser()
     ap.add_argument("--backfill", help="YYYY-MM-DD — verilirse o günden bugüne backfill yapar")
     args = ap.parse_args()
 
-    sess = sessionmaker(bind=get_admin_engine(), future=True)()
+    settings = get_admin_settings()
+    # kvkk_admin_ro DEĞİL: rollup job kendi en-az-yetki rolüyle bağlanmalı. Boşsa
+    # admin_database_url'e düşer (dev/test kolaylığı) — prod MUTLAKA
+    # METRICS_JOB_DATABASE_URL'i kvkk_metrics_job rolüne ayarlamalıdır.
+    job_url = settings.metrics_job_database_url or settings.admin_database_url
+    engine = create_engine(normalize_pg_url(job_url), future=True)
+    sess = sessionmaker(bind=engine, future=True)()
     try:
         if not _try_advisory_lock(sess):
             print("metrics job: another runner holds the lock, skipping")
