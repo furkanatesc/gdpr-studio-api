@@ -1,14 +1,12 @@
-import itertools
 import uuid
 from types import SimpleNamespace
 
 import pytest
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from admin_api.audit import write_audit
 from app.db import Base
-from app.models import PlatformAuditLog
 
 _ADMIN = SimpleNamespace(admin_id=str(uuid.uuid4()), email="admin@example.com")
 
@@ -17,22 +15,7 @@ _ADMIN = SimpleNamespace(admin_id=str(uuid.uuid4()), email="admin@example.com")
 def admin_db():
     engine = create_engine("sqlite+pysqlite:///:memory:", future=True)
     Base.metadata.create_all(engine)
-
-    # sqlite only aliases an INTEGER (not BIGINT) primary key to its internal
-    # rowid autoincrement; PlatformAuditLog.id is BigInteger, so on sqlite it
-    # needs an explicit value. Assign one here — Postgres keeps using its own
-    # sequence in production, this is a sqlite-test-only shim.
-    counter = itertools.count(1)
-
-    def _assign_id(mapper, connection, target):
-        if target.id is None:
-            target.id = next(counter)
-
-    event.listen(PlatformAuditLog, "before_insert", _assign_id)
-    try:
-        yield sessionmaker(bind=engine, expire_on_commit=False)()
-    finally:
-        event.remove(PlatformAuditLog, "before_insert", _assign_id)
+    yield sessionmaker(bind=engine, expire_on_commit=False)()
 
 
 def test_chain_links_prev_hash(admin_db):

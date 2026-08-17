@@ -29,7 +29,7 @@ def upgrade():
         sa.Column("disabled_at", sa.DateTime(timezone=True), nullable=True),
     )
     op.create_table("platform_audit_logs",
-        sa.Column("id", sa.BigInteger(), primary_key=True, autoincrement=True),
+        sa.Column("id", sa.Integer().with_variant(sa.BigInteger(), "postgresql"), primary_key=True, autoincrement=True),
         sa.Column("actor_platform_admin_id", pg.UUID(as_uuid=True), sa.ForeignKey("platform_admins.id", ondelete="SET NULL"), nullable=True),
         sa.Column("actor_email_snapshot", sa.String(), nullable=True),
         sa.Column("action", sa.String(), nullable=False),
@@ -65,7 +65,7 @@ def upgrade():
     # SQLAlchemy ORM model requires one — added surrogate id BigInteger PK.
     # UniqueConstraint kept for the UPSERT (day, metric_key, dims) path.
     op.create_table("platform_metrics_daily",
-        sa.Column("id", sa.BigInteger(), primary_key=True, autoincrement=True),
+        sa.Column("id", sa.Integer().with_variant(sa.BigInteger(), "postgresql"), primary_key=True, autoincrement=True),
         sa.Column("day", sa.Date(), nullable=False),
         sa.Column("metric_key", sa.String(), nullable=False),
         sa.Column("dims", pg.JSONB(), nullable=False, server_default=sa.text("'{}'::jsonb")),

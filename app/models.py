@@ -432,7 +432,9 @@ class PlatformAuditLog(Base):
         Index("ix_platform_audit_org_created", "target_org_id", "created_at"),
     )
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(
+        Integer().with_variant(BigInteger(), "postgresql"), primary_key=True, autoincrement=True
+    )
     actor_platform_admin_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("platform_admins.id", ondelete="SET NULL"), nullable=True
     )
@@ -485,7 +487,9 @@ class PlatformMetricDaily(Base):
         Index("ix_platform_metrics_key_day", "metric_key", "day"),
     )
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(
+        Integer().with_variant(BigInteger(), "postgresql"), primary_key=True, autoincrement=True
+    )
     day: Mapped[date] = mapped_column(Date, nullable=False)
     metric_key: Mapped[str] = mapped_column(String(), nullable=False)
     dims: Mapped[dict] = mapped_column(_JSON, nullable=False, server_default=text("'{}'"))
