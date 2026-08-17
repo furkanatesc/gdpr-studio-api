@@ -39,14 +39,18 @@ def write_audit(
     ip=None,
     request_id=None,
 ) -> PlatformAuditLog:
-    prev = session.execute(
-        select(PlatformAuditLog.row_hash).order_by(PlatformAuditLog.id.desc()).limit(1)
-    ).scalar()
+    prev_stmt = select(PlatformAuditLog.row_hash).order_by(PlatformAuditLog.id.desc()).limit(1)
+    if session.bind.dialect.name == "postgresql":
+        # Serialize concurrent appends: without FOR UPDATE, two writers can both read the
+        # same prev_hash and fork the chain. sqlite has no row locking (and is single-writer
+        # by nature), so the plain select is used there.
+        prev_stmt = prev_stmt.with_for_update()
+    prev = session.execute(prev_stmt).scalar()
     payload = {
         "actor": getattr(actor, "admin_id", None),
         "action": action,
         "reason": reason,
-        "target_org_id": str(target_org_id) if target_org_id else None,
+        "target_org_id": str(target_org_id) if target_org_id is not None else None,
         "target_type": target_type,
         "target_id": target_id,
         "result_row_count": result_row_count,

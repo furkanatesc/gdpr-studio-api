@@ -27,3 +27,10 @@ def test_chain_links_prev_hash(admin_db):
 def test_row_hash_covers_fields(admin_db):
     a = write_audit(admin_db, actor=_ADMIN, action="x", reason="t1")
     assert a.row_hash and len(a.row_hash) == 64  # sha256 hex
+
+    b = write_audit(admin_db, actor=_ADMIN, action="y", reason="t1")
+    assert b.row_hash != a.row_hash  # different action -> different hash
+    assert b.row_hash != b.prev_hash  # chained hash is not a no-op copy of prev
+
+    c = write_audit(admin_db, actor=_ADMIN, action="y", reason="t2")
+    assert c.row_hash != b.row_hash  # different reason -> different hash
