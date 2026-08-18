@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from .config import get_admin_settings
 from .db import get_admin_engine, verify_admin_role_and_head
 from .modules.metrics import router as metrics_router
+from .modules.tenants import router as tenants_router
 
 
 @asynccontextmanager
@@ -21,6 +22,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="KVKK Yönetim — Admin API", lifespan=lifespan)
 app.include_router(metrics_router)
+app.include_router(tenants_router)
 
 
 @app.get("/admin/healthz")
