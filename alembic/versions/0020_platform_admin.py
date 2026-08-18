@@ -96,7 +96,7 @@ def upgrade():
         op.execute("GRANT INSERT ON platform_audit_logs TO kvkk_admin_ro")
         op.execute("REVOKE UPDATE, DELETE ON platform_audit_logs FROM kvkk_admin_ro, kvkk_metrics_job")
         op.execute("GRANT INSERT ON impersonation_sessions TO kvkk_admin_ro")
-        op.execute("GRANT UPDATE (ended_at, end_kind) ON impersonation_sessions TO kvkk_admin_ro")
+        op.execute("GRANT UPDATE (ended_at, end_kind, approved_by) ON impersonation_sessions TO kvkk_admin_ro")
         op.execute("GRANT INSERT, UPDATE ON platform_metrics_daily TO kvkk_metrics_job")
         op.execute("GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO kvkk_admin_ro, kvkk_metrics_job")
         op.execute("ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO kvkk_admin_ro")

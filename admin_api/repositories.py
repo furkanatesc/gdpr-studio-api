@@ -1,19 +1,33 @@
 """admin-api salt-okunur repository katmanı.
 
-Rollup-only: yalnızca `platform_metrics_daily`'yi okur — kiracı tablolarına ASLA dokunmaz,
-cross-tenant tarama/`begin_provisioning` yok (bkz. Task 7, ayrı — canlı tek-org okuma).
+Rollup-only: `PlatformMetricsRepository`/`TenantAdminRepository` yalnızca `platform_metrics_daily`'yi
+okur veya küçük indeksli join'lerle kiracı verisine dokunur — cross-tenant tarama/`begin_provisioning`
+yok (bkz. Task 7, ayrı — canlı tek-org okuma). `ImpersonationRepository` back-office
+`impersonation_sessions`/`platform_audit_logs` tablolarında çalışır — kiracı verisi OKUMAZ/YAZMAZ
+(bkz. Task 8; kapsamlı kiracı okuma proxy'si Task 9'da AYRI).
 """
 
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
+from fastapi import HTTPException
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.auth.tenant_session import begin_provisioning, end_provisioning, set_org_context
-from app.models import Membership, Organization, PlatformMetricDaily, Subscription, UsageCounter
+from app.models import (
+    ImpersonationSession,
+    Membership,
+    Organization,
+    PlatformAdmin,
+    PlatformMetricDaily,
+    Subscription,
+    UsageCounter,
+)
+
+from .audit import write_audit
 
 
 class PlatformMetricsRepository:
@@ -202,3 +216,133 @@ class TenantAdminRepository:
                 else None
             ),
         }
+
+
+_IMPERSONATION_TTL = timedelta(minutes=30)
+
+
+def utc_now() -> datetime:
+    return datetime.now(UTC)
+
+
+def as_aware_utc(dt: datetime) -> datetime:
+    """sqlite `DateTime(timezone=True)` tzinfo'yu round-trip'te atar; naive değeri UTC say."""
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=UTC)
+    return dt
+
+
+class ImpersonationRepository:
+    """Impersonation session yaşam döngüsü — start/approve/end. Kiracı verisi OKUMAZ/YAZMAZ.
+
+    Fail-closed: `.start()` session insert'i ile `write_audit(...)` AYNI transaction'da —
+    `write_audit` flush+commit eder (bkz. `admin_api.audit`); commit başarısız olursa
+    henüz commit edilmemiş session insert'i de rollback olur (hiçbir zaman audit'siz
+    session commit edilmez).
+    """
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def start(
+        self, actor, target_org_id: uuid.UUID, reason: str, scope: str
+    ) -> ImpersonationSession:
+        row = ImpersonationSession(
+            platform_admin_id=uuid.UUID(str(actor.admin_id)),
+            target_org_id=target_org_id,
+            reason=reason,
+            scope=scope,
+            requires_dual_control=(scope == "ozel_nitelikli"),
+            bound_sub=actor.token_sub,
+            expires_at=utc_now() + _IMPERSONATION_TTL,
+        )
+        self._session.add(row)
+        self._session.flush()  # row.id lazım (audit meta) — henüz COMMIT edilmedi
+        write_audit(
+            self._session,
+            actor=actor,
+            action="impersonation.started",
+            reason=reason,
+            target_org_id=target_org_id,
+            target_type="impersonation_session",
+            target_id=str(row.id),
+            meta={"session_id": str(row.id), "scope": scope},
+        )  # write_audit COMMIT eder — session insert'i de bu commit'e dahil
+        return row
+
+    def approve(self, actor, session_id: uuid.UUID) -> ImpersonationSession:
+        row = self._session.get(ImpersonationSession, session_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail="not_found")
+        if not row.requires_dual_control:
+            raise HTTPException(status_code=400, detail="dual_control_not_required")
+        if row.approved_by is not None:
+            raise HTTPException(status_code=409, detail="already_approved")
+        if row.ended_at is not None or as_aware_utc(row.expires_at) <= utc_now():
+            raise HTTPException(status_code=403, detail="session_not_active")
+        if str(actor.admin_id) == str(row.platform_admin_id):
+            raise HTTPException(status_code=403, detail="self_approval_forbidden")
+        row.approved_by = uuid.UUID(str(actor.admin_id))
+        self._session.flush()
+        write_audit(
+            self._session,
+            actor=actor,
+            action="impersonation.approved",
+            reason=row.reason,
+            target_org_id=row.target_org_id,
+            target_type="impersonation_session",
+            target_id=str(row.id),
+            meta={"session_id": str(row.id)},
+        )
+        return row
+
+    def end(self, actor, session_id: uuid.UUID) -> ImpersonationSession:
+        row = self._session.get(ImpersonationSession, session_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail="not_found")
+        if row.ended_at is not None:
+            raise HTTPException(status_code=409, detail="already_ended")
+        row.ended_at = utc_now()
+        row.end_kind = "manual"
+        self._session.flush()
+        write_audit(
+            self._session,
+            actor=actor,
+            action="impersonation.ended",
+            reason=row.reason,
+            target_org_id=row.target_org_id,
+            target_type="impersonation_session",
+            target_id=str(row.id),
+            meta={"session_id": str(row.id)},
+        )
+        return row
+
+
+def resolve_active_session(
+    session: Session, admin, session_id: uuid.UUID, token_sub: str
+) -> ImpersonationSession:
+    """Task 9'un kapsamlı okuma proxy'sinin dayanacağı tek kapı — ALL şartlar tutmalı, yoksa 403.
+
+    Sahiplik bağı + süre + sub-bağ + dual-control onayı + owner admin'in HÂLÂ aktif olduğunun
+    taze DB okuması (mid-session deprovision'ı yakalar — `require_platform_admin` istek başına
+    zaten kontrol eder, bu savunma derinliği).
+    """
+    row = session.get(ImpersonationSession, session_id)
+    if row is None:
+        raise HTTPException(status_code=403, detail="impersonation_session_invalid")
+
+    owner_active = session.execute(
+        select(PlatformAdmin.is_active).where(PlatformAdmin.id == row.platform_admin_id)
+    ).scalar_one_or_none()
+
+    valid = (
+        str(row.platform_admin_id) == str(admin.admin_id)
+        and row.ended_at is None
+        and as_aware_utc(row.expires_at) > utc_now()
+        and row.bound_sub == token_sub
+        and (not row.requires_dual_control or row.approved_by is not None)
+        and bool(owner_active)
+    )
+    if not valid:
+        raise HTTPException(status_code=403, detail="impersonation_session_invalid")
+    return row
