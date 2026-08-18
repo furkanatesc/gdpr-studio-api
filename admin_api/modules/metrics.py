@@ -24,12 +24,20 @@ class _Camel(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
+class MetricsOverviewRow(_Camel):
+    metric_key: str
+    day: date
+    dims: dict
+    value: float
+
+
 class MetricsOverview(_Camel):
-    metrics: dict[str, float]
+    metrics: list[MetricsOverviewRow]
 
 
 class TimeseriesPoint(_Camel):
     day: date
+    dims: dict
     value: float
 
 
@@ -42,7 +50,8 @@ def get_overview(
     identity: PlatformAdminIdentity = Depends(require_platform_admin),
     session: Session = Depends(admin_session),
 ) -> MetricsOverview:
-    return MetricsOverview(metrics=PlatformMetricsRepository(session).overview())
+    rows = PlatformMetricsRepository(session).overview()
+    return MetricsOverview(metrics=[MetricsOverviewRow(**row) for row in rows])
 
 
 @router.get("/timeseries", response_model=MetricsTimeseries)

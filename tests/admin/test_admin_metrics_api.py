@@ -18,7 +18,7 @@ _IDENTITY = PlatformAdminIdentity(
 
 
 @pytest.fixture()
-def client():
+def session_factory():
     engine = create_engine(
         "sqlite+pysqlite:///:memory:",
         future=True,
@@ -43,15 +43,18 @@ def client():
                 dims={},
                 value_numeric=12,
             ),
-            PlatformMetricDaily(
-                day=today,
-                metric_key="subs_active",
-                dims={"plan": "pro"},
-                value_numeric=5,
-            ),
         ]
     )
     session.commit()
+
+    yield session
+
+    session.close()
+
+
+@pytest.fixture()
+def client(session_factory):
+    session = session_factory
 
     def _override_session():
         yield session
@@ -63,7 +66,6 @@ def client():
         yield c
 
     app.dependency_overrides.clear()
-    session.close()
 
 
 def test_timeseries_reads_rollup(client):
@@ -83,5 +85,80 @@ def test_overview_returns_latest(client):
     resp = client.get("/admin/metrics/overview")
     assert resp.status_code == 200
     body = resp.json()
-    assert isinstance(body["metrics"], dict)
-    assert body["metrics"]["tenants_active"] == 12
+    metrics = body["metrics"]
+    assert isinstance(metrics, list)
+    tenants_rows = [row for row in metrics if row["metricKey"] == "tenants_active"]
+    assert len(tenants_rows) == 1
+    assert tenants_rows[0]["value"] == 12
+    assert tenants_rows[0]["dims"] == {}
+
+
+def test_overview_preserves_dims(client, session_factory):
+    session = session_factory
+    today = date.today()
+    session.add_all(
+        [
+            PlatformMetricDaily(
+                day=today,
+                metric_key="subs_active",
+                dims={"plan": "pro"},
+                value_numeric=3,
+            ),
+            PlatformMetricDaily(
+                day=today,
+                metric_key="subs_active",
+                dims={"plan": "free"},
+                value_numeric=10,
+            ),
+        ]
+    )
+    session.commit()
+
+    resp = client.get("/admin/metrics/overview")
+    assert resp.status_code == 200
+    body = resp.json()
+    metrics = body["metrics"]
+    assert isinstance(metrics, list)
+
+    subs_rows = [row for row in metrics if row["metricKey"] == "subs_active"]
+    assert len(subs_rows) == 2
+    by_plan = {row["dims"]["plan"]: row["value"] for row in subs_rows}
+    assert by_plan == {"pro": 3, "free": 10}
+
+    tenants_rows = [row for row in metrics if row["metricKey"] == "tenants_active"]
+    assert len(tenants_rows) == 1
+    assert tenants_rows[0]["value"] == 12
+    assert tenants_rows[0]["dims"] == {}
+
+
+def test_timeseries_preserves_dims(client, session_factory):
+    session = session_factory
+    today = date.today()
+    session.add_all(
+        [
+            PlatformMetricDaily(
+                day=today,
+                metric_key="subs_active",
+                dims={"plan": "pro"},
+                value_numeric=3,
+            ),
+            PlatformMetricDaily(
+                day=today,
+                metric_key="subs_active",
+                dims={"plan": "free"},
+                value_numeric=10,
+            ),
+        ]
+    )
+    session.commit()
+
+    resp = client.get(
+        "/admin/metrics/timeseries", params={"metric": "subs_active", "range": 30}
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    points = body["points"]
+    plans = {point["dims"]["plan"] for point in points}
+    assert plans == {"pro", "free"}
+    values_by_plan = {point["dims"]["plan"]: point["value"] for point in points}
+    assert values_by_plan == {"pro": 3, "free": 10}
