@@ -130,3 +130,34 @@ def test_detail_returns_single_org(client):
 
     missing = client.get(f"/admin/tenants/{uuid.uuid4()}")
     assert missing.status_code == 404
+
+
+def test_list_cursor_second_page(client):
+    page1 = client.get("/admin/tenants", params={"limit": 2})
+    assert page1.status_code == 200
+    body1 = page1.json()
+    assert len(body1["items"]) == 2
+    assert body1["nextCursor"] is not None
+
+    page2 = client.get("/admin/tenants", params={"limit": 2, "cursor": body1["nextCursor"]})
+    assert page2.status_code == 200
+    body2 = page2.json()
+    assert body2["nextCursor"] is None
+
+    names1 = {item["name"] for item in body1["items"]}
+    names2 = {item["name"] for item in body2["items"]}
+    assert names1.isdisjoint(names2)
+    assert names1 | names2 == {"Acme Hukuk", "Beta Danismanlik", "Gamma Suspended"}
+
+
+def test_list_malformed_cursor_returns_4xx(client):
+    resp = client.get("/admin/tenants", params={"cursor": "not-a-valid-cursor"})
+    assert resp.status_code in (400, 422)
+
+
+def test_list_filters_by_q(client):
+    resp = client.get("/admin/tenants", params={"q": "acme"})
+    assert resp.status_code == 200
+    body = resp.json()
+    names = {item["name"] for item in body["items"]}
+    assert names == {"Acme Hukuk"}

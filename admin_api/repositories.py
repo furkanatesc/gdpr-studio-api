@@ -12,7 +12,7 @@ from datetime import date, datetime, timedelta
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 
-from app.auth.tenant_session import set_org_context
+from app.auth.tenant_session import begin_provisioning, end_provisioning, set_org_context
 from app.models import Membership, Organization, PlatformMetricDaily, Subscription, UsageCounter
 
 
@@ -128,7 +128,11 @@ class TenantAdminRepository:
         stmt = stmt.order_by(Organization.created_at.desc(), Organization.id.desc()).limit(
             limit + 1
         )
-        rows = self._session.execute(stmt).all()
+        begin_provisioning(self._session)
+        try:
+            rows = self._session.execute(stmt).all()
+        finally:
+            end_provisioning(self._session)
         has_more = len(rows) > limit
         page_rows = rows[:limit]
 
@@ -153,13 +157,13 @@ class TenantAdminRepository:
         return {"items": items, "next_cursor": next_cursor}
 
     def detail(self, org_id: uuid.UUID) -> dict | None:
+        set_org_context(self._session, org_id)
+
         org = self._session.execute(
             select(Organization).where(Organization.id == org_id)
         ).scalar_one_or_none()
         if org is None:
             return None
-
-        set_org_context(self._session, org_id)
 
         sub = self._session.execute(
             select(Subscription).where(Subscription.org_id == org_id)
