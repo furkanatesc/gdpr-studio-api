@@ -32,6 +32,9 @@ class AdminSettings(BaseSettings):
     # H5 gate — varsayılan KAPALI (yasal/hukuki onay öncesi hiçbir platform-admin uç aktif olmaz).
     h5_legal_ready: bool = False
 
+    # Impersonation okuma vekili — oturum başına kümülatif servis edilen satır tavanı (bkz. Task 9).
+    impersonation_volume_cap: int = 5000
+
     # IP allowlist — altyapı (ör. Railway private networking) zorunlu kılar; uygulama tarafı savunma derinliği.
     admin_allowed_ips: str = ""
 

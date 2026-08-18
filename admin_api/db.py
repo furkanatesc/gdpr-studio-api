@@ -57,3 +57,13 @@ def verify_admin_role_and_head(engine, settings: AdminSettings) -> None:
             raise RuntimeError(
                 f"admin-api expects migration head {settings.expected_migration_head}, found {head}"
             )
+
+
+def assert_bypass_off(session: Session) -> None:
+    """Defensive: a scoped impersonation read must NEVER run with app.bypass_rls='on'
+    (a dirty bypass window leaks ALL tenants). Postgres-only check; no-op on sqlite (no RLS)."""
+    bind = session.get_bind()
+    if bind is not None and bind.dialect.name == "postgresql":
+        val = session.execute(text("SELECT current_setting('app.bypass_rls', true)")).scalar()
+        if val == "on":
+            raise RuntimeError("bypass_rls is ON during impersonation read — aborting (isolation breach)")
