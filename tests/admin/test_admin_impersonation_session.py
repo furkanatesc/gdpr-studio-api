@@ -12,16 +12,18 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, func, select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 import admin_api.modules.impersonation as impersonation_module
+import admin_api.repositories as repositories_module
 from admin_api.auth import PlatformAdminIdentity, require_platform_admin
 from admin_api.config import AdminSettings
 from admin_api.db import admin_session
 from admin_api.main import app
 from admin_api.modules.impersonation import resolve_active_session
+from admin_api.repositories import ImpersonationRepository
 from app.db import Base
 from app.models import ImpersonationSession, PlatformAdmin, PlatformAuditLog
 
@@ -209,3 +211,107 @@ def test_end_sets_ended_at_and_kind(client_legal_on, session_factory):
         select(PlatformAuditLog).where(PlatformAuditLog.action == "impersonation.ended")
     ).scalars().all()
     assert len(rows) == 1
+
+
+def _seed_active_session(
+    session_factory, *, admin_id: str = ADMIN_A_ID, bound_sub: str = "sub-a"
+) -> ImpersonationSession:
+    row = ImpersonationSession(
+        platform_admin_id=uuid.UUID(admin_id),
+        target_org_id=TARGET_ORG,
+        reason="inceleme",
+        scope="documents",
+        requires_dual_control=False,
+        bound_sub=bound_sub,
+        expires_at=datetime.now(UTC) + timedelta(minutes=30),
+    )
+    session_factory.add(row)
+    session_factory.commit()
+    return row
+
+
+def test_resolve_rejects_wrong_owner(session_factory):
+    row = _seed_active_session(session_factory)
+
+    with pytest.raises(HTTPException) as exc:
+        resolve_active_session(session_factory, IDENTITY_B, row.id, "sub-a")
+    assert exc.value.status_code == 403
+
+
+def test_resolve_rejects_bound_sub_mismatch(session_factory):
+    row = _seed_active_session(session_factory)
+
+    with pytest.raises(HTTPException) as exc:
+        resolve_active_session(session_factory, IDENTITY_A, row.id, "sub-DIFFERENT")
+    assert exc.value.status_code == 403
+
+
+def test_resolve_rejects_inactive_admin(session_factory):
+    row = _seed_active_session(session_factory)
+
+    admin_row = session_factory.get(PlatformAdmin, uuid.UUID(ADMIN_A_ID))
+    admin_row.is_active = False
+    session_factory.commit()
+
+    with pytest.raises(HTTPException) as exc:
+        resolve_active_session(session_factory, IDENTITY_A, row.id, "sub-a")
+    assert exc.value.status_code == 403
+
+    admin_row.is_active = True
+    session_factory.commit()
+
+    resolved = resolve_active_session(session_factory, IDENTITY_A, row.id, "sub-a")
+    assert resolved.id == row.id
+
+
+def test_resolve_happy_path_returns_session(session_factory):
+    row = _seed_active_session(session_factory)
+
+    resolved = resolve_active_session(session_factory, IDENTITY_A, row.id, "sub-a")
+    assert resolved.id == row.id
+
+
+def test_start_is_fail_closed_when_audit_raises(session_factory, monkeypatch):
+    engine = session_factory.bind
+
+    def _raise_write_audit(*args, **kwargs):
+        raise RuntimeError("audit write failed")
+
+    monkeypatch.setattr(repositories_module, "write_audit", _raise_write_audit)
+
+    with pytest.raises(RuntimeError):
+        ImpersonationRepository(session_factory).start(
+            IDENTITY_A, TARGET_ORG, "inceleme", "documents"
+        )
+
+    # admin_session()'daki gerçek teardown yolunu birebir taklit et: yalnızca close(),
+    # açık rollback YOK (bkz. admin_api/db.py) — flush edilmiş ama commit edilmemiş
+    # insert'in hayatta kalmadığını kanıtlar.
+    session_factory.close()
+
+    fresh = sessionmaker(bind=engine, future=True)()
+    try:
+        count = fresh.execute(
+            select(func.count()).select_from(ImpersonationSession)
+        ).scalar_one()
+        assert count == 0
+    finally:
+        fresh.close()
+
+
+def test_start_legal_off_creates_no_rows(client_legal_off, session_factory):
+    resp = client_legal_off.post("/admin/impersonation", json=_start_body())
+    assert resp.status_code == 403
+    assert resp.json()["detail"] == "h5_legal_not_ready"
+
+    session_count = session_factory.execute(
+        select(func.count()).select_from(ImpersonationSession)
+    ).scalar_one()
+    assert session_count == 0
+
+    audit_count = session_factory.execute(
+        select(func.count())
+        .select_from(PlatformAuditLog)
+        .where(PlatformAuditLog.action == "impersonation.started")
+    ).scalar_one()
+    assert audit_count == 0
