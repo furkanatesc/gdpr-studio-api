@@ -19,8 +19,9 @@ from admin_api.db import assert_bypass_off
 from admin_api.modules.impersonation import SCOPE_READERS
 from app.auth.tenant_session import begin_provisioning, end_provisioning, set_org_context
 
-PG = os.getenv("RLS_TEST_DATABASE_URL")  # owner URL — same gate style as tests/test_rls.py
-pytestmark = pytest.mark.skipif(not PG, reason="requires Postgres owner URL")
+PG = os.getenv("ADMIN_RLS_TEST_DATABASE_URL")  # owner URL (tests swap to kvkk_admin_ro); ayrı var —
+# tenant test_rls.py RLS_TEST_DATABASE_URL=kvkk_app ister, admin lane owner ister (çakışmaz)
+pytestmark = pytest.mark.skipif(not PG, reason="requires Postgres owner URL (ADMIN_RLS_TEST_DATABASE_URL)")
 
 
 def _ro_url(pg):
