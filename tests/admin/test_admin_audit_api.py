@@ -5,6 +5,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -102,3 +103,20 @@ def test_limit_bounds_rejected(client):
 def test_malformed_cursor_rejected(client):
     resp = client.get("/admin/audit", params={"cursor": "notanint"})
     assert resp.status_code == 422
+
+
+def test_audit_requires_platform_admin(session_factory):
+    def _reject():
+        raise HTTPException(status_code=401, detail="missing_token")
+
+    def _override_session():
+        yield session_factory
+
+    app.dependency_overrides[require_platform_admin] = _reject
+    app.dependency_overrides[admin_session] = _override_session
+    try:
+        with TestClient(app) as c:
+            resp = c.get("/admin/audit")
+        assert resp.status_code == 401
+    finally:
+        app.dependency_overrides.clear()

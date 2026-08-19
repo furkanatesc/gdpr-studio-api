@@ -17,23 +17,28 @@ import redis
 from .config import get_admin_settings
 
 _client: redis.Redis | None = None
-_initialized = False
+_last_attempt: float = 0.0
+_RETRY_COOLDOWN_S = 5.0
 
 _local_lock = threading.Lock()
 _local_counters: dict[tuple[str, int], int] = {}
 
 
 def get_admin_redis() -> redis.Redis | None:
-    """Lazy singleton. Empty `admin_redis_url` -> None (disabled). Connect failure -> None
-    (caller distinguishes "disabled" from "down" via `admin_redis_url` truthiness itself)."""
-    global _client, _initialized
-    if _initialized:
+    """Cooldown'lu yeniden-deneme singleton. Bağlanan client süresiz cache'lenir. Client yokken
+    en fazla `_RETRY_COOLDOWN_S` saniyede bir yeniden bağlantı denenir — bir Redis blip'i
+    sürecin ömrü boyunca kalıcı `None` haline GELMEZ (bkz. review C1). Boş `admin_redis_url`
+    -> None (disabled, caller `admin_redis_url` truthiness'ından ayırt eder)."""
+    global _client, _last_attempt
+    if _client is not None:
         return _client
-    _initialized = True
     url = get_admin_settings().admin_redis_url
     if not url:
-        _client = None
         return None
+    now = time.monotonic()
+    if now - _last_attempt < _RETRY_COOLDOWN_S:
+        return None
+    _last_attempt = now
     try:
         client = redis.Redis.from_url(
             url, socket_connect_timeout=0.5, socket_timeout=0.5, decode_responses=True
@@ -47,9 +52,9 @@ def get_admin_redis() -> redis.Redis | None:
 
 def reset_admin_redis() -> None:
     """Test izolasyonu: singleton'ı sıfırla (ayar değişince yeniden değerlendirilsin)."""
-    global _client, _initialized
+    global _client, _last_attempt
     _client = None
-    _initialized = False
+    _last_attempt = 0.0
 
 
 def redis_fixed_window_allow(client: redis.Redis, key: str, limit: int, window_s: int = 60) -> bool:

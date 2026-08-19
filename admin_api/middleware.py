@@ -14,6 +14,7 @@ Degrade semantics:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 
@@ -69,11 +70,11 @@ class AdminRateLimitMiddleware:
             )
             key = f"admin_rl:{'write' if mutating else 'read'}:{ip or 'unknown'}"
 
-            redis = get_admin_redis()
+            redis = await asyncio.to_thread(get_admin_redis)
             down = redis is None
             if not down:
                 try:
-                    allowed = redis_fixed_window_allow(redis, key, limit)
+                    allowed = await asyncio.to_thread(redis_fixed_window_allow, redis, key, limit)
                 except RedisError:
                     down = True
                 else:

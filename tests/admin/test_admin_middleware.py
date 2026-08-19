@@ -16,10 +16,11 @@ from fastapi.testclient import TestClient
 from redis.exceptions import RedisError
 
 import admin_api.middleware as middleware_module
+import admin_api.redis_client as redis_client_module
 from admin_api.config import AdminSettings
 from admin_api.main import app as real_app
 from admin_api.middleware import AdminRateLimitMiddleware
-from admin_api.redis_client import reset_admin_redis, reset_local_limiter
+from admin_api.redis_client import get_admin_redis, reset_admin_redis, reset_local_limiter
 from admin_api.request_context import get_admin_client_ip
 
 
@@ -65,6 +66,56 @@ class _FakeRedis:
 
     def expire(self, key, ttl):
         pass
+
+
+def test_get_admin_redis_retries_after_cooldown(monkeypatch):
+    settings = AdminSettings(admin_redis_url="redis://down")
+    monkeypatch.setattr(redis_client_module, "get_admin_settings", lambda: settings)
+
+    calls = {"n": 0}
+
+    class _FakePingClient:
+        def ping(self):
+            return True
+
+    def _from_url(*args, **kwargs):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise ConnectionError("blip")
+        return _FakePingClient()
+
+    monkeypatch.setattr(redis_client_module.redis.Redis, "from_url", _from_url)
+
+    assert get_admin_redis() is None
+    assert calls["n"] == 1
+
+    monkeypatch.setattr(
+        redis_client_module.time,
+        "monotonic",
+        lambda: redis_client_module._last_attempt + 10.0,
+    )
+    client = get_admin_redis()
+    assert isinstance(client, _FakePingClient)
+    assert calls["n"] == 2
+
+
+def test_get_admin_redis_does_not_retry_within_cooldown(monkeypatch):
+    settings = AdminSettings(admin_redis_url="redis://down")
+    monkeypatch.setattr(redis_client_module, "get_admin_settings", lambda: settings)
+
+    calls = {"n": 0}
+
+    def _from_url(*args, **kwargs):
+        calls["n"] += 1
+        raise ConnectionError("still down")
+
+    monkeypatch.setattr(redis_client_module.redis.Redis, "from_url", _from_url)
+
+    assert get_admin_redis() is None
+    assert calls["n"] == 1
+
+    assert get_admin_redis() is None
+    assert calls["n"] == 1
 
 
 def test_middleware_registered_on_app():
