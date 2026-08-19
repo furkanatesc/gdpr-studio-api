@@ -15,7 +15,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.auth.tenant_session import set_org_context
@@ -190,9 +190,21 @@ def read_impersonated_scope(
     identity: PlatformAdminIdentity = Depends(require_platform_admin),
     session: Session = Depends(admin_session),
 ) -> list[dict]:
+    if not get_admin_settings().h5_legal_ready:
+        raise HTTPException(status_code=403, detail="h5_legal_not_ready")
+
     sess = resolve_active_session(session, identity, session_id, token_sub=identity.token_sub)
 
     assert_bypass_off(session)
+
+    if session.bind.dialect.name == "postgresql":
+        # Serialize concurrent reads on the SAME session so the volume-cap check + the viewed-audit
+        # write are atomic (else two concurrent reads can jointly exceed the cap — spec §4.3 makes the
+        # row cap the primary exfil control). xact lock auto-releases at write_audit's commit.
+        session.execute(
+            text("SELECT pg_advisory_xact_lock(hashtext('impersonation_read'), hashtext(:sid))"),
+            {"sid": str(session_id)},
+        )
 
     if scope not in SCOPE_READERS:
         raise HTTPException(status_code=404, detail="unknown_scope")

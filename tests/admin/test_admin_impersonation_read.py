@@ -73,7 +73,13 @@ def session_factory():
 
 
 def _make_client(
-    session, identity, monkeypatch, *, volume_cap: int = 5000, raise_server_exceptions: bool = True
+    session,
+    identity,
+    monkeypatch,
+    *,
+    volume_cap: int = 5000,
+    raise_server_exceptions: bool = True,
+    legal_ready: bool = True,
 ) -> TestClient:
     def _override_session():
         yield session
@@ -83,7 +89,7 @@ def _make_client(
     monkeypatch.setattr(
         impersonation_module,
         "get_admin_settings",
-        lambda: AdminSettings(h5_legal_ready=True, impersonation_volume_cap=volume_cap),
+        lambda: AdminSettings(h5_legal_ready=legal_ready, impersonation_volume_cap=volume_cap),
     )
     return TestClient(app, raise_server_exceptions=raise_server_exceptions)
 
@@ -157,6 +163,17 @@ def test_read_requires_active_session(client, session_factory):
     row = _seed_session(session_factory, expires_at=datetime.now(UTC) - timedelta(minutes=1))
     resp = client.get(f"/admin/impersonation/{row.id}/clients")
     assert resp.status_code == 403
+
+
+def test_read_requires_legal_ready(session_factory, monkeypatch):
+    row = _seed_session(session_factory, scope="clients")
+    c = _make_client(session_factory, IDENTITY_A, monkeypatch, legal_ready=False)
+    try:
+        resp = c.get(f"/admin/impersonation/{row.id}/clients")
+        assert resp.status_code == 403
+        assert resp.json()["detail"] == "h5_legal_not_ready"
+    finally:
+        app.dependency_overrides.clear()
 
 
 def test_read_scope_must_match_session(client, session_factory):
@@ -235,6 +252,27 @@ def test_volume_cap_exceeded_returns_429(session_factory, monkeypatch):
             select(PlatformAuditLog).where(PlatformAuditLog.action == "impersonation.viewed")
         ).scalars().all()
         assert viewed == []
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_volume_cap_cumulative_across_sequential_requests(session_factory, monkeypatch):
+    _seed_target_org_data(session_factory)
+    row = _seed_session(session_factory, scope="clients")
+    c = _make_client(session_factory, IDENTITY_A, monkeypatch, volume_cap=3)
+    try:
+        resp1 = c.get(f"/admin/impersonation/{row.id}/clients")
+        assert resp1.status_code == 200
+        assert len(resp1.json()) == 2
+
+        resp2 = c.get(f"/admin/impersonation/{row.id}/clients")
+        assert resp2.status_code == 429
+        assert resp2.json()["detail"] == "volume_cap_exceeded"
+
+        viewed = session_factory.execute(
+            select(PlatformAuditLog).where(PlatformAuditLog.action == "impersonation.viewed")
+        ).scalars().all()
+        assert len(viewed) == 1
     finally:
         app.dependency_overrides.clear()
 

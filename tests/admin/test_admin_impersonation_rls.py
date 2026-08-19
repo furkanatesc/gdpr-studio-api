@@ -101,12 +101,29 @@ def test_read_requires_bypass_off():
         eng.dispose()
 
 
+SCOPE_IDENTITY_FIELD = {
+    "clients": "id",
+    "compliance": "requirementKey",
+    "documents_meta": "id",
+    "ozel_nitelikli": "id",
+}
+
+
 @pytest.fixture()
 def seeded_orgs_with_clients():
-    """Owner URL ile bypass altında iki org + birer client ekler (SEC-C2); testten sonra temizler."""
+    """Owner URL ile bypass altında iki org + birer client + her SCOPE_READERS okuyucusunun
+    arkasındaki tabloda birer satır ekler (SEC-C2, 4 kapsam için); testten sonra temizler."""
     eng = create_engine(PG, future=True)
     org_a, org_b = uuid.uuid4(), uuid.uuid4()
     client_a, client_b = uuid.uuid4(), uuid.uuid4()
+    doc_a, doc_b = uuid.uuid4(), uuid.uuid4()
+    proc_a, proc_b = uuid.uuid4(), uuid.uuid4()
+    seed_ids = {
+        "clients": (client_a, client_b),
+        "compliance": ("sec-c2-req-a", "sec-c2-req-b"),
+        "documents_meta": (doc_a, doc_b),
+        "ozel_nitelikli": (proc_a, proc_b),
+    }
     with eng.begin() as c:
         c.execute(text("SELECT set_config('app.bypass_rls', 'on', true)"))
         for oid, name in [(org_a, "SEC-C2 Org A"), (org_b, "SEC-C2 Org B")]:
@@ -114,19 +131,55 @@ def seeded_orgs_with_clients():
                 text("INSERT INTO organizations (id, name, status) VALUES (:id, :name, 'active')"),
                 {"id": oid, "name": name},
             )
-        c.execute(
-            text("INSERT INTO clients (id, org_id, name) VALUES (:id, :oid, :name)"),
-            {"id": client_a, "oid": org_a, "name": "SEC-C2 Client A"},
-        )
-        c.execute(
-            text("INSERT INTO clients (id, org_id, name) VALUES (:id, :oid, :name)"),
-            {"id": client_b, "oid": org_b, "name": "SEC-C2 Client B"},
-        )
+        for cid, oid, name in [(client_a, org_a, "SEC-C2 Client A"), (client_b, org_b, "SEC-C2 Client B")]:
+            c.execute(
+                text("INSERT INTO clients (id, org_id, name) VALUES (:id, :oid, :name)"),
+                {"id": cid, "oid": oid, "name": name},
+            )
+        for oid, key in [(org_a, "sec-c2-req-a"), (org_b, "sec-c2-req-b")]:
+            c.execute(
+                text(
+                    "INSERT INTO compliance_status (id, org_id, requirement_key, status) "
+                    "VALUES (:id, :oid, :key, 'yapildi')"
+                ),
+                {"id": uuid.uuid4(), "oid": oid, "key": key},
+            )
+        for did, oid in [(doc_a, org_a), (doc_b, org_b)]:
+            c.execute(
+                text(
+                    "INSERT INTO generated_documents (id, org_id, doc_type) "
+                    "VALUES (:id, :oid, 'aydinlatma')"
+                ),
+                {"id": did, "oid": oid},
+            )
+        for pid, oid, cid, ad in [
+            (proc_a, org_a, client_a, "SEC-C2 Proc A"),
+            (proc_b, org_b, client_b, "SEC-C2 Proc B"),
+        ]:
+            c.execute(
+                text(
+                    "INSERT INTO client_processors (id, org_id, client_id, ad, unvan) "
+                    "VALUES (:id, :oid, :cid, :ad, 'A.Ş.')"
+                ),
+                {"id": pid, "oid": oid, "cid": cid, "ad": ad},
+            )
 
-    yield org_a, org_b
+    yield org_a, org_b, seed_ids
 
     with eng.begin() as c:
         c.execute(text("SELECT set_config('app.bypass_rls', 'on', true)"))
+        c.execute(
+            text("DELETE FROM client_processors WHERE org_id = ANY(:oids)"),
+            {"oids": [str(org_a), str(org_b)]},
+        )
+        c.execute(
+            text("DELETE FROM generated_documents WHERE org_id = ANY(:oids)"),
+            {"oids": [str(org_a), str(org_b)]},
+        )
+        c.execute(
+            text("DELETE FROM compliance_status WHERE org_id = ANY(:oids)"),
+            {"oids": [str(org_a), str(org_b)]},
+        )
         c.execute(
             text("DELETE FROM clients WHERE org_id = ANY(:oids)"),
             {"oids": [str(org_a), str(org_b)]},
@@ -138,11 +191,14 @@ def seeded_orgs_with_clients():
     eng.dispose()
 
 
-def test_aggregate_then_impersonate_does_not_leak_foreign_rows(seeded_orgs_with_clients):
+@pytest.mark.parametrize("scope", ["clients", "compliance", "documents_meta", "ozel_nitelikli"])
+def test_aggregate_then_impersonate_does_not_leak_foreign_rows(scope, seeded_orgs_with_clients):
     """SEC-C2 — the core guarantee: an unrelated cross-tenant aggregate window (bypass on,
     then off) in one kvkk_admin_ro session must NOT leak into a scoped impersonation read run
-    in a FRESH kvkk_admin_ro session/connection afterwards."""
-    org_a, org_b = seeded_orgs_with_clients
+    in a FRESH kvkk_admin_ro session/connection afterwards. Parametrized over all four shipped
+    scopes — each backing table (clients/compliance_status/generated_documents/client_processors)
+    carries an equivalent org_id-keyed FORCE RLS policy."""
+    org_a, org_b, seed_ids = seeded_orgs_with_clients
 
     eng1 = create_engine(_ro_url(PG), future=True)
     s1 = sessionmaker(bind=eng1, future=True)()
@@ -160,10 +216,12 @@ def test_aggregate_then_impersonate_does_not_leak_foreign_rows(seeded_orgs_with_
     s2 = sessionmaker(bind=eng2, future=True)()
     try:
         set_org_context(s2, org_a)
-        rows = SCOPE_READERS["clients"](s2, org_a)
-        names = {r["name"] for r in rows}
-        assert "SEC-C2 Client A" in names
-        assert "SEC-C2 Client B" not in names
+        rows = SCOPE_READERS[scope](s2, org_a)
+        field = SCOPE_IDENTITY_FIELD[scope]
+        values = {r[field] for r in rows}
+        value_a, value_b = seed_ids[scope]
+        assert value_a in values
+        assert value_b not in values
     finally:
         s2.close()
         eng2.dispose()
