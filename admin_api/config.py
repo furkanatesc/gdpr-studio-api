@@ -38,6 +38,13 @@ class AdminSettings(BaseSettings):
     # IP allowlist — altyapı (ör. Railway private networking) zorunlu kılar; uygulama tarafı savunma derinliği.
     admin_allowed_ips: str = ""
 
+    # Rate-limit Redis — boş = limiter tamamen devre dışı (dev/test/Redis'siz deploy).
+    admin_redis_url: str = ""
+    # Salt-okuma uçları dakikalık limiti — Redis çökerse yerel-fallback ile korunur (degrade).
+    admin_rate_limit_read_per_min: int = 120
+    # Yazma/state-değiştiren uçlar dakikalık limiti — Redis çökerse fail-closed 503.
+    admin_rate_limit_write_per_min: int = 30
+
     @property
     def admin_supabase_issuer(self) -> str:
         return f"{self.admin_supabase_project_url.rstrip('/')}/auth/v1"

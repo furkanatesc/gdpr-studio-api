@@ -22,6 +22,7 @@ from app.models import (
     Membership,
     Organization,
     PlatformAdmin,
+    PlatformAuditLog,
     PlatformMetricDaily,
     Subscription,
     UsageCounter,
@@ -216,6 +217,58 @@ class TenantAdminRepository:
                 else None
             ),
         }
+
+
+def _parse_audit_cursor(cursor: str) -> int:
+    return int(cursor)
+
+
+def _encode_audit_cursor(last_id: int) -> str:
+    return str(last_id)
+
+
+class PlatformAuditRepository:
+    """`platform_audit_logs` salt-okunur pager — `id` DESC keyset (PK, indeksli).
+
+    `created_at` yerine `id` ile sıralanır: iki kompozit indeks de `created_at` ile
+    BAŞLAMIYOR, bu yüzden `created_at` sıralaması ölçekte seq-scan/sort'a düşer; `id` DESC
+    indeksli ve (append-only, artan ekleme sırası nedeniyle) kronolojik olarak eşdeğerdir.
+    `prev_hash`/`row_hash` bilerek DIŞLANIR — bütünlük içseldir, okuyucuya açılmaz.
+    """
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def list(self, *, cursor: str | None, limit: int) -> dict:
+        stmt = select(PlatformAuditLog).order_by(PlatformAuditLog.id.desc()).limit(limit + 1)
+        if cursor:
+            cursor_id = _parse_audit_cursor(cursor)
+            stmt = stmt.where(PlatformAuditLog.id < cursor_id)
+        rows = self._session.execute(stmt).scalars().all()
+        has_more = len(rows) > limit
+        page = rows[:limit]
+
+        items = [
+            {
+                "id": row.id,
+                "action": row.action,
+                "actor_platform_admin_id": row.actor_platform_admin_id,
+                "actor_email_snapshot": row.actor_email_snapshot,
+                "target_org_id": row.target_org_id,
+                "target_type": row.target_type,
+                "target_id": row.target_id,
+                "reason": row.reason,
+                "result_row_count": row.result_row_count,
+                "meta": row.meta,
+                "ip": row.ip,
+                "request_id": row.request_id,
+                "created_at": row.created_at,
+            }
+            for row in page
+        ]
+
+        next_cursor = _encode_audit_cursor(page[-1].id) if has_more and page else None
+        return {"items": items, "next_cursor": next_cursor}
 
 
 _IMPERSONATION_TTL = timedelta(minutes=30)

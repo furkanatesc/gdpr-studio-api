@@ -12,6 +12,8 @@ from sqlalchemy import select
 
 from app.models import PlatformAuditLog
 
+from .request_context import get_admin_client_ip
+
 
 def _as_uuid(value) -> uuid.UUID | None:
     if value is None or isinstance(value, uuid.UUID):
@@ -39,6 +41,8 @@ def write_audit(
     ip=None,
     request_id=None,
 ) -> PlatformAuditLog:
+    if ip is None:
+        ip = get_admin_client_ip()  # trusted-hop socket peer, stamped by AdminRateLimitMiddleware
     prev_stmt = select(PlatformAuditLog.row_hash).order_by(PlatformAuditLog.id.desc()).limit(1)
     if session.bind.dialect.name == "postgresql":
         # Serialize concurrent appends: without FOR UPDATE, two writers can both read the
