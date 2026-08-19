@@ -20,6 +20,7 @@ _client: redis.Redis | None = None
 _last_attempt: float = 0.0
 _RETRY_COOLDOWN_S = 5.0
 
+_conn_lock = threading.Lock()
 _local_lock = threading.Lock()
 _local_counters: dict[tuple[str, int], int] = {}
 
@@ -28,26 +29,33 @@ def get_admin_redis() -> redis.Redis | None:
     """Cooldown'lu yeniden-deneme singleton. Bağlanan client süresiz cache'lenir. Client yokken
     en fazla `_RETRY_COOLDOWN_S` saniyede bir yeniden bağlantı denenir — bir Redis blip'i
     sürecin ömrü boyunca kalıcı `None` haline GELMEZ (bkz. review C1). Boş `admin_redis_url`
-    -> None (disabled, caller `admin_redis_url` truthiness'ından ayırt eder)."""
+    -> None (disabled, caller `admin_redis_url` truthiness'ından ayırt eder).
+
+    `_conn_lock`: bağlantı+global-mutasyonu serileştirir (çağıran `asyncio.to_thread` ile ayrı
+    worker thread'lerden gelir). Kilit içinde tekrar-kontrol → başarısız bir thread'in `_client=None`
+    yazması, eşzamanlı başarılı bir bağlantıyı EZEMEZ (re-review #3)."""
     global _client, _last_attempt
     if _client is not None:
         return _client
     url = get_admin_settings().admin_redis_url
     if not url:
         return None
-    now = time.monotonic()
-    if now - _last_attempt < _RETRY_COOLDOWN_S:
-        return None
-    _last_attempt = now
-    try:
-        client = redis.Redis.from_url(
-            url, socket_connect_timeout=0.5, socket_timeout=0.5, decode_responses=True
-        )
-        client.ping()
-        _client = client
-    except Exception:
-        _client = None
-    return _client
+    with _conn_lock:
+        if _client is not None:  # başka thread bu arada bağlandı
+            return _client
+        now = time.monotonic()
+        if now - _last_attempt < _RETRY_COOLDOWN_S:
+            return None
+        _last_attempt = now
+        try:
+            client = redis.Redis.from_url(
+                url, socket_connect_timeout=0.5, socket_timeout=0.5, decode_responses=True
+            )
+            client.ping()
+            _client = client
+        except Exception:
+            _client = None
+        return _client
 
 
 def reset_admin_redis() -> None:
