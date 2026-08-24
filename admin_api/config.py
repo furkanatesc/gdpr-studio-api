@@ -48,6 +48,10 @@ class AdminSettings(BaseSettings):
     # Yazma/state-değiştiren uçlar dakikalık limiti — Redis çökerse fail-closed 503.
     admin_rate_limit_write_per_min: int = 30
 
+    # BFF-only access: admin-api is closed to the public and only the admin-web BFF may
+    # reach it, presenting this shared secret in X-Admin-BFF-Secret. Empty = dev/test bypass.
+    admin_bff_secret: str = ""
+
     @property
     def admin_supabase_issuer(self) -> str:
         return f"{self.admin_supabase_project_url.rstrip('/')}/auth/v1"

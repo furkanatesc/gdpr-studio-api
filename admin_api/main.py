@@ -26,6 +26,11 @@ async def lifespan(app: FastAPI):
                 "ADMIN_REDIS_URL must be set in production "
                 "(empty disables the rate-limiter = self-DoS exposure)"
             )
+        if not s.admin_bff_secret:
+            raise RuntimeError(
+                "ADMIN_BFF_SECRET must be set in production "
+                "(empty leaves admin-api open to the public)"
+            )
         verify_admin_role_and_head(get_admin_engine(), s)
     yield
 

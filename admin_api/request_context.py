@@ -20,3 +20,12 @@ def get_admin_client_ip() -> str | None:
 
 def reset_admin_client_ip(token: Token) -> None:
     _admin_client_ip.reset(token)
+
+
+def resolve_admin_client_ip(*, socket_ip, bff_secret_ok, forwarded_ip):
+    """The audit/rate-limit client IP. Trust the BFF-forwarded IP only when the caller
+    proved it is the BFF (valid secret); otherwise fall back to the socket peer so an
+    untrusted caller cannot spoof its origin."""
+    if bff_secret_ok and forwarded_ip:
+        return forwarded_ip
+    return socket_ip
