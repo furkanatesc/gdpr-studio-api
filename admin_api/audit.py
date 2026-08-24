@@ -7,6 +7,7 @@
 import hashlib
 import json
 import uuid
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 
@@ -25,6 +26,62 @@ def _hash(prev: str | None, payload: dict) -> str:
     return hashlib.sha256(
         ((prev or "") + json.dumps(payload, sort_keys=True, default=str)).encode()
     ).hexdigest()
+
+
+def _payload(
+    *,
+    actor_id,
+    action,
+    reason,
+    target_org_id,
+    target_type,
+    target_id,
+    result_row_count,
+    meta,
+    created_at,
+    ip,
+    request_id,
+    actor_email_snapshot,
+) -> dict:
+    """The exact field set the row_hash covers. `created_at`, `ip`, `request_id` and
+    `actor_email_snapshot` are hashed too so an owner with UPDATE cannot silently rewrite
+    the when/where/who of a row without invalidating the chain."""
+    return {
+        "actor": str(actor_id) if actor_id is not None else None,
+        "actor_email_snapshot": actor_email_snapshot,
+        "action": action,
+        "reason": reason,
+        "target_org_id": str(target_org_id) if target_org_id is not None else None,
+        "target_type": target_type,
+        "target_id": target_id,
+        "result_row_count": result_row_count,
+        "meta": meta,
+        "created_at": created_at.isoformat() if created_at is not None else None,
+        "ip": ip,
+        "request_id": request_id,
+    }
+
+
+def recompute_row_hash(row: PlatformAuditLog) -> str:
+    """WORM verification: recompute a stored row's hash from its own fields to detect
+    tampering. Any post-write mutation of a hashed field makes this diverge from row.row_hash."""
+    return _hash(
+        row.prev_hash,
+        _payload(
+            actor_id=row.actor_platform_admin_id,
+            action=row.action,
+            reason=row.reason,
+            target_org_id=row.target_org_id,
+            target_type=row.target_type,
+            target_id=row.target_id,
+            result_row_count=row.result_row_count,
+            meta=row.meta,
+            created_at=row.created_at,
+            ip=row.ip,
+            request_id=row.request_id,
+            actor_email_snapshot=row.actor_email_snapshot,
+        ),
+    )
 
 
 def write_audit(
@@ -50,19 +107,27 @@ def write_audit(
         # by nature), so the plain select is used there.
         prev_stmt = prev_stmt.with_for_update()
     prev = session.execute(prev_stmt).scalar()
-    payload = {
-        "actor": getattr(actor, "admin_id", None),
-        "action": action,
-        "reason": reason,
-        "target_org_id": str(target_org_id) if target_org_id is not None else None,
-        "target_type": target_type,
-        "target_id": target_id,
-        "result_row_count": result_row_count,
-        "meta": meta,
-    }
+    # Stamp created_at in Python (not the DB server_default) so it is known at hash time
+    # and therefore covered by row_hash. Always UTC.
+    created_at = datetime.now(UTC)
+    actor_email_snapshot = getattr(actor, "email", None)
+    payload = _payload(
+        actor_id=getattr(actor, "admin_id", None),
+        action=action,
+        reason=reason,
+        target_org_id=target_org_id,
+        target_type=target_type,
+        target_id=target_id,
+        result_row_count=result_row_count,
+        meta=meta,
+        created_at=created_at,
+        ip=ip,
+        request_id=request_id,
+        actor_email_snapshot=actor_email_snapshot,
+    )
     row = PlatformAuditLog(
         actor_platform_admin_id=_as_uuid(getattr(actor, "admin_id", None)),
-        actor_email_snapshot=getattr(actor, "email", None),
+        actor_email_snapshot=actor_email_snapshot,
         action=action,
         reason=reason,
         target_org_id=_as_uuid(target_org_id),
@@ -72,6 +137,7 @@ def write_audit(
         meta=meta,
         ip=ip,
         request_id=request_id,
+        created_at=created_at,
         prev_hash=prev,
         row_hash=_hash(prev, payload),
     )

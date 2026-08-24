@@ -98,9 +98,38 @@ def upgrade():
         op.execute("GRANT INSERT ON impersonation_sessions TO kvkk_admin_ro")
         op.execute("GRANT UPDATE (ended_at, end_kind, approved_by) ON impersonation_sessions TO kvkk_admin_ro")
         op.execute("GRANT INSERT, UPDATE ON platform_metrics_daily TO kvkk_metrics_job")
-        op.execute("GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO kvkk_admin_ro, kvkk_metrics_job")
+        # Least-privilege sequence USAGE: grant ONLY the serial sequence each role must
+        # advance for its own INSERTs — audit id-seq → admin_ro, metrics id-seq → metrics_job.
+        # (impersonation_sessions/platform_admins use gen_random_uuid(), no sequence.) The
+        # prior "USAGE,SELECT ON ALL SEQUENCES" gave both read-only roles every tenant sequence.
+        # pg_get_serial_sequence keeps this robust to the actual generated sequence name.
+        op.execute(
+            "DO $$ DECLARE s text; BEGIN "
+            "s := pg_get_serial_sequence('platform_audit_logs','id'); "
+            "IF s IS NOT NULL THEN EXECUTE format('GRANT USAGE ON SEQUENCE %s TO kvkk_admin_ro', s); END IF; "
+            "s := pg_get_serial_sequence('platform_metrics_daily','id'); "
+            "IF s IS NOT NULL THEN EXECUTE format('GRANT USAGE ON SEQUENCE %s TO kvkk_metrics_job', s); END IF; "
+            "END $$;"
+        )
         op.execute("ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO kvkk_admin_ro")
         op.execute("ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO kvkk_metrics_job")
+        # kvkk_app (tenant app role) must have ZERO access to platform back-office objects.
+        # 0003 set ALTER DEFAULT PRIVILEGES granting kvkk_app full DML+SELECT on every future
+        # table/sequence, so these four tables (and their serial sequences) were auto-granted at
+        # CREATE — a DB-role hole in the append-only audit and a cross-tenant metadata SELECT path.
+        # Revoke it back (repo pattern: 0014 REVOKE UPDATE,DELETE ... FROM kvkk_app).
+        op.execute(
+            "REVOKE ALL PRIVILEGES ON platform_audit_logs, impersonation_sessions, "
+            "platform_admins, platform_metrics_daily FROM kvkk_app"
+        )
+        op.execute(
+            "DO $$ DECLARE s text; BEGIN "
+            "s := pg_get_serial_sequence('platform_audit_logs','id'); "
+            "IF s IS NOT NULL THEN EXECUTE format('REVOKE ALL PRIVILEGES ON SEQUENCE %s FROM kvkk_app', s); END IF; "
+            "s := pg_get_serial_sequence('platform_metrics_daily','id'); "
+            "IF s IS NOT NULL THEN EXECUTE format('REVOKE ALL PRIVILEGES ON SEQUENCE %s FROM kvkk_app', s); END IF; "
+            "END $$;"
+        )
 
 
 def downgrade():

@@ -28,6 +28,9 @@ class AdminSettings(BaseSettings):
     admin_supabase_project_url: str = ""
     admin_supabase_jwt_aud: str = "platform-admin"
     admin_jwks_timeout_s: int = 10
+    # Step-up recency (spec §4.2): an `amr` MFA factor older than this is not "recent"
+    # → 401 fail-closed. Default aligns with the typical Supabase access-token lifetime.
+    admin_amr_mfa_max_age_s: int = 3600
 
     # H5 gate — varsayılan KAPALI (yasal/hukuki onay öncesi hiçbir platform-admin uç aktif olmaz).
     h5_legal_ready: bool = False

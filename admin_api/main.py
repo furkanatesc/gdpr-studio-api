@@ -19,6 +19,13 @@ from .modules.tenants import router as tenants_router
 async def lifespan(app: FastAPI):
     s = get_admin_settings()
     if s.environment == "production":
+        # Fail-closed: an empty ADMIN_REDIS_URL silently disables the rate-limiter, leaving
+        # the admin surface with no self-DoS protection. Never allow that in production.
+        if not s.admin_redis_url:
+            raise RuntimeError(
+                "ADMIN_REDIS_URL must be set in production "
+                "(empty disables the rate-limiter = self-DoS exposure)"
+            )
         verify_admin_role_and_head(get_admin_engine(), s)
     yield
 
