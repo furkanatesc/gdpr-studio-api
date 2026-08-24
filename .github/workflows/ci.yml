@@ -45,5 +45,9 @@ jobs:
 
       - name: Testler (pytest — birim + golden grounding + gerçek RLS izolasyonu)
         env:
+          # Tenant RLS testleri (tests/test_rls.py): NOBYPASSRLS kvkk_app rolüyle koşar.
           RLS_TEST_DATABASE_URL: postgresql+psycopg://kvkk_app:kvkk_app@localhost:5432/kvkk
+          # Admin RLS testleri (tests/admin/*_rls.py): owner ile seed edip kvkk_admin_ro'ya çevirir.
+          # Ayrı var — aynı anda iki farklı rol gerektiği için (çakışmaz).
+          ADMIN_RLS_TEST_DATABASE_URL: postgresql+psycopg://kvkk:kvkk@localhost:5432/kvkk
         run: pytest -q

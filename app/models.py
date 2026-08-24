@@ -9,18 +9,20 @@ pgvector ile eklenecek bir migration'dır.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import (
     JSON,
     BigInteger,
     Boolean,
     CheckConstraint,
+    Date,
     DateTime,
     Float,
     ForeignKey,
     Index,
     Integer,
+    Numeric,
     String,
     Text,
     UniqueConstraint,
@@ -67,6 +69,9 @@ class Organization(Base):
     __tablename__ = "organizations"
     __table_args__ = (
         CheckConstraint("status IN ('active', 'deleting', 'suspended')", name="ck_organizations_status"),
+        # H5 platform admin (migration 0020) rollup job için — ORM'de deklare edilmezse
+        # autogenerate bu index'i DROP önerir (model↔DB drift).
+        Index("ix_org_status", "status"),
     )
     id: Mapped[uuid.UUID] = _uuid_pk()
     name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -150,6 +155,8 @@ class Subscription(Base):
         CheckConstraint("plan IN ('baslangic', 'standart', 'premium')", name="ck_subscriptions_plan"),
         CheckConstraint("interval IN ('month', 'year')", name="ck_subscriptions_interval"),
         CheckConstraint("status IN ('active', 'past_due', 'canceled')", name="ck_subscriptions_status"),
+        # H5 platform admin (migration 0020) rollup job için.
+        Index("ix_sub_plan_status", "plan", "status"),
     )
     id: Mapped[uuid.UUID] = _uuid_pk()
     org_id: Mapped[uuid.UUID] = mapped_column(
@@ -171,6 +178,8 @@ class UsageCounter(Base):
     __tablename__ = "usage_counters"
     __table_args__ = (
         UniqueConstraint("org_id", "period", name="uq_usage_org_period"),
+        # H5 platform admin (migration 0020) rollup job için.
+        Index("ix_usage_period", "period"),
     )
     id: Mapped[uuid.UUID] = _uuid_pk()
     org_id: Mapped[uuid.UUID] = mapped_column(
@@ -236,6 +245,8 @@ class GeneratedDocument(Base):
             "doc_type IN ('aydinlatma', 'cerez', 'kayit', 'dpa', 'dpia', 'ihlal')",
             name="ck_generated_documents_type",
         ),
+        # H5 platform admin (migration 0020) rollup job için.
+        Index("ix_gen_docs_created", "created_at"),
     )
     id: Mapped[uuid.UUID] = _uuid_pk()
     org_id: Mapped[uuid.UUID] = mapped_column(
@@ -396,3 +407,91 @@ class AuditLog(Base):
     request_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     meta: Mapped[dict | None] = mapped_column(_JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PlatformAdmin(Base):
+    """H5 platform yönetici hesabı — ayrı Supabase staff projesi ile kimliklenir (org'a bağlı değil)."""
+
+    __tablename__ = "platform_admins"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    supabase_user_id: Mapped[str] = mapped_column(String(), unique=True, nullable=False)
+    email: Mapped[str] = mapped_column(String(), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))
+    confidentiality_ack_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    disabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class PlatformAuditLog(Base):
+    """Append-only platform-admin denetim izi — hash-zincirli (prev_hash/row_hash), UPDATE/DELETE REVOKE ile reddedilir."""
+
+    __tablename__ = "platform_audit_logs"
+    __table_args__ = (
+        Index("ix_platform_audit_actor_created", "actor_platform_admin_id", "created_at"),
+        Index("ix_platform_audit_org_created", "target_org_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(
+        Integer().with_variant(BigInteger(), "postgresql"), primary_key=True, autoincrement=True
+    )
+    actor_platform_admin_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("platform_admins.id", ondelete="SET NULL"), nullable=True
+    )
+    actor_email_snapshot: Mapped[str | None] = mapped_column(String(), nullable=True)
+    action: Mapped[str] = mapped_column(String(), nullable=False)
+    target_org_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    target_type: Mapped[str | None] = mapped_column(String(), nullable=True)
+    target_id: Mapped[str | None] = mapped_column(String(), nullable=True)
+    reason: Mapped[str] = mapped_column(String(), nullable=False)
+    result_row_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    meta: Mapped[dict | None] = mapped_column(_JSON, nullable=True)
+    prev_hash: Mapped[str | None] = mapped_column(String(), nullable=True)
+    row_hash: Mapped[str] = mapped_column(String(), nullable=False)
+    ip: Mapped[str | None] = mapped_column(String(), nullable=True)
+    request_id: Mapped[str | None] = mapped_column(String(), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ImpersonationSession(Base):
+    """Platform admin'in bir org'u geçici olarak taklit etmesi (dual-control + zaman-sınırlı + sub-bağlı)."""
+
+    __tablename__ = "impersonation_sessions"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    platform_admin_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("platform_admins.id"), nullable=False
+    )
+    target_org_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    reason: Mapped[str] = mapped_column(String(), nullable=False)
+    scope: Mapped[str] = mapped_column(String(), nullable=False)
+    requires_dual_control: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
+    approved_by: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("platform_admins.id"), nullable=True
+    )
+    bound_sub: Mapped[str] = mapped_column(String(), nullable=False)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    end_kind: Mapped[str | None] = mapped_column(String(), nullable=True)
+
+
+class PlatformMetricDaily(Base):
+    """Günlük metrik rollup (kvkk_metrics_job INSERT/UPDATE eder). Surrogate id PK (PREFLIGHT ruling,
+    2026-08-17): plandaki tablo tanımında PK yoktu, ORM modeli PK zorunlu kılar; UPSERT anahtarı
+    UniqueConstraint(day, metric_key, dims) olarak korunur."""
+
+    __tablename__ = "platform_metrics_daily"
+    __table_args__ = (
+        UniqueConstraint("day", "metric_key", "dims", name="uq_platform_metrics_daily"),
+        Index("ix_platform_metrics_key_day", "metric_key", "day"),
+    )
+
+    id: Mapped[int] = mapped_column(
+        Integer().with_variant(BigInteger(), "postgresql"), primary_key=True, autoincrement=True
+    )
+    day: Mapped[date] = mapped_column(Date, nullable=False)
+    metric_key: Mapped[str] = mapped_column(String(), nullable=False)
+    dims: Mapped[dict] = mapped_column(_JSON, nullable=False, server_default=text("'{}'"))
+    value_numeric: Mapped[float] = mapped_column(Numeric(), nullable=False)
+    computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
