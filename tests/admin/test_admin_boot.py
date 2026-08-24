@@ -29,6 +29,7 @@ def test_prod_with_redis_url_boots(monkeypatch):
     s = AdminSettings(
         environment="production",
         admin_redis_url="redis://localhost:6379/0",
+        admin_bff_secret="test-secret",
         admin_database_url="sqlite://",
     )
     monkeypatch.setattr(main, "get_admin_settings", lambda: s)
@@ -41,3 +42,18 @@ def test_dev_allows_empty_redis(monkeypatch):
     monkeypatch.setattr(main, "get_admin_settings", lambda: s)
     with TestClient(main.app) as c:  # dev never boot-guards redis
         assert c.get("/admin/healthz").status_code == 200
+
+
+def test_prod_requires_admin_bff_secret(monkeypatch):
+    monkeypatch.setattr(main, "verify_admin_role_and_head", lambda *a, **k: None)
+    monkeypatch.setattr(main, "get_admin_engine", lambda: None)
+    s = AdminSettings(
+        environment="production",
+        admin_redis_url="redis://x:6379/0",
+        admin_bff_secret="",
+        admin_database_url="sqlite://",
+    )
+    monkeypatch.setattr(main, "get_admin_settings", lambda: s)
+    with pytest.raises(RuntimeError, match="ADMIN_BFF_SECRET"):
+        with TestClient(main.app):
+            pass
