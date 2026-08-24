@@ -15,6 +15,7 @@ Degrade semantics:
 from __future__ import annotations
 
 import asyncio
+import hmac
 import json
 import logging
 
@@ -22,12 +23,14 @@ from redis.exceptions import RedisError
 
 from .config import get_admin_settings
 from .redis_client import get_admin_redis, local_fixed_window_allow, redis_fixed_window_allow
-from .request_context import reset_admin_client_ip, set_admin_client_ip
+from .request_context import reset_admin_client_ip, resolve_admin_client_ip, set_admin_client_ip
 
 _log = logging.getLogger("admin_api.ratelimit")
 
 _EXEMPT_PATHS = {"/admin/healthz", "/openapi.json", "/docs", "/redoc"}
 _MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+_BFF_SECRET_HEADER = b"x-admin-bff-secret"
+_BFF_CLIENT_IP_HEADER = b"x-admin-client-ip"
 
 
 async def _send_json(send, status: int, detail: str, retry_after: int | None = None) -> None:
@@ -48,7 +51,25 @@ class AdminRateLimitMiddleware:
             return
 
         client = scope.get("client")
-        ip = client[0] if client else None
+        socket_ip = client[0] if client else None
+        headers = dict(scope.get("headers") or [])
+
+        settings = get_admin_settings()
+
+        bff_secret_ok = False
+        if settings.admin_bff_secret:
+            provided = headers.get(_BFF_SECRET_HEADER, b"").decode("latin-1")
+            bff_secret_ok = hmac.compare_digest(provided, settings.admin_bff_secret)
+            if not bff_secret_ok:
+                await _send_json(send, 403, "forbidden")
+                return
+
+        forwarded_ip_raw = headers.get(_BFF_CLIENT_IP_HEADER)
+        forwarded_ip = forwarded_ip_raw.decode("latin-1") if forwarded_ip_raw else None
+        ip = resolve_admin_client_ip(
+            socket_ip=socket_ip, bff_secret_ok=bff_secret_ok, forwarded_ip=forwarded_ip
+        )
+
         token = set_admin_client_ip(ip)
         try:
             path = scope.get("path", "")
@@ -56,7 +77,6 @@ class AdminRateLimitMiddleware:
                 await self.app(scope, receive, send)
                 return
 
-            settings = get_admin_settings()
             if not settings.admin_redis_url:  # unconfigured -> limiter disabled
                 await self.app(scope, receive, send)
                 return

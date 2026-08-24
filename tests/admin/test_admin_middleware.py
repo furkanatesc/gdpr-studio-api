@@ -171,6 +171,53 @@ def test_configured_down_write_fails_closed(monkeypatch, caplog):
     assert any("failing closed" in rec.message for rec in caplog.records)
 
 
+def _set_admin_bff_secret(monkeypatch, secret: str) -> AdminSettings:
+    settings = AdminSettings(admin_redis_url="", admin_bff_secret=secret)
+    monkeypatch.setattr(middleware_module, "get_admin_settings", lambda: settings)
+    return settings
+
+
+def _client_with_middleware(capture_client_ip_into: dict | None = None) -> TestClient:
+    async def _app(scope, receive, send):
+        if capture_client_ip_into is not None:
+            capture_client_ip_into["client_ip"] = get_admin_client_ip()
+        await send(
+            {
+                "type": "http.response.start",
+                "status": 200,
+                "headers": [(b"content-type", b"application/json")],
+            }
+        )
+        await send({"type": "http.response.body", "body": b"{}"})
+
+    return TestClient(AdminRateLimitMiddleware(_app))
+
+
+def test_missing_bff_secret_rejected_when_configured(monkeypatch):
+    _set_admin_bff_secret(monkeypatch, "s3cret")
+    client = _client_with_middleware()
+    r = client.get("/admin/healthz")  # no X-Admin-BFF-Secret
+    assert r.status_code == 403
+
+
+def test_matching_bff_secret_allows_and_uses_forwarded_ip(monkeypatch):
+    _set_admin_bff_secret(monkeypatch, "s3cret")
+    seen: dict = {}
+    client = _client_with_middleware(capture_client_ip_into=seen)
+    r = client.get(
+        "/admin/healthz",
+        headers={"X-Admin-BFF-Secret": "s3cret", "X-Admin-Client-IP": "203.0.113.7"},
+    )
+    assert r.status_code == 200
+    assert seen["client_ip"] == "203.0.113.7"
+
+
+def test_empty_secret_no_enforcement(monkeypatch):
+    _set_admin_bff_secret(monkeypatch, "")
+    client = _client_with_middleware()
+    assert client.get("/admin/healthz").status_code == 200
+
+
 def test_configured_up_rate_limits_over_threshold(monkeypatch):
     settings = AdminSettings(admin_redis_url="redis://up", admin_rate_limit_read_per_min=2)
     fake = _FakeRedis()
