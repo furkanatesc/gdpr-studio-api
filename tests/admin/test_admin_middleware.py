@@ -196,8 +196,15 @@ def _client_with_middleware(capture_client_ip_into: dict | None = None) -> TestC
 def test_missing_bff_secret_rejected_when_configured(monkeypatch):
     _set_admin_bff_secret(monkeypatch, "s3cret")
     client = _client_with_middleware()
-    r = client.get("/admin/healthz")  # no X-Admin-BFF-Secret
+    r = client.get("/admin/tenants")  # non-exempt path, no X-Admin-BFF-Secret
     assert r.status_code == 403
+
+
+def test_healthz_exempt_from_bff_secret_when_configured(monkeypatch):
+    _set_admin_bff_secret(monkeypatch, "s3cret")
+    client = _client_with_middleware()
+    r = client.get("/admin/healthz")  # no X-Admin-BFF-Secret — health probe must reach it
+    assert r.status_code == 200
 
 
 def test_matching_bff_secret_allows_and_uses_forwarded_ip(monkeypatch):
