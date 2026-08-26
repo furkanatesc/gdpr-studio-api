@@ -84,6 +84,35 @@ class ImpersonationSessionResponse(_Camel):
         )
 
 
+class ImpersonationSessionPage(_Camel):
+    items: list[ImpersonationSessionResponse]
+    next_cursor: str | None
+
+
+_MAX_LIST_LIMIT = 200
+
+
+@router.get("", response_model=ImpersonationSessionPage)
+def list_impersonation(
+    cursor: str | None = None,
+    limit: int = 50,
+    identity: PlatformAdminIdentity = Depends(require_platform_admin),
+    session: Session = Depends(admin_session),
+) -> ImpersonationSessionPage:
+    # Legal-gate YOK: dönen şey oturum metadata'sı (kiracı verisi değil); onaylayıcının
+    # başka admin'in bekleyen oturumunu görebilmesi için platform-geneli (audit gibi).
+    if not (1 <= limit <= _MAX_LIST_LIMIT):
+        raise HTTPException(status_code=422, detail="invalid_limit")
+    try:
+        page = ImpersonationRepository(session).list(cursor=cursor, limit=limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="malformed_cursor") from exc
+    return ImpersonationSessionPage(
+        items=[ImpersonationSessionResponse.from_row(row) for row in page["items"]],
+        next_cursor=page["next_cursor"],
+    )
+
+
 @router.post("", response_model=ImpersonationSessionResponse, status_code=201)
 def start_impersonation(
     body: ImpersonationStartRequest,
