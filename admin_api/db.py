@@ -16,6 +16,7 @@ from app.config import normalize_pg_url
 from .config import AdminSettings, get_admin_settings
 
 _engine = None
+_session_factory = None
 
 
 def get_admin_engine():
@@ -32,9 +33,17 @@ def get_admin_engine():
     return _engine
 
 
+def _get_session_factory():
+    """Motor gibi sessionmaker da tek sefer kurulur (istek başına yeniden kurma yok)."""
+    global _session_factory
+    if _session_factory is None:
+        _session_factory = sessionmaker(bind=get_admin_engine(), future=True)
+    return _session_factory
+
+
 def admin_session() -> Iterator[Session]:
     """FastAPI bağımlılığı: istek başına oturum."""
-    sess = sessionmaker(bind=get_admin_engine(), future=True)()
+    sess = _get_session_factory()()
     try:
         yield sess
     finally:

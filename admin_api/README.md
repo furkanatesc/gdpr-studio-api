@@ -51,15 +51,17 @@ salt-okunur **impersonation**. Ana tenant API'sinden **ayrı deploy birimi**, pa
 - **🔴 ZORUNLU DEPLOY GATE — trusted-hop IP (Task 10 review I2):** admin-api bir reverse-proxy
   (Railway/Cloudflare) arkasında çalışır. `AdminRateLimitMiddleware` istemci IP'sini yalnız
   `scope["client"]` (socket-peer) üzerinden alır (XFF spoof reddi — doğru ilke). AMA proxy arkasında
-  `scope["client"]` **proxy'nin kendi adresi** olabilir → o zaman (a) per-admin rate-limit tek kovaya
-  çöker, (b) `platform_audit_logs.ip` her eylemi proxy IP'sine yazar (adli olarak işe yaramaz).
+  `scope["client"]` **proxy'nin kendi adresi** olabilir → o zaman (a) per-IP rate-limit TÜM admin'leri
+  tek kovaya toplar, (b) `platform_audit_logs.ip` her eylemi proxy IP'sine yazar (adli olarak işe yaramaz).
   **Fix (uygulama değil, sunucu/infra katmanı):** ASGI sunucusunu güvenilir hop'u yeniden yazacak
   şekilde koştur —
   ```
   uvicorn admin_api.main:app --proxy-headers --forwarded-allow-ips=<trusted-proxy-CIDR>
   ```
   (yalnız güvenilir proxy CIDR'ı; asla `*` değil). **Deploy'da doğrula:** bir admin eyleminden sonra
-  `platform_audit_logs.ip` = gerçek admin origin IP'si + rate-limit kovaları per-admin ayrışıyor.
+  `platform_audit_logs.ip` = gerçek admin origin IP'si + rate-limit kovaları per-IP (her admin'in
+  gerçek origin IP'si) ayrışıyor. NOT: limiter middleware auth'tan ÖNCE koşar (admin kimliği henüz
+  yok) → kova daima IP bazlı, per-admin DEĞİL; ayrı origin IP'leri per-admin'i yalnız yaklaşıklar.
 - **Rate-limit degrade** (self-DoS önleme, `AdminRateLimitMiddleware`): `ADMIN_REDIS_URL` set VE Redis
   erişilebilirken per-IP sabit-pencere limiter. Redis **configured-ama-erişilemez** olduğunda:
   yazma/state-değiştiren uçlar **fail-closed 503**, salt-okuma uçları **local in-process fallback +
