@@ -274,6 +274,15 @@ class PlatformAuditRepository:
 _IMPERSONATION_TTL = timedelta(minutes=30)
 
 
+def _parse_impersonation_cursor(cursor: str) -> tuple[datetime, uuid.UUID]:
+    started_at_raw, id_raw = cursor.rsplit("|", 1)
+    return datetime.fromisoformat(started_at_raw), uuid.UUID(id_raw)
+
+
+def _encode_impersonation_cursor(started_at: datetime, session_id: uuid.UUID) -> str:
+    return f"{started_at.isoformat()}|{session_id}"
+
+
 def utc_now() -> datetime:
     return datetime.now(UTC)
 
@@ -296,6 +305,39 @@ class ImpersonationRepository:
 
     def __init__(self, session: Session) -> None:
         self._session = session
+
+    def list(self, *, cursor: str | None, limit: int) -> dict:
+        """Platform-geneli oturum listesi — `(started_at, id)` DESC keyset.
+
+        `id` UUID (monoton değil) olduğundan audit'in saf id-cursor'ı uymaz; sıralama
+        `started_at` üstünden, eşitlikte `id` ile bozulur (tenant list deseni). Kiracı
+        verisi OKUNMAZ — `impersonation_sessions` platform tablosudur (RLS yok).
+        """
+        stmt = select(ImpersonationSession)
+        if cursor:
+            cursor_started_at, cursor_id = _parse_impersonation_cursor(cursor)
+            stmt = stmt.where(
+                or_(
+                    ImpersonationSession.started_at < cursor_started_at,
+                    and_(
+                        ImpersonationSession.started_at == cursor_started_at,
+                        ImpersonationSession.id < cursor_id,
+                    ),
+                )
+            )
+        stmt = stmt.order_by(
+            ImpersonationSession.started_at.desc(), ImpersonationSession.id.desc()
+        ).limit(limit + 1)
+        rows = self._session.execute(stmt).scalars().all()
+        has_more = len(rows) > limit
+        page = rows[:limit]
+
+        next_cursor = None
+        if has_more and page:
+            last = page[-1]
+            next_cursor = _encode_impersonation_cursor(as_aware_utc(last.started_at), last.id)
+
+        return {"items": list(page), "next_cursor": next_cursor}
 
     def start(
         self, actor, target_org_id: uuid.UUID, reason: str, scope: str
