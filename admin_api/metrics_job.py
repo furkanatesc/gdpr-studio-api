@@ -16,7 +16,7 @@ ayrı, en-az-yetki `kvkk_metrics_job` rolüyle çalışmalıdır (bkz. migration
 from __future__ import annotations
 
 import argparse
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import func, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -75,10 +75,15 @@ def compute_daily(session, day: date) -> None:
         end_provisioning(session)
 
 
+def _utc_today() -> date:
+    """Rollup gün referansı = UTC bugünü (yerel `date.today()` gün sınırında kayar)."""
+    return datetime.now(UTC).date()
+
+
 def backfill(session, since: date) -> None:
     """`since` gününden bugüne (dahil) her gün için `compute_daily` çalıştırır."""
     d = since
-    today = date.today()
+    today = _utc_today()
     while d <= today:
         compute_daily(session, d)
         d = d + timedelta(days=1)
@@ -124,7 +129,7 @@ def main() -> None:
             if args.backfill:
                 backfill(sess, date.fromisoformat(args.backfill))
             else:
-                compute_daily(sess, date.today())
+                compute_daily(sess, _utc_today())
         finally:
             _advisory_unlock(sess)
     finally:

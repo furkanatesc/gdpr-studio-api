@@ -121,6 +121,10 @@ def start_impersonation(
 ) -> ImpersonationSessionResponse:
     if not get_admin_settings().h5_legal_ready:
         raise HTTPException(status_code=403, detail="h5_legal_not_ready")
+    # Yalnız okunabilir scope'lar: read-proxy SCOPE_READERS dışını 404'ler → geçersiz
+    # scope'lu oturum ölü doğar. Start'ta reddet (backend = scope'ta otorite kaynak).
+    if body.scope not in SCOPE_READERS:
+        raise HTTPException(status_code=422, detail="unknown_scope")
     row = ImpersonationRepository(session).start(
         identity, body.target_org_id, body.reason, body.scope
     )
