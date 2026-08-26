@@ -10,7 +10,7 @@ yok (bkz. Task 7, ayrı — canlı tek-org okuma). `ImpersonationRepository` bac
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from fastapi import HTTPException
 from sqlalchemy import and_, func, or_, select
@@ -79,7 +79,9 @@ class PlatformMetricsRepository:
         Dims'li metrikler (ör. `subs_active`) her gün için birden çok noktaya karşılık gelir;
         her nokta kendi `dims`'ini taşır — toplama/collapse yok.
         """
-        cutoff = date.today() - timedelta(days=days)
+        # TAM `days` takvim günü (bugün dahil): today-(days-1) .. today. UTC referansı
+        # (yerel `date.today()` değil) — metrics_job'un UTC gün damgasıyla tutarlı.
+        cutoff = utc_now().date() - timedelta(days=days - 1)
         rows = self._session.execute(
             select(
                 PlatformMetricDaily.day,

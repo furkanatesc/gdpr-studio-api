@@ -95,7 +95,7 @@ def client_legal_on(session_factory, monkeypatch):
     app.dependency_overrides.clear()
 
 
-def _start_body(scope: str = "documents") -> dict:
+def _start_body(scope: str = "documents_meta") -> dict:
     return {"targetOrgId": str(TARGET_ORG), "reason": "inceleme", "scope": scope}
 
 
@@ -113,7 +113,7 @@ def test_start_requires_reason_and_scope(client_legal_on):
 
 
 def test_start_creates_session_and_audit(client_legal_on, session_factory):
-    resp = client_legal_on.post("/admin/impersonation", json=_start_body("documents"))
+    resp = client_legal_on.post("/admin/impersonation", json=_start_body("documents_meta"))
     assert resp.status_code == 201
     body = resp.json()
     assert body["requiresDualControl"] is False
@@ -198,7 +198,7 @@ def test_resolve_active_session_rejects_unapproved_dual_control(session_factory)
 
 
 def test_end_sets_ended_at_and_kind(client_legal_on, session_factory):
-    start = client_legal_on.post("/admin/impersonation", json=_start_body("documents"))
+    start = client_legal_on.post("/admin/impersonation", json=_start_body("documents_meta"))
     session_id = start.json()["id"]
 
     resp = client_legal_on.delete(f"/admin/impersonation/{session_id}")
@@ -297,6 +297,31 @@ def test_start_is_fail_closed_when_audit_raises(session_factory, monkeypatch):
         assert count == 0
     finally:
         fresh.close()
+
+
+def test_start_rejects_unknown_scope(client_legal_on, session_factory):
+    resp = client_legal_on.post("/admin/impersonation", json=_start_body("bogus_scope"))
+    assert resp.status_code == 422
+    assert resp.json()["detail"] == "unknown_scope"
+
+    # Ölü oturum yaratılmamalı: read-proxy yalnız SCOPE_READERS'ı okur, geçersiz
+    # scope'lu oturum asla okunamaz → start'ta reddedilir, satır/audit yazılmaz.
+    session_count = session_factory.execute(
+        select(func.count()).select_from(ImpersonationSession)
+    ).scalar_one()
+    assert session_count == 0
+    audit_count = session_factory.execute(
+        select(func.count())
+        .select_from(PlatformAuditLog)
+        .where(PlatformAuditLog.action == "impersonation.started")
+    ).scalar_one()
+    assert audit_count == 0
+
+
+def test_start_accepts_all_known_scopes(client_legal_on):
+    for scope in ("clients", "compliance", "documents_meta", "ozel_nitelikli"):
+        resp = client_legal_on.post("/admin/impersonation", json=_start_body(scope))
+        assert resp.status_code == 201, scope
 
 
 def test_start_legal_off_creates_no_rows(client_legal_off, session_factory):
