@@ -495,3 +495,19 @@ class PlatformMetricDaily(Base):
     dims: Mapped[dict] = mapped_column(_JSON, nullable=False, server_default=text("'{}'"))
     value_numeric: Mapped[float] = mapped_column(Numeric(), nullable=False)
     computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class SeedState(Base):
+    """Grounding seed'in son uygulanan içerik-hash'i (global operasyonel metadata, RLS'siz).
+
+    Her boot'ta destructive DELETE+INSERT yerine: seed girdilerinin hash'i burada
+    saklanır; değişmediyse seed atlanır (churn/yarış yok). Tek mantıksal satır
+    (key='grounding')."""
+
+    __tablename__ = "seed_state"
+
+    key: Mapped[str] = mapped_column(String(), primary_key=True)
+    content_hash: Mapped[str] = mapped_column(String(), nullable=False)
+    applied_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
