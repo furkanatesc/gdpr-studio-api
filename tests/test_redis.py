@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import time
+
 import app.config as cfg
 import app.redis_client as rc
 from app.redis_client import _allow, cache_get_json, cache_set_json
@@ -42,6 +44,53 @@ def test_allow_fail_open_redis_hatasinda():
             raise RuntimeError("redis down")
 
     assert _allow(Boom(), "k", 1) is True  # hata → izin ver (fail-open)
+
+
+def test_get_redis_retries_after_transient_failure(monkeypatch):
+    """Geçici bir Redis blip'i, Redis'i sürecin ömrü boyunca kalıcı DEVRE DIŞI bırakmamalı:
+    cooldown sonrası yeniden bağlanıp iyileşmeli (sticky-singleton regresyonunu yakalar)."""
+    rc.reset_redis()
+    monkeypatch.setattr(cfg._settings, "redis_url", "redis://unused:6379/0")
+
+    clock = {"t": 1000.0}
+    monkeypatch.setattr(time, "monotonic", lambda: clock["t"])
+
+    calls = {"n": 0}
+    good = FakeRedis()
+
+    class Boom:
+        def ping(self):
+            raise RuntimeError("transient down")
+
+    def fake_from_url(url, **kwargs):
+        calls["n"] += 1
+        return Boom() if calls["n"] == 1 else good
+
+    monkeypatch.setattr(rc.redis.Redis, "from_url", staticmethod(fake_from_url))
+
+    assert rc.get_redis() is None  # ilk deneme: bağlanamadı
+    assert rc.get_redis() is None  # cooldown içinde: yeniden DENEME yok
+    assert calls["n"] == 1
+
+    clock["t"] += 10.0  # cooldown geçti
+    assert rc.get_redis() is good  # yeniden dener + iyileşir
+    assert calls["n"] == 2
+
+    rc.reset_redis()
+
+
+def test_get_redis_unconfigured_stays_none(monkeypatch):
+    """Boş redis_url → None, ve from_url'e hiç dokunmadan (bağlantı fırtınası yok)."""
+    rc.reset_redis()
+    monkeypatch.setattr(cfg._settings, "redis_url", "")
+
+    def boom_from_url(*a, **k):
+        raise AssertionError("boş url ile bağlanmaya çalışılmamalı")
+
+    monkeypatch.setattr(rc.redis.Redis, "from_url", staticmethod(boom_from_url))
+    assert rc.get_redis() is None
+    assert rc.get_redis() is None
+    rc.reset_redis()
 
 
 def test_cache_json_roundtrip(monkeypatch):

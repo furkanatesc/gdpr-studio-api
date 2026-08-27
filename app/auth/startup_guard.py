@@ -113,3 +113,59 @@ def verify_invite_secret(settings) -> None:  # type: ignore[no-untyped-def]
     reason = invite_secret_violation(settings.environment, settings.invite_secret)
     if reason is not None:
         raise RuntimeError(reason)
+
+
+# Default DATABASE_URL host işareti: env inject edilmezse config.py:33 varsayılanı
+# localhost'a düşer (userinfo normalize edilse de host korunur). Managed prod DB'leri
+# asla localhost kullanmaz → prod'da "localhost" görülmesi = DATABASE_URL unutuldu.
+_DEFAULT_DB_HOST_MARKER = "localhost"
+
+
+def prod_secret_violations(
+    environment: str,
+    database_url: str,
+    supabase_project_url: str,
+    internal_api_token: str,
+    auth_dev_bypass: bool,
+) -> list[str]:
+    """Saf predikat: prod'da guard'sız kritik config ihlallerinin Türkçe listesi (yoksa boş).
+
+    Yalnızca ``environment == "production"`` denetler; aksi halde boş liste (dev/test no-op).
+    """
+    if environment != "production":
+        return []
+    reasons: list[str] = []
+    if _DEFAULT_DB_HOST_MARKER in database_url:
+        reasons.append(
+            "DATABASE_URL prod'da localhost/varsayılana düşmüş görünüyor: yanlış/boş DB'ye "
+            "bağlanma riski. Prod'da gerçek DATABASE_URL ayarlanmalı."
+        )
+    if auth_dev_bypass:
+        reasons.append(
+            "AUTH_DEV_BYPASS prod'da açık: JWT doğrulaması atlanır ve kimlik doğrulama tamamen "
+            "devre dışı kalır. Prod'da kapatılmalı (False)."
+        )
+    if not supabase_project_url:
+        reasons.append(
+            "SUPABASE_PROJECT_URL prod'da boş: tüm kimlikli istekler 401 alır (geç fark edilen "
+            "kesinti, boot'ta yakalanmaz). Ayarlanmalı."
+        )
+    if not internal_api_token:
+        reasons.append(
+            "INTERNAL_API_TOKEN prod'da boş: /api/internal/* uçları 403 verir; DSAR purge / "
+            "retention sweep sessizce çağrılamaz hale gelir. Ayarlanmalı."
+        )
+    return reasons
+
+
+def verify_prod_secrets(settings) -> None:  # type: ignore[no-untyped-def]
+    """DB-bağımsız doğrulayıcı: prod-kritik config ihlallerinde RuntimeError (fail-closed, fail-fast)."""
+    reasons = prod_secret_violations(
+        settings.environment,
+        settings.database_url,
+        settings.supabase_project_url,
+        settings.internal_api_token,
+        settings.auth_dev_bypass,
+    )
+    if reasons:
+        raise RuntimeError("Prod config guard: " + " | ".join(reasons))
