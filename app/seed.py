@@ -9,18 +9,24 @@ Migration'lar uygulandıktan sonra çağrılmalıdır (alembic upgrade head).
 
 from __future__ import annotations
 
+import hashlib
 import json
 import unicodedata
 from pathlib import Path
 
-from sqlalchemy import delete
+from sqlalchemy import delete, func, text
 
 from legal_core.prompt import ONAY_BEKLEYEN_PLACEHOLDER
 
 from .auth.tenant_session import begin_provisioning
 from .db import get_sessionmaker
-from .models import BusinessRule, Category, Measure, Process
+from .models import BusinessRule, Category, Measure, Process, SeedState
 from .seed_compliance import REQUIREMENTS, seed_compliance_requirements
+
+# Tek mantıksal seed-state satırı + eşzamanlı replika boot'larını serileştiren sabit
+# advisory-lock anahtarı (Postgres). Transaction-scope: commit/rollback'te otomatik bırakılır.
+_SEED_KEY = "grounding"
+_SEED_ADVISORY_LOCK_KEY = 823641001
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 CATEGORIES_PATH = DATA_DIR / "categories.json"
@@ -105,6 +111,58 @@ def apply_seed(session, *, categories: dict, rules: list, processes: list,
             "tedbir": len(measures), "uyum": n_req}
 
 
+def compute_seed_hash(*, categories: dict, rules: list, processes: list,
+                      measures: list, requirements: list) -> str:
+    """Tüm seed girdilerinin deterministik SHA-256'sı (saf, DB'siz).
+
+    İçerik değişmediyse seed'i atlamak için kullanılır. Kanonik JSON (sort_keys)
+    → aynı girdi her zaman aynı hash. rules tuple'ları list'e normalize edilir."""
+    payload = {
+        "categories": categories,
+        "rules": [list(r) for r in rules],
+        "processes": processes,
+        "measures": measures,
+        "requirements": requirements,
+    }
+    blob = json.dumps(payload, sort_keys=True, ensure_ascii=False, default=str)
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
+
+
+def should_apply(stored_hash: str | None, new_hash: str) -> bool:
+    """Saf karar: saklı hash yoksa veya farklıysa yeniden uygula (True)."""
+    return stored_hash != new_hash
+
+
+def apply_seed_if_changed(session, *, categories: dict, rules: list, processes: list,
+                          measures: list, requirements: list) -> dict:
+    """Tek-koşuculu + content-hash no-op seed (commit ETMEZ — çağıran commit'ler).
+
+    Postgres'te transaction-scope advisory-lock alır (eşzamanlı replika boot'larını
+    serileştirir). İçerik hash'i saklı hash'le eşitse hiçbir yazma yapmadan atlar;
+    farklıysa ``apply_seed`` (atomik delete+insert) çalışır ve seed_state güncellenir.
+    """
+    begin_provisioning(session)
+    bind = session.get_bind()
+    if bind is not None and bind.dialect.name == "postgresql":
+        session.execute(text("SELECT pg_advisory_xact_lock(:k)"), {"k": _SEED_ADVISORY_LOCK_KEY})
+
+    new_hash = compute_seed_hash(categories=categories, rules=rules, processes=processes,
+                                 measures=measures, requirements=requirements)
+    state = session.get(SeedState, _SEED_KEY)
+    stored = state.content_hash if state is not None else None
+    if not should_apply(stored, new_hash):
+        return {"skipped": True, "content_hash": new_hash}
+
+    counts = apply_seed(session, categories=categories, rules=rules, processes=processes,
+                        measures=measures, requirements=requirements)
+    if state is None:
+        session.add(SeedState(key=_SEED_KEY, content_hash=new_hash))
+    else:
+        state.content_hash = new_hash
+        state.applied_at = func.now()
+    return {"skipped": False, "content_hash": new_hash, **counts}
+
+
 def seed() -> None:
     raw = json.loads(CATEGORIES_PATH.read_text(encoding="utf-8"))
     categories = {unicodedata.normalize("NFC", k): v for k, v in raw.items()}
@@ -113,11 +171,15 @@ def seed() -> None:
 
     session = get_sessionmaker()()
     try:
-        c = apply_seed(session, categories=categories, rules=RULES, processes=processes,
-                       measures=measures, requirements=REQUIREMENTS)
+        res = apply_seed_if_changed(session, categories=categories, rules=RULES,
+                                    processes=processes, measures=measures,
+                                    requirements=REQUIREMENTS)
         session.commit()
-        print(f"Seed tamam: {c['kategori']} kategori, {c['kural']} iş kuralı, {c['surec']} süreç, "
-              f"{c['tedbir']} tedbir, {c['uyum']} uyum gereksinimi.")
+        if res["skipped"]:
+            print("Seed atlandı: içerik değişmedi (hash eşleşti).")
+        else:
+            print(f"Seed tamam: {res['kategori']} kategori, {res['kural']} iş kuralı, "
+                  f"{res['surec']} süreç, {res['tedbir']} tedbir, {res['uyum']} uyum gereksinimi.")
     finally:
         session.close()
 
