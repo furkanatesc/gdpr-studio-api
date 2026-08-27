@@ -183,7 +183,12 @@ class AccountRepository:
         return user
 
     def get_membership_for_user(self, user_id: uuid.UUID) -> Membership | None:
-        return self._s.scalar(select(Membership).where(Membership.user_id == user_id))
+        # scalar_one_or_none: user_id UNIQUE (tek-org MVP) ≤1 satır garanti eder; kısıt
+        # ileride çok-org için gevşetilirse .scalar()'ın sessizce rastgele bir üyelik
+        # seçmesi yerine MultipleResultsFound ile fail-fast (ileriye-dönük savunma).
+        return self._s.execute(
+            select(Membership).where(Membership.user_id == user_id)
+        ).scalar_one_or_none()
 
     def create_org_with_admin(self, name: str, user_id: uuid.UUID) -> Organization:
         org = Organization(name=name)
