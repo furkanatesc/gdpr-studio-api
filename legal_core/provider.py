@@ -7,7 +7,7 @@ aynı arayüzü kullanır — fark yalnızca hangi api_key'in geçtiğidir.
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
 from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
@@ -34,6 +34,11 @@ class ProviderResult:
 @runtime_checkable
 class ModelProvider(Protocol):
     def generate(self, prompt: str, *, max_tokens: int = DEFAULT_MAX_TOKENS) -> ProviderResult: ...
+
+
+@runtime_checkable
+class AsyncModelProvider(Protocol):
+    def astream(self, prompt: str, *, max_tokens: int = DEFAULT_MAX_TOKENS): ...
 
 
 class AnthropicProvider:
@@ -101,6 +106,38 @@ class AnthropicProvider:
         ) as s:
             yield from s.text_stream
             final = s.get_final_message()
+            usage = getattr(final, "usage", None)
+            self.last_result = ProviderResult(
+                text="",
+                model=self._model,
+                input_tokens=getattr(usage, "input_tokens", 0) or 0,
+                output_tokens=getattr(usage, "output_tokens", 0) or 0,
+                stop_reason=getattr(final, "stop_reason", None),
+            )
+
+    def _aclient(self):
+        """Async Anthropic istemcisi (lazy import: legal_core saf kalır)."""
+        import httpx
+        from anthropic import AsyncAnthropic
+
+        return AsyncAnthropic(
+            api_key=self._api_key,
+            timeout=httpx.Timeout(self._timeout_s),
+            max_retries=self._max_retries,
+        )
+
+    async def astream(self, prompt: str, *, max_tokens: int = DEFAULT_MAX_TOKENS) -> AsyncIterator[str]:
+        """stream()'in async ikizi: metin delta'larını akıtır, bitince last_result'ı doldurur."""
+        client = self._aclient()
+        self.last_result = None
+        async with client.messages.stream(
+            model=self._model,
+            max_tokens=max_tokens,
+            messages=[{"role": "user", "content": prompt}],
+        ) as s:
+            async for delta in s.text_stream:
+                yield delta
+            final = await s.get_final_message()
             usage = getattr(final, "usage", None)
             self.last_result = ProviderResult(
                 text="",
