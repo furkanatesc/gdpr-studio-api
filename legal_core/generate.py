@@ -7,7 +7,7 @@ Tüm IO bağımlılıkları (grounding repo, kural repo, model provider) enjekte
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
 from typing import Any
 
 from .aggregate_sections import Section
@@ -171,6 +171,45 @@ def generate_aydinlatma_envanter_stream(
 
     chunks: list[str] = []
     for delta in provider.stream(prompt, max_tokens=max_tokens):
+        chunks.append(delta)
+        yield ("delta", delta)
+
+    streamed = "".join(chunks)
+    final_text = ensure_disclaimer(streamed)
+    if final_text != streamed:
+        yield ("delta", final_text[len(streamed):])
+
+    last = getattr(provider, "last_result", None)
+    yield (
+        "done",
+        {
+            "model": getattr(provider, "model", "") or "",
+            "disclaimer": DISCLAIMER,
+            "usage": (
+                {"inputTokens": last.input_tokens, "outputTokens": last.output_tokens}
+                if last
+                else None
+            ),
+            "stopReason": last.stop_reason if last else None,
+        },
+    )
+
+
+async def generate_aydinlatma_envanter_stream_async(
+    sections: list[Section],
+    boilerplate: dict,
+    profile: ClientProfile,
+    *,
+    provider: Any,  # astream() metoduna sahip bir AsyncModelProvider (duck-typed)
+    max_tokens: int = DEFAULT_MAX_TOKENS,
+) -> AsyncIterator[tuple[str, Any]]:
+    """generate_aydinlatma_envanter_stream'in async ikizi: TEK fark `async for provider.astream`."""
+    yield ("grounding", [_section_to_grounding(s) for s in sections])
+
+    prompt = build_aydinlatma_envanter_prompt(sections, boilerplate, profile)
+
+    chunks: list[str] = []
+    async for delta in provider.astream(prompt, max_tokens=max_tokens):
         chunks.append(delta)
         yield ("delta", delta)
 
