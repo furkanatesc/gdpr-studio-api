@@ -3,7 +3,7 @@
 
 generate ucu app.modules.generation.generate_stream'in kota/idempotency/rate-limit
 desenini birebir kullanir; fark: onayli envanter bolumlerinden (Section) sabit
-DocType.aydinlatma uretir (legal_core.generate.generate_aydinlatma_envanter_stream).
+DocType.aydinlatma uretir (legal_core.generate.generate_aydinlatma_envanter_stream_async).
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 from legal_core.aggregate_sections import Section, aggregate_sections
 from legal_core.boilerplate import load_boilerplate
 from legal_core.canonical import load_canonicalizer
-from legal_core.generate import generate_aydinlatma_envanter_stream
+from legal_core.generate import generate_aydinlatma_envanter_stream_async
 from legal_core.models import DocType
 from legal_core.prompt import ensure_disclaimer
 from legal_core.provider import AnthropicProvider
@@ -226,7 +226,7 @@ def prepare(
 
 
 @router.post("/{client_id}/aydinlatma/generate", dependencies=[Depends(generate_rate_limit)])
-def generate(
+async def generate(
     client_id: uuid.UUID,
     body: GenerateIn,
     # tenant_session: RLS org bağlamını set eder; record_generation_usage bu oturumda yazar.
@@ -260,14 +260,14 @@ def generate(
     )
     byok = x_anthropic_key is not None
 
-    def event_stream():
+    async def event_stream():
         # Sayım deseni generation.generate_stream ile birebir — bkz. oradaki gerekçe.
         reserved = 0
         started = False
         full_text = ""
         generated_doc_id: uuid.UUID | None = None
         try:
-            for kind, payload in generate_aydinlatma_envanter_stream(
+            async for kind, payload in generate_aydinlatma_envanter_stream_async(
                 sections, boilerplate, profile, provider=provider, max_tokens=aydinlatma_max_tokens,
             ):
                 if kind == "grounding":
