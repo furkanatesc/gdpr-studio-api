@@ -48,9 +48,29 @@ def test_async_stream_olay_dizisi_ve_disclaimer():
     assert kinds[0] == "grounding"
     assert "delta" in kinds
     assert kinds[-1] == "done"
+
+    # Assertion 1: Grounding VALUE — empty sections yields exactly ("grounding", [])
+    grounding_event = events[0]
+    assert grounding_event == ("grounding", []), f"Expected ('grounding', []), got {grounding_event}"
+
+    # Assertion 2: Delta verbatim — non-disclaimer deltas reconstruct FakeAsyncProvider text
+    # FakeAsyncProvider streams "Aydinlatma metni govdesi" in two chunks: [:5] + [5:]
+    deltas = [p for k, p in events if k == "delta"]
+    # Remove disclaimer marker from reconstruction if present (it's added as final delta)
+    non_disclaimer_deltas = [d for d in deltas if DISCLAIMER_MARKER not in d]
+    reconstructed = "".join(non_disclaimer_deltas)
+    # The original fake text is "Aydinlatma metni govdesi" (5 + 18 chars)
+    expected_text = "Aydinlatma metni govdesi"
+    assert reconstructed == expected_text, f"Expected '{expected_text}', got '{reconstructed}'"
+
     # disclaimer akışta yoksa ('done' öncesi) bir delta olarak eklenir
     full = "".join(p for k, p in events if k == "delta")
     assert DISCLAIMER_MARKER in full
+
+    # Assertion 3: Prompt pass-through — provider.seen_prompt is set (non-empty)
+    assert provider.seen_prompt is not None, "provider.seen_prompt should be set by astream()"
+    assert provider.seen_prompt, "provider.seen_prompt should be non-empty (built prompt was passed)"
+
     done_meta = events[-1][1]
     assert done_meta["usage"] == {"inputTokens": 10, "outputTokens": 20}
     assert done_meta["stopReason"] == "end_turn"
