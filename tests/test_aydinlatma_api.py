@@ -115,7 +115,7 @@ def _make_client(db_session):
     return c.id
 
 
-def _fake_stream(*a, **k):
+async def _fake_stream(*a, **k):
     yield "grounding", []
     yield "delta", "Aydinlatma"
     yield "delta", " metni"
@@ -136,12 +136,12 @@ def _generate(db_session, client_id, **overrides):
     body = aydmod.GenerateIn(sections=[aydmod.SectionIn(is_sureci="Ozluk", kategoriler=["Kimlik"])])
     kwargs = dict(session=db_session, identity=IDENT, x_anthropic_key=None, idempotency_key=None)
     kwargs.update(overrides)
-    return aydmod.generate(client_id=client_id, body=body, **kwargs)
+    return asyncio.run(aydmod.generate(client_id=client_id, body=body, **kwargs))
 
 
 def test_generate_musvekkil_yok_404(db_session, monkeypatch):
     _managed_billing_settings()
-    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream", _fake_stream)
+    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream_async", _fake_stream)
     from fastapi import HTTPException
 
     try:
@@ -159,11 +159,12 @@ def test_generate_envanter_belgesi_tavani_ile_cagirir(db_session, monkeypatch):
     _managed_billing_settings()
     captured = {}
 
-    def _capture_stream(sections, boilerplate, profile, **kw):
+    async def _capture_stream(sections, boilerplate, profile, **kw):
         captured["max_tokens"] = kw.get("max_tokens")
-        yield from _fake_stream()
+        async for ev in _fake_stream():
+            yield ev
 
-    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream", _capture_stream)
+    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream_async", _capture_stream)
     cid = _make_client(db_session)
 
     resp = _generate(db_session, cid)
@@ -211,7 +212,7 @@ def test_generate_gecersiz_client_404_idempotency_kilidi_almaz(client, db_sessio
         redis_url="",
     )
     _use_fake_redis(monkeypatch)
-    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream", _fake_stream)
+    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream_async", _fake_stream)
 
     cid = _make_client(db_session)
     body = {"sections": [{"isSureci": "Ozluk", "kategoriler": ["Kimlik"]}]}
@@ -233,7 +234,7 @@ def test_generate_gecersiz_client_404_idempotency_kilidi_almaz(client, db_sessio
 
 def test_generate_olay_sirasi_ve_uyum_kaydi(db_session, monkeypatch):
     _managed_billing_settings()
-    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream", _fake_stream)
+    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream_async", _fake_stream)
     cid = _make_client(db_session)
 
     resp = _generate(db_session, cid)
@@ -253,7 +254,7 @@ def test_generate_basaride_document_generated_audit_yazilir(db_session, monkeypa
     from app.models import AuditLog
 
     _managed_billing_settings()
-    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream", _fake_stream)
+    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream_async", _fake_stream)
     cid = _make_client(db_session)
 
     resp = _generate(db_session, cid)
@@ -265,7 +266,7 @@ def test_generate_basaride_document_generated_audit_yazilir(db_session, monkeypa
     assert rows[0].target_type == "document" and rows[0].target_id == "aydinlatma"
 
 
-def _fake_stream_truncated(*a, **k):
+async def _fake_stream_truncated(*a, **k):
     yield "grounding", []
     yield "delta", "Kesik aydinlatma metni..."
     yield "done", {
@@ -280,7 +281,7 @@ def test_generate_max_tokensta_saklanmaz_ve_uyari_yayinlanir(db_session, monkeyp
     from app.models import ClientDocument
 
     _managed_billing_settings()
-    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream", _fake_stream_truncated)
+    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream_async", _fake_stream_truncated)
     cid = _make_client(db_session)
 
     resp = _generate(db_session, cid)
@@ -298,7 +299,7 @@ def test_generate_uyari_donedan_once_gelir(db_session, monkeypatch):
     import json
 
     _managed_billing_settings()
-    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream", _fake_stream_truncated)
+    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream_async", _fake_stream_truncated)
     cid = _make_client(db_session)
 
     resp = _generate(db_session, cid)
@@ -320,7 +321,7 @@ def test_generate_max_tokensta_uyum_kaydi_geri_alinir(db_session, monkeypatch):
     GeneratedDocumentRepository(db_session).record(IDENT.org_id, DocType.aydinlatma)
     db_session.commit()
 
-    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream", _fake_stream_truncated)
+    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream_async", _fake_stream_truncated)
     cid = _make_client(db_session)
 
     resp = _generate(db_session, cid)
@@ -337,7 +338,7 @@ def test_generate_max_tokensta_document_generated_audit_yazilmaz(db_session, mon
     from app.models import AuditLog
 
     _managed_billing_settings()
-    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream", _fake_stream_truncated)
+    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream_async", _fake_stream_truncated)
     cid = _make_client(db_session)
 
     resp = _generate(db_session, cid)
@@ -356,7 +357,7 @@ def test_generate_max_tokensta_belge_sayaci_geri_alinir(db_session, monkeypatch)
     from app.billing.repositories import UsageRepository
 
     _managed_billing_settings()
-    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream", _fake_stream_truncated)
+    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream_async", _fake_stream_truncated)
     cid = _make_client(db_session)
 
     resp = _generate(db_session, cid)
@@ -366,7 +367,7 @@ def test_generate_max_tokensta_belge_sayaci_geri_alinir(db_session, monkeypatch)
 
 
 def _fake_stream_with_stop_reason(stop_reason):
-    def _f(*a, **k):
+    async def _f(*a, **k):
         yield "grounding", []
         yield "delta", "Aydinlatma metni"
         yield "done", {
@@ -384,7 +385,7 @@ def test_generate_baglam_penceresi_asildiginda_saklanmaz(db_session, monkeypatch
 
     _managed_billing_settings()
     monkeypatch.setattr(
-        aydmod, "generate_aydinlatma_envanter_stream",
+        aydmod, "generate_aydinlatma_envanter_stream_async",
         _fake_stream_with_stop_reason("model_context_window_exceeded"),
     )
     cid = _make_client(db_session)
@@ -403,7 +404,7 @@ def test_generate_refusal_saklanmaz_ve_farkli_mesaj_gosterilir(db_session, monke
 
     _managed_billing_settings()
     monkeypatch.setattr(
-        aydmod, "generate_aydinlatma_envanter_stream",
+        aydmod, "generate_aydinlatma_envanter_stream_async",
         _fake_stream_with_stop_reason("refusal"),
     )
     cid = _make_client(db_session)
@@ -424,7 +425,7 @@ def test_generate_end_turn_saklanir_regresyon_kilidi(db_session, monkeypatch):
 
     _managed_billing_settings()
     monkeypatch.setattr(
-        aydmod, "generate_aydinlatma_envanter_stream",
+        aydmod, "generate_aydinlatma_envanter_stream_async",
         _fake_stream_with_stop_reason("end_turn"),
     )
     cid = _make_client(db_session)
@@ -443,7 +444,7 @@ def test_generate_kesmede_idempotency_kilidi_birakilir(db_session, monkeypatch):
     tavsiyesine uyan istemci 409 almamali."""
     _managed_billing_settings()
     fake = _use_fake_redis(monkeypatch)
-    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream", _fake_stream_truncated)
+    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream_async", _fake_stream_truncated)
     cid = _make_client(db_session)
 
     resp = _generate(db_session, cid, idempotency_key="ayd-kesme-1")
@@ -456,7 +457,7 @@ def test_generate_belgeyi_saklar_iki_puanla(db_session, monkeypatch):
     from app.models import ClientDocument
 
     _managed_billing_settings()
-    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream", _fake_stream)
+    monkeypatch.setattr(aydmod, "generate_aydinlatma_envanter_stream_async", _fake_stream)
     cid = _make_client(db_session)
 
     resp = _generate(db_session, cid)
