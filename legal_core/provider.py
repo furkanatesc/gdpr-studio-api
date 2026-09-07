@@ -33,6 +33,8 @@ class ProviderResult:
 
 @runtime_checkable
 class AsyncModelProvider(Protocol):
+    async def agenerate(self, prompt: str, *, max_tokens: int = DEFAULT_MAX_TOKENS) -> ProviderResult: ...
+
     def astream(self, prompt: str, *, max_tokens: int = DEFAULT_MAX_TOKENS): ...
 
 
@@ -62,12 +64,12 @@ class AnthropicProvider:
 
     async def agenerate(self, prompt: str, *, max_tokens: int = DEFAULT_MAX_TOKENS) -> ProviderResult:
         """AsyncAnthropic ile tek-seferlik (stream'siz) üretim; await messages.create."""
-        client = self._aclient()
-        message = await client.messages.create(
-            model=self._model,
-            max_tokens=max_tokens,
-            messages=[{"role": "user", "content": prompt}],
-        )
+        async with self._aclient() as client:
+            message = await client.messages.create(
+                model=self._model,
+                max_tokens=max_tokens,
+                messages=[{"role": "user", "content": prompt}],
+            )
         text = message.content[0].text
         usage = getattr(message, "usage", None)
         result = ProviderResult(
@@ -93,21 +95,21 @@ class AnthropicProvider:
 
     async def astream(self, prompt: str, *, max_tokens: int = DEFAULT_MAX_TOKENS) -> AsyncIterator[str]:
         """Metin delta'larını akıtır; bitince final usage'ı self.last_result'a yazar."""
-        client = self._aclient()
         self.last_result = None
-        async with client.messages.stream(
-            model=self._model,
-            max_tokens=max_tokens,
-            messages=[{"role": "user", "content": prompt}],
-        ) as s:
-            async for delta in s.text_stream:
-                yield delta
-            final = await s.get_final_message()
-            usage = getattr(final, "usage", None)
-            self.last_result = ProviderResult(
-                text="",
+        async with self._aclient() as client:
+            async with client.messages.stream(
                 model=self._model,
-                input_tokens=getattr(usage, "input_tokens", 0) or 0,
-                output_tokens=getattr(usage, "output_tokens", 0) or 0,
-                stop_reason=getattr(final, "stop_reason", None),
-            )
+                max_tokens=max_tokens,
+                messages=[{"role": "user", "content": prompt}],
+            ) as s:
+                async for delta in s.text_stream:
+                    yield delta
+                final = await s.get_final_message()
+                usage = getattr(final, "usage", None)
+                self.last_result = ProviderResult(
+                    text="",
+                    model=self._model,
+                    input_tokens=getattr(usage, "input_tokens", 0) or 0,
+                    output_tokens=getattr(usage, "output_tokens", 0) or 0,
+                    stop_reason=getattr(final, "stop_reason", None),
+                )

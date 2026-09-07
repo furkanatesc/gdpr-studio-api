@@ -26,6 +26,12 @@ class _FakeAsyncClient:
     def __init__(self, stop_reason="end_turn"):
         self.messages = _FakeAsyncMessages(stop_reason)
 
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *a):
+        return False
+
 
 def test_agenerate_normal_bitiste_result_text_ve_usage_tasir(monkeypatch):
     """agenerate() message.content[0].text, usage, stop_reason'ı ProviderResult'a taşır."""

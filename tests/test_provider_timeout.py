@@ -34,6 +34,12 @@ class _FakeAsyncClient:
         _FakeAsyncClient.captured = kwargs
         self.messages = _FakeAsyncMessages(kwargs)
 
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *a):
+        return False
+
 
 def _install_fake_anthropic(monkeypatch):
     """anthropic modülünü sahtele — `from anthropic import AsyncAnthropic` bunu bulur."""

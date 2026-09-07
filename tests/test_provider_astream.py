@@ -37,6 +37,12 @@ class _FakeAsyncClient:
     def __init__(self, cm):
         self.messages = SimpleNamespace(stream=lambda **kw: cm)
 
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *a):
+        return False
+
 
 def test_astream_deltalari_akitir_ve_last_result_doldurur(monkeypatch):
     p = AnthropicProvider("sk-fake", model="claude-x")
