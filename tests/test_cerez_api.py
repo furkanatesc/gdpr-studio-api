@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import uuid
 
 import app.config as config_module
@@ -33,7 +34,7 @@ def _make_client(db_session):
     return c.id
 
 
-def _fake_stream(*a, **k):
+async def _fake_stream(*a, **k):
     yield "grounding", []
     yield "delta", "Cerez"
     yield "delta", " politikasi"
@@ -41,8 +42,6 @@ def _fake_stream(*a, **k):
 
 
 def _consume(response) -> str:
-    import asyncio
-
     async def _run():
         chunks = []
         async for chunk in response.body_iterator:
@@ -56,12 +55,12 @@ def _generate(db_session, client_id, **overrides):
     body = cerezmod.CerezGenerateIn(site="otel.com", tools="GA", cmp="yok", kategoriler=["Zorunlu çerezler"])
     kwargs = dict(session=db_session, identity=IDENT, x_anthropic_key=None, idempotency_key=None)
     kwargs.update(overrides)
-    return cerezmod.generate(client_id=client_id, body=body, **kwargs)
+    return asyncio.run(cerezmod.generate(client_id=client_id, body=body, **kwargs))
 
 
 def test_cerez_generate_musvekkil_yok_404(db_session, monkeypatch):
     _managed_billing_settings()
-    monkeypatch.setattr(cerezmod, "generate_document_stream", _fake_stream)
+    monkeypatch.setattr(cerezmod, "generate_document_stream_async", _fake_stream)
     from fastapi import HTTPException
 
     try:
@@ -72,7 +71,7 @@ def test_cerez_generate_musvekkil_yok_404(db_session, monkeypatch):
         raise AssertionError("404 bekleniyordu")
 
 
-def _fake_stream_truncated(*a, **k):
+async def _fake_stream_truncated(*a, **k):
     yield "grounding", []
     yield "delta", "Kesik cerez politikasi..."
     yield "done", {
@@ -87,7 +86,7 @@ def test_cerez_generate_max_tokensta_saklanmaz_ve_uyari_yayinlanir(db_session, m
     from app.models import ClientDocument
 
     _managed_billing_settings()
-    monkeypatch.setattr(cerezmod, "generate_document_stream", _fake_stream_truncated)
+    monkeypatch.setattr(cerezmod, "generate_document_stream_async", _fake_stream_truncated)
     cid = _make_client(db_session)
 
     resp = _generate(db_session, cid)
@@ -105,11 +104,12 @@ def test_cerez_generate_hala_8000_max_tokens_ile_cagirir(db_session, monkeypatch
     _managed_billing_settings()
     captured = {}
 
-    def _capture_stream(req, **kw):
+    async def _capture_stream(req, **kw):
         captured["max_tokens"] = kw.get("max_tokens")
-        yield from _fake_stream()
+        async for ev in _fake_stream():
+            yield ev
 
-    monkeypatch.setattr(cerezmod, "generate_document_stream", _capture_stream)
+    monkeypatch.setattr(cerezmod, "generate_document_stream_async", _capture_stream)
     cid = _make_client(db_session)
 
     resp = _generate(db_session, cid)
@@ -149,7 +149,7 @@ def test_cerez_generate_uyari_donedan_once_gelir(db_session, monkeypatch):
     import json
 
     _managed_billing_settings()
-    monkeypatch.setattr(cerezmod, "generate_document_stream", _fake_stream_truncated)
+    monkeypatch.setattr(cerezmod, "generate_document_stream_async", _fake_stream_truncated)
     cid = _make_client(db_session)
 
     resp = _generate(db_session, cid)
@@ -171,7 +171,7 @@ def test_cerez_generate_max_tokensta_uyum_kaydi_geri_alinir(db_session, monkeypa
     GeneratedDocumentRepository(db_session).record(IDENT.org_id, DocType.cerez)
     db_session.commit()
 
-    monkeypatch.setattr(cerezmod, "generate_document_stream", _fake_stream_truncated)
+    monkeypatch.setattr(cerezmod, "generate_document_stream_async", _fake_stream_truncated)
     cid = _make_client(db_session)
 
     resp = _generate(db_session, cid)
@@ -190,7 +190,7 @@ def test_cerez_generate_max_tokensta_belge_sayaci_geri_alinir(db_session, monkey
     from app.billing.repositories import UsageRepository
 
     _managed_billing_settings()
-    monkeypatch.setattr(cerezmod, "generate_document_stream", _fake_stream_truncated)
+    monkeypatch.setattr(cerezmod, "generate_document_stream_async", _fake_stream_truncated)
     cid = _make_client(db_session)
 
     resp = _generate(db_session, cid)
@@ -200,7 +200,7 @@ def test_cerez_generate_max_tokensta_belge_sayaci_geri_alinir(db_session, monkey
 
 
 def _fake_stream_with_stop_reason(stop_reason):
-    def _f(*a, **k):
+    async def _f(*a, **k):
         yield "grounding", []
         yield "delta", "Cerez politikasi metni"
         yield "done", {
@@ -218,7 +218,7 @@ def test_cerez_generate_baglam_penceresi_asildiginda_saklanmaz(db_session, monke
 
     _managed_billing_settings()
     monkeypatch.setattr(
-        cerezmod, "generate_document_stream",
+        cerezmod, "generate_document_stream_async",
         _fake_stream_with_stop_reason("model_context_window_exceeded"),
     )
     cid = _make_client(db_session)
@@ -237,7 +237,7 @@ def test_cerez_generate_refusal_saklanmaz_ve_farkli_mesaj_gosterilir(db_session,
 
     _managed_billing_settings()
     monkeypatch.setattr(
-        cerezmod, "generate_document_stream",
+        cerezmod, "generate_document_stream_async",
         _fake_stream_with_stop_reason("refusal"),
     )
     cid = _make_client(db_session)
@@ -258,7 +258,7 @@ def test_cerez_generate_end_turn_saklanir_regresyon_kilidi(db_session, monkeypat
 
     _managed_billing_settings()
     monkeypatch.setattr(
-        cerezmod, "generate_document_stream",
+        cerezmod, "generate_document_stream_async",
         _fake_stream_with_stop_reason("end_turn"),
     )
     cid = _make_client(db_session)
@@ -276,7 +276,7 @@ def test_cerez_generate_kesmede_idempotency_kilidi_birakilir(db_session, monkeyp
     """Borc #4: kesmede idempotency kilidi BIRAKILMALI."""
     _managed_billing_settings()
     fake = _use_fake_redis(monkeypatch)
-    monkeypatch.setattr(cerezmod, "generate_document_stream", _fake_stream_truncated)
+    monkeypatch.setattr(cerezmod, "generate_document_stream_async", _fake_stream_truncated)
     cid = _make_client(db_session)
 
     resp = _generate(db_session, cid, idempotency_key="cerez-kesme-1")
@@ -289,7 +289,7 @@ def test_cerez_generate_belgeyi_saklar_iki_puanla(db_session, monkeypatch):
     from app.models import ClientDocument
 
     _managed_billing_settings()
-    monkeypatch.setattr(cerezmod, "generate_document_stream", _fake_stream)
+    monkeypatch.setattr(cerezmod, "generate_document_stream_async", _fake_stream)
     cid = _make_client(db_session)
 
     resp = _generate(db_session, cid)

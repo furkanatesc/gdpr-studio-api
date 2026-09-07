@@ -2,7 +2,7 @@
 """Cerez politikasi uretimi — muvekkil baglaminda generate/docx uclari.
 
 Aydinlatma generate skeleton'ini (kota/idempotency/rate-limit/SSE) izler; fark: jenerik
-generate_document_stream'i cerez girdisi + muvekkil kimligiyle cagirir ve client_documents'a
+generate_document_stream_async'i cerez girdisi + muvekkil kimligiyle cagirir ve client_documents'a
 doc_type='cerez' saklar (ortak store_client_document, RLS-guvenli).
 """
 
@@ -18,7 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 from sqlalchemy.orm import Session
 
-from legal_core.generate import generate_document_stream
+from legal_core.generate import generate_document_stream_async
 from legal_core.models import DocType, GenerateRequest
 from legal_core.prompt import ensure_disclaimer
 from legal_core.provider import AnthropicProvider
@@ -75,7 +75,7 @@ class DocxIn(_Camel):
 
 
 @router.post("/{client_id}/cerez/generate", dependencies=[Depends(generate_rate_limit)])
-def generate(
+async def generate(
     client_id: uuid.UUID,
     body: CerezGenerateIn,
     session: Session = Depends(tenant_session),
@@ -115,14 +115,14 @@ def generate(
     )
     byok = x_anthropic_key is not None
 
-    def event_stream():
+    async def event_stream():
         # Sayim deseni generation.generate_stream ile birebir.
         reserved = 0
         started = False
         full_text = ""
         generated_doc_id: uuid.UUID | None = None
         try:
-            for kind, payload in generate_document_stream(
+            async for kind, payload in generate_document_stream_async(
                 req,
                 grounding=grounding,
                 rules_repo=rules_repo,
