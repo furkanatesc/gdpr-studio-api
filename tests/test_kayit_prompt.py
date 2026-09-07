@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
+
 from app.modules.kayit import _canonicalize_records
-from legal_core.generate import generate_kayit_envanter_stream
+from legal_core.generate import generate_kayit_envanter_stream_async
 from legal_core.models import ClientProfile, ProcessRecord
 from legal_core.prompt import DISCLAIMER, ONAY_BEKLEYEN_PLACEHOLDER, build_kayit_envanter_prompt
 from legal_core.provider import ProviderResult
@@ -93,18 +95,31 @@ class _FakeStreamProvider:
         self.stop_reason = stop_reason
         self.last_result = None
 
-    def stream(self, prompt, *, max_tokens=8000):
+    async def astream(self, prompt, *, max_tokens=8000):
         self.seen_prompt = prompt
-        yield from self.chunks
+        for chunk in self.chunks:
+            yield chunk
         self.last_result = ProviderResult(
             text="", model=self.model, input_tokens=11, output_tokens=22,
             stop_reason=self.stop_reason,
         )
 
 
+def _collect(records, profile, measures, rules, provider, **kwargs):
+    async def _run():
+        return [
+            ev
+            async for ev in generate_kayit_envanter_stream_async(
+                records, profile, measures, rules, provider=provider, **kwargs,
+            )
+        ]
+
+    return asyncio.run(_run())
+
+
 def test_kayit_stream_olay_sirasi_ve_grounding():
     provider = _FakeStreamProvider(["Isleme ", "kaydi."])
-    events = list(generate_kayit_envanter_stream(RECORDS, PROFILE, MEASURES, RULES, provider=provider))
+    events = _collect(RECORDS, PROFILE, MEASURES, RULES, provider)
     kinds = [e[0] for e in events]
     assert kinds[0] == "grounding"
     assert kinds[-1] == "done"
@@ -116,7 +131,7 @@ def test_kayit_stream_olay_sirasi_ve_grounding():
 
 def test_kayit_stream_disclaimer_garantisi():
     provider = _FakeStreamProvider(["kisa cikti"])
-    events = list(generate_kayit_envanter_stream(RECORDS, PROFILE, MEASURES, RULES, provider=provider))
+    events = _collect(RECORDS, PROFILE, MEASURES, RULES, provider)
     full = "".join(e[1] for e in events if e[0] == "delta")
     assert "avukat incelemesine tabi" in full
 
@@ -133,9 +148,7 @@ def test_kayit_stream_grounding_cap_ile_prompt_tutarli():
         for i in range(65)
     ]
     provider = _FakeStreamProvider(["cikti"])
-    events = list(
-        generate_kayit_envanter_stream(many, PROFILE, MEASURES, RULES, provider=provider, process_cap=60)
-    )
+    events = _collect(many, PROFILE, MEASURES, RULES, provider, process_cap=60)
     grounding = events[0][1]
     assert len(grounding) == 60
 
@@ -143,14 +156,14 @@ def test_kayit_stream_grounding_cap_ile_prompt_tutarli():
 def test_kayit_stream_done_stop_reason_max_tokens_tasir():
     """max_tokens'ta kesilen uretim done meta'sinda gorunur olmali (borc: gorunmez kesme)."""
     provider = _FakeStreamProvider(["kirpik cikti"], stop_reason="max_tokens")
-    events = list(generate_kayit_envanter_stream(RECORDS, PROFILE, MEASURES, RULES, provider=provider))
+    events = _collect(RECORDS, PROFILE, MEASURES, RULES, provider)
     done = next(p for k, p in events if k == "done")
     assert done["stopReason"] == "max_tokens"
 
 
 def test_kayit_stream_done_stop_reason_normalde_end_turn():
     provider = _FakeStreamProvider(["tam cikti"], stop_reason="end_turn")
-    events = list(generate_kayit_envanter_stream(RECORDS, PROFILE, MEASURES, RULES, provider=provider))
+    events = _collect(RECORDS, PROFILE, MEASURES, RULES, provider)
     done = next(p for k, p in events if k == "done")
     assert done["stopReason"] == "end_turn"
 
@@ -166,9 +179,7 @@ def test_kayit_stream_grounding_cap_sifir_sinirsiz():
         for i in range(65)
     ]
     provider = _FakeStreamProvider(["cikti"])
-    events = list(
-        generate_kayit_envanter_stream(many, PROFILE, MEASURES, RULES, provider=provider, process_cap=0)
-    )
+    events = _collect(many, PROFILE, MEASURES, RULES, provider, process_cap=0)
     grounding = events[0][1]
     assert len(grounding) == 65
 
