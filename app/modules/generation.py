@@ -13,8 +13,8 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from legal_core import GenerateRequest, GenerateResponse, generate_document
-from legal_core.generate import generate_document_stream
+from legal_core import GenerateRequest, GenerateResponse
+from legal_core.generate import generate_document_async, generate_document_stream_async
 from legal_core.grounding import Grounding
 from legal_core.provider import AnthropicProvider
 
@@ -161,7 +161,7 @@ def _claim_idempotency(identity: Identity, key: str | None) -> None:
     response_model_by_alias=True,
     dependencies=[Depends(generate_rate_limit)],
 )
-def generate(
+async def generate(
     req: GenerateRequest,
     # tenant_session: RLS org bağlamını set eder; record_generation_usage bu oturumda yazar.
     session: Session = Depends(tenant_session),
@@ -185,7 +185,7 @@ def generate(
     sector = org.sector if org else None
 
     try:
-        result = generate_document(
+        result = await generate_document_async(
             req,
             grounding=grounding,
             rules_repo=rules_repo,
@@ -218,7 +218,7 @@ def generate(
 
 
 @router.post("/generate/stream", dependencies=[Depends(generate_rate_limit)])
-def generate_stream(
+async def generate_stream(
     req: GenerateRequest,
     # tenant_session: RLS org bağlamını set eder; record_generation_usage bu oturumda yazar.
     session: Session = Depends(tenant_session),
@@ -244,7 +244,7 @@ def generate_stream(
 
     byok = x_anthropic_key is not None
 
-    def event_stream():
+    async def event_stream():
         # Sayım 'done'a bırakılamaz: istemci hemen öncesinde koparsa (GeneratorExit) üretim
         # hiç sayılmaz → ücretsiz tavan + maliyet bütçesi süresiz atlanır. Kopma anında
         # üretecin `finally`'si ancak çöp toplamada, istek oturumu kapandıktan sonra
@@ -253,7 +253,7 @@ def generate_stream(
         reserved = 0
         started = False
         try:
-            for kind, payload in generate_document_stream(
+            async for kind, payload in generate_document_stream_async(
                 req,
                 grounding=grounding,
                 rules_repo=rules_repo,

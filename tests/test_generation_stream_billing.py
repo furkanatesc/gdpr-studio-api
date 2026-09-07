@@ -43,7 +43,7 @@ def _managed_billing_settings():
 
 
 def _fake_stream_factory(settings):
-    def _fake_stream(*a, **k):
+    async def _fake_stream(*a, **k):
         yield "grounding", []
         yield "delta", "Aydınlatma"
         yield "delta", " metni"
@@ -57,13 +57,13 @@ def _fake_stream_factory(settings):
 
 def _stream_response(db_session, *, doc_type="aydinlatma", byok=None):
     # Doğrudan çağrı (FastAPI Depends/Header varsayılanları çözülmez) → hepsi açıkça geçilir.
-    return genmod.generate_stream(
+    return asyncio.run(genmod.generate_stream(
         GenerateRequest(type=doc_type),
         session=db_session,
         identity=IDENT,
         x_anthropic_key=byok,
         idempotency_key=None,
-    )
+    ))
 
 
 def _consume(response, *, events: int | None = None) -> None:
@@ -89,7 +89,7 @@ def _counter(db_session) -> UsageCounter | None:
 def test_stream_abort_before_done_still_counts_usage(db_session, monkeypatch):
     """İstemci ilk delta'dan sonra koparsa bile üretim sayılır (bypass kapalı)."""
     settings = _managed_billing_settings()
-    monkeypatch.setattr(genmod, "generate_document_stream", _fake_stream_factory(settings))
+    monkeypatch.setattr(genmod, "generate_document_stream_async", _fake_stream_factory(settings))
 
     _consume(_stream_response(db_session), events=2)  # grounding + ilk delta, sonra kopar
 
@@ -104,7 +104,7 @@ def test_stream_abort_before_done_still_counts_usage(db_session, monkeypatch):
 def test_stream_completion_settles_actual_cost_and_counts_once(db_session, monkeypatch):
     """Akış tamamlanınca: tek sayım + rezervasyon gerçek maliyetle mahsuplaşır."""
     settings = _managed_billing_settings()
-    monkeypatch.setattr(genmod, "generate_document_stream", _fake_stream_factory(settings))
+    monkeypatch.setattr(genmod, "generate_document_stream_async", _fake_stream_factory(settings))
 
     _consume(_stream_response(db_session))
 
@@ -120,7 +120,7 @@ def test_stream_completion_settles_actual_cost_and_counts_once(db_session, monke
 def test_stream_abort_before_first_delta_counts_nothing(db_session, monkeypatch):
     """Model hiç çağrılmadan (grounding'de) kopma → sayım yok; kullanıcı boşuna ödemez."""
     settings = _managed_billing_settings()
-    monkeypatch.setattr(genmod, "generate_document_stream", _fake_stream_factory(settings))
+    monkeypatch.setattr(genmod, "generate_document_stream_async", _fake_stream_factory(settings))
 
     _consume(_stream_response(db_session), events=1)  # yalnız grounding
 
@@ -131,7 +131,7 @@ def test_stream_abort_before_first_delta_counts_nothing(db_session, monkeypatch)
 def test_stream_byok_counts_document_but_no_cost(db_session, monkeypatch):
     """BYOK: maliyet bizim değil → rezerve edilmez; doküman tavanı yine sayılır."""
     settings = _managed_billing_settings()
-    monkeypatch.setattr(genmod, "generate_document_stream", _fake_stream_factory(settings))
+    monkeypatch.setattr(genmod, "generate_document_stream_async", _fake_stream_factory(settings))
 
     _consume(_stream_response(db_session, byok="sk-user-key"))
 

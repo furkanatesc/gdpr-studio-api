@@ -25,9 +25,13 @@ def _fake_response():
     )
 
 
+async def _agenerate_ok(*a, **k):
+    return _fake_response()
+
+
 def test_successful_generation_records_document(client, db_session, monkeypatch):
     _managed_billing_settings()
-    monkeypatch.setattr(genmod, "generate_document", lambda *a, **k: _fake_response())
+    monkeypatch.setattr(genmod, "generate_document_async", _agenerate_ok)
     r = client.post("/api/generate", json={"type": "aydinlatma"})
     assert r.status_code == 200
     rows = db_session.query(GeneratedDocument).all()
@@ -39,10 +43,10 @@ def test_successful_generation_records_document(client, db_session, monkeypatch)
 def test_failed_generation_records_no_document(client, db_session, monkeypatch):
     _managed_billing_settings()
 
-    def _boom(*a, **k):
+    async def _boom(*a, **k):
         raise RuntimeError("model patladı")
 
-    monkeypatch.setattr(genmod, "generate_document", _boom)
+    monkeypatch.setattr(genmod, "generate_document_async", _boom)
     r = client.post("/api/generate", json={"type": "aydinlatma"})
     assert r.status_code == 502
     assert db_session.query(GeneratedDocument).count() == 0
@@ -51,12 +55,12 @@ def test_failed_generation_records_no_document(client, db_session, monkeypatch):
 def test_streaming_generation_records_document(client, db_session, monkeypatch):
     _managed_billing_settings()
 
-    def _fake_stream(*a, **k):
+    async def _fake_stream(*a, **k):
         yield "grounding", []
         yield "delta", "me"
         yield "done", {"model": "claude-sonnet-4-6", "usage": {"inputTokens": 10, "outputTokens": 20}}
 
-    monkeypatch.setattr(genmod, "generate_document_stream", _fake_stream)
+    monkeypatch.setattr(genmod, "generate_document_stream_async", _fake_stream)
     with client.stream("POST", "/api/generate/stream", json={"type": "cerez"}) as r:
         assert r.status_code == 200
         body = "".join(r.iter_text())

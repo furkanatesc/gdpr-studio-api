@@ -115,6 +115,26 @@ class AnthropicProvider:
                 stop_reason=getattr(final, "stop_reason", None),
             )
 
+    async def agenerate(self, prompt: str, *, max_tokens: int = DEFAULT_MAX_TOKENS) -> ProviderResult:
+        """generate()'in async ikizi: TEK fark AsyncAnthropic + await messages.create."""
+        client = self._aclient()
+        message = await client.messages.create(
+            model=self._model,
+            max_tokens=max_tokens,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        text = message.content[0].text
+        usage = getattr(message, "usage", None)
+        result = ProviderResult(
+            text=text,
+            model=self._model,
+            input_tokens=getattr(usage, "input_tokens", 0) or 0,
+            output_tokens=getattr(usage, "output_tokens", 0) or 0,
+            stop_reason=getattr(message, "stop_reason", None),
+        )
+        self.last_result = result
+        return result
+
     def _aclient(self):
         """Async Anthropic istemcisi (lazy import: legal_core saf kalır)."""
         import httpx

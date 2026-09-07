@@ -28,11 +28,11 @@ def _managed_billing_settings():
 def test_stream_error_is_logged_and_captured(client, monkeypatch, caplog):
     _managed_billing_settings()
 
-    def _boom_stream(*a, **k):
+    async def _boom_stream(*a, **k):
         yield "grounding", []
         raise RuntimeError("model akışı patladı")
 
-    monkeypatch.setattr(genmod, "generate_document_stream", _boom_stream)
+    monkeypatch.setattr(genmod, "generate_document_stream_async", _boom_stream)
 
     captured: list[BaseException] = []
     monkeypatch.setattr(genmod, "capture_exception", lambda e: captured.append(e))

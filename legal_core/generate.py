@@ -83,6 +83,44 @@ def generate_document(
     )
 
 
+async def generate_document_async(
+    request: GenerateRequest,
+    *,
+    grounding: Grounding,
+    rules_repo: BusinessRuleRepository,
+    provider: Any,  # agenerate() metoduna sahip bir AsyncModelProvider (duck-typed)
+    max_tokens: int = DEFAULT_MAX_TOKENS,
+    sector: str | None = None,
+    kisi_grubu: str | None = None,
+    process_cap: int = DEFAULT_PROCESS_CAP,
+) -> GenerateResponse:
+    """generate_document'ın async ikizi: TEK fark `await provider.agenerate`."""
+    doc_type = request.type.value
+
+    # Etiket kaynağı: web kontratında çerez/risk kategorileri de 'veriler' altında gelir.
+    tags = list(request.veriler)
+
+    inventory = grounding.inventory_rules(tags)
+    measures = grounding.measures()
+    rules = GLOBAL_RULES + rules_repo.business_rules(doc_type)
+    processes = grounding.process_rules(sector, kisi_grubu)
+    prompt = build_prompt(
+        doc_type, _user_input(request), inventory, rules,
+        processes=processes, process_cap=process_cap, measures=measures,
+    )
+
+    result = await provider.agenerate(prompt, max_tokens=max_tokens)
+    text = ensure_disclaimer(result.text)
+
+    return GenerateResponse(
+        text=text,
+        grounding=[r.to_grounding() for r in inventory],
+        model=result.model,
+        disclaimer=DISCLAIMER,
+        usage=Usage(input_tokens=result.input_tokens, output_tokens=result.output_tokens),
+    )
+
+
 def generate_document_stream(
     request: GenerateRequest,
     *,
