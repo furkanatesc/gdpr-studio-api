@@ -292,6 +292,49 @@ def generate_kayit_envanter_stream(
     )
 
 
+async def generate_kayit_envanter_stream_async(
+    records: list[ProcessRecord],
+    profile: ClientProfile,
+    measures: list[str],
+    rules: list[str],
+    *,
+    provider: Any,
+    max_tokens: int = DEFAULT_MAX_TOKENS,
+    process_cap: int = DEFAULT_PROCESS_CAP,
+) -> AsyncIterator[tuple[str, Any]]:
+    """generate_kayit_envanter_stream'in async ikizi: TEK fark `async for provider.astream`."""
+    total = len(records)
+    grounded = records[:process_cap] if process_cap and total > process_cap else records
+    yield ("grounding", [_process_to_grounding(r) for r in grounded])
+
+    prompt = build_kayit_envanter_prompt(records, profile, measures, rules, process_cap=process_cap)
+
+    chunks: list[str] = []
+    async for delta in provider.astream(prompt, max_tokens=max_tokens):
+        chunks.append(delta)
+        yield ("delta", delta)
+
+    streamed = "".join(chunks)
+    final_text = ensure_disclaimer(streamed)
+    if final_text != streamed:
+        yield ("delta", final_text[len(streamed):])
+
+    last = getattr(provider, "last_result", None)
+    yield (
+        "done",
+        {
+            "model": getattr(provider, "model", "") or "",
+            "disclaimer": DISCLAIMER,
+            "usage": (
+                {"inputTokens": last.input_tokens, "outputTokens": last.output_tokens}
+                if last
+                else None
+            ),
+            "stopReason": last.stop_reason if last else None,
+        },
+    )
+
+
 def generate_dpia_envanter_stream(
     records: list[ProcessRecord],
     profile: ClientProfile,
