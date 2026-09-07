@@ -596,3 +596,38 @@ def generate_ihlal_stream(
         "usage": ({"inputTokens": last.input_tokens, "outputTokens": last.output_tokens} if last else None),
         "stopReason": last.stop_reason if last else None,
     })
+
+
+async def generate_ihlal_stream_async(
+    olay,
+    profile,
+    kategoriler,
+    veri_turleri,
+    measures,
+    rules,
+    bildirim_turu,
+    *,
+    provider: Any,
+    max_tokens: int = DEFAULT_MAX_TOKENS,
+) -> AsyncIterator[tuple[str, Any]]:
+    """generate_ihlal_stream'in async ikizi: TEK fark `async for provider.astream`."""
+    if bildirim_turu == "kurul":
+        prompt = build_ihlal_kurul_prompt(olay, profile, kategoriler, veri_turleri, measures, rules)
+    else:
+        prompt = build_ihlal_ilgili_kisi_prompt(olay, profile, kategoriler)
+
+    chunks: list[str] = []
+    async for delta in provider.astream(prompt, max_tokens=max_tokens):
+        chunks.append(delta)
+        yield ("delta", delta)
+    streamed = "".join(chunks)
+    final_text = ensure_disclaimer(streamed)
+    if final_text != streamed:
+        yield ("delta", final_text[len(streamed):])
+    last = getattr(provider, "last_result", None)
+    yield ("done", {
+        "model": getattr(provider, "model", "") or "",
+        "disclaimer": DISCLAIMER,
+        "usage": ({"inputTokens": last.input_tokens, "outputTokens": last.output_tokens} if last else None),
+        "stopReason": last.stop_reason if last else None,
+    })
