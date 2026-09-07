@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import uuid
 
 
@@ -126,7 +127,7 @@ def _make_processor_direct(db_session, client_id, org_id=_IDENT.org_id):
     return p.id
 
 
-def _fake_stream_truncated(*a, **k):
+async def _fake_stream_truncated(*a, **k):
     yield "grounding", []
     yield "delta", "Kesik DPA sozlesmesi..."
     yield "done", {
@@ -157,15 +158,15 @@ def test_dpa_generate_max_tokensta_belge_sayaci_geri_alinir(db_session, monkeypa
     from app.billing.repositories import UsageRepository
 
     _managed_billing_settings()
-    monkeypatch.setattr(dpamod, "generate_dpa_envanter_stream", _fake_stream_truncated)
+    monkeypatch.setattr(dpamod, "generate_dpa_envanter_stream_async", _fake_stream_truncated)
     cid = _make_client_direct(db_session)
     _put_inventory_direct(db_session, cid)
     pid = _make_processor_direct(db_session, cid)
 
-    resp = dpamod.generate(
+    resp = asyncio.run(dpamod.generate(
         client_id=cid, body=dpamod.DpaGenerateIn(processor_id=pid),
         session=db_session, identity=_IDENT, x_anthropic_key=None, idempotency_key=None,
-    )
+    ))
     body = _consume(resp)
 
     assert "event: warning" in body

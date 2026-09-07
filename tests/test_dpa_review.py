@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 import pytest
@@ -75,7 +76,7 @@ class _FakeProvider:
         self.model = "fake"
         self.calls = 0
 
-    def stream(self, prompt, *, max_tokens=8000):
+    async def astream(self, prompt, *, max_tokens=8000):
         self.calls += 1
         # akışı taklit için parça parça yield
         mid = len(self._payload) // 2
@@ -90,7 +91,7 @@ def test_review_dpa_counts_summary():
          "alinti": "", "gerekce": "g", "oneri": "o"}
         for i, it in enumerate(DPA_CHECKLIST)
     ])
-    result = review_dpa("metin", _ctx(), provider=_FakeProvider(payload))
+    result = asyncio.run(review_dpa("metin", _ctx(), provider=_FakeProvider(payload)))
     assert isinstance(result, DpaReviewResult)
     assert result.uygun + result.eksik + result.yetersiz == 11
     assert result.kirmizi_bayrak >= 0
@@ -101,5 +102,5 @@ def test_review_dpa_retries_once_on_bad_json():
     # İlk çağrı bozuk, ama _FakeProvider hep aynı payload döndürür → retry de bozuk → ReviewParseError.
     bad = _FakeProvider("bu json değil")
     with pytest.raises(ReviewParseError):
-        review_dpa("metin", _ctx(), provider=bad)
+        asyncio.run(review_dpa("metin", _ctx(), provider=bad))
     assert bad.calls == 2  # bir asıl + bir retry
