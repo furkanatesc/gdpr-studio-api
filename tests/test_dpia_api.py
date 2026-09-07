@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import uuid
 
 
@@ -104,7 +105,7 @@ def _put_inventory_direct(db_session, client_id, org_id=_DEFEKT2_IDENT.org_id):
     db_session.commit()
 
 
-def _fake_dpia_stream_truncated(*a, **k):
+async def _fake_dpia_stream_truncated(*a, **k):
     yield "grounding", []
     yield "delta", "Kesik DPIA metni..."
     yield "done", {
@@ -115,8 +116,6 @@ def _fake_dpia_stream_truncated(*a, **k):
 
 
 def _consume_direct(response) -> str:
-    import asyncio
-
     async def _run():
         chunks = []
         async for chunk in response.body_iterator:
@@ -133,7 +132,7 @@ def _generate_direct(db_session, client_id, **ov):
         x_anthropic_key=None, idempotency_key=None,
     )
     kwargs.update(ov)
-    return dpiamod.generate(client_id=client_id, **kwargs)
+    return asyncio.run(dpiamod.generate(client_id=client_id, **kwargs))
 
 
 def test_dpia_generate_max_tokensta_belge_sayaci_geri_alinir(db_session, monkeypatch):
@@ -145,7 +144,7 @@ def test_dpia_generate_max_tokensta_belge_sayaci_geri_alinir(db_session, monkeyp
     from app.billing.repositories import UsageRepository
 
     _managed_billing_settings()
-    monkeypatch.setattr(dpiamod, "generate_dpia_envanter_stream", _fake_dpia_stream_truncated)
+    monkeypatch.setattr(dpiamod, "generate_dpia_envanter_stream_async", _fake_dpia_stream_truncated)
     cid = _make_client_direct(db_session)
     _put_inventory_direct(db_session, cid)
 

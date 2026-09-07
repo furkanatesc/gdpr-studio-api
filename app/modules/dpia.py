@@ -17,7 +17,7 @@ from pydantic.alias_generators import to_camel
 from sqlalchemy.orm import Session
 
 from legal_core.dpia_necessity import DpiaAnket, evaluate_dpia_necessity
-from legal_core.generate import generate_dpia_envanter_stream
+from legal_core.generate import generate_dpia_envanter_stream_async
 from legal_core.models import DocType
 from legal_core.prompt import ensure_disclaimer
 from legal_core.provider import AnthropicProvider
@@ -115,7 +115,7 @@ def prepare(
 
 
 @router.post("/{client_id}/dpia/generate", dependencies=[Depends(generate_rate_limit)])
-def generate(
+async def generate(
     client_id: uuid.UUID,
     body: DpiaGenerateIn,
     session: Session = Depends(tenant_session),
@@ -154,13 +154,13 @@ def generate(
     )
     byok = x_anthropic_key is not None
 
-    def event_stream():
+    async def event_stream():
         reserved = 0
         started = False
         full_text = ""
         generated_doc_id: uuid.UUID | None = None
         try:
-            for kind, payload in generate_dpia_envanter_stream(
+            async for kind, payload in generate_dpia_envanter_stream_async(
                 records, prof, measures, rules, body.tetiklenenler, provider=provider,
                 max_tokens=dpia_max_tokens, process_cap=cap,
             ):
