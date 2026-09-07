@@ -49,6 +49,7 @@ from .generation import (
     _claim_idempotency,
     _resolve_api_key,
     _sse,
+    classify_generation_error,
     classify_incomplete_stop_reason,
 )
 
@@ -221,7 +222,7 @@ def generate(
                 idempotency.release(identity.org_id, idempotency_key)
             _log.exception("cerez akis hatasi (org=%s)", identity.org_id)
             capture_exception(e)
-            yield _sse("error", {"detail": "Belge üretilemedi; lütfen tekrar deneyin."})
+            yield _sse("error", {"detail": classify_generation_error(e)})
 
     return StreamingResponse(
         event_stream(),

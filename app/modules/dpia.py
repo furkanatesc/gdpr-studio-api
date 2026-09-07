@@ -45,7 +45,13 @@ from ..repositories import (
     PostgresProcessRepository,
 )
 from .document_store import client_profile, store_client_document
-from .generation import _claim_idempotency, _resolve_api_key, _sse, classify_incomplete_stop_reason
+from .generation import (
+    _claim_idempotency,
+    _resolve_api_key,
+    _sse,
+    classify_generation_error,
+    classify_incomplete_stop_reason,
+)
 
 router = APIRouter(prefix="/api/clients", tags=["dpia"])
 _log = logging.getLogger("app.dpia")
@@ -246,7 +252,7 @@ def generate(
                 idempotency.release(identity.org_id, idempotency_key)
             _log.exception("dpia akis hatasi (org=%s)", identity.org_id)
             capture_exception(e)
-            yield _sse("error", {"detail": "Belge üretilemedi; lütfen tekrar deneyin."})
+            yield _sse("error", {"detail": classify_generation_error(e)})
 
     return StreamingResponse(
         event_stream(),

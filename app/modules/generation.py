@@ -47,6 +47,55 @@ _log = logging.getLogger("app.generation")
 # yalnız log/Sentry'de kalır (B1: hata mesajı hijyeni).
 GENERIC_GENERATION_ERROR = "Belge üretilemedi; lütfen tekrar deneyin."
 
+# Spesifik Anthropic hata sınıflandırması (B2): kredi/rate-limit/auth/overload
+# istemciye farklı görünsün ki kullanıcı ne yapması gerektiğini anlayabilsin.
+# Ham istisna mesajı/içeriği (prompt/PII taşıyabilir) hiçbir zaman bu sabitlerin
+# dışına sızmaz — eşleşme istisna TÜRÜNE, kredi durumunda ayrıca dar bir alt-dizge
+# kontrolüne (istisnanın KENDİ mesajı üzerinde, echo edilmeden) dayanır.
+CREDIT_BALANCE_ERROR = "Anthropic API kredisi tükenmiş görünüyor; lütfen bakiyeyi kontrol edin."
+RATE_LIMIT_ERROR = "Yoğunluk nedeniyle hız sınırına ulaşıldı; birkaç dakika sonra tekrar deneyin."
+AUTH_ERROR = "Anthropic API anahtarı geçersiz veya yetkisiz."
+SERVICE_UNAVAILABLE_ERROR = "Yapay zekâ hizmeti geçici olarak yanıt vermiyor; lütfen tekrar deneyin."
+
+
+def classify_generation_error(exc: BaseException) -> str:
+    """Anthropic istisnasını kullanıcıya özel, PII-güvenli bir Türkçe mesaja eşler.
+
+    Bilinmeyen/beklenmedik istisnalar GENERIC_GENERATION_ERROR'a düşer. Dönen değer
+    her zaman bu modüldeki sabit şablonlardan biridir — istisnanın kendi mesajı asla
+    doğrudan döndürülmez.
+    """
+    # Lazy import: legal_core saf kalsın diye anthropic SDK yalnız burada, provider'daki
+    # gibi ihtiyaç anında import edilir.
+    from anthropic import (
+        APIConnectionError,
+        AuthenticationError,
+        BadRequestError,
+        InternalServerError,
+        RateLimitError,
+    )
+
+    if isinstance(exc, BadRequestError):
+        message = str(getattr(exc, "message", None) or exc)
+        if "credit balance" in message.lower():
+            return CREDIT_BALANCE_ERROR
+        return GENERIC_GENERATION_ERROR
+    if isinstance(exc, RateLimitError):
+        return RATE_LIMIT_ERROR
+    if isinstance(exc, AuthenticationError):
+        return AUTH_ERROR
+    if isinstance(exc, APIConnectionError):
+        return SERVICE_UNAVAILABLE_ERROR
+    if isinstance(exc, InternalServerError):
+        return SERVICE_UNAVAILABLE_ERROR
+    # OverloadedError (529) / ServiceUnavailableError (503) / DeadlineExceededError (504)
+    # InternalServerError'un alt sınıfı DEĞİL, APIStatusError'un kardeşidir — status_code
+    # üzerinden de yakala ki SDK'nın export etmediği bu sınıflar da aynı kovaya düşsün.
+    status_code = getattr(exc, "status_code", None)
+    if isinstance(status_code, int) and status_code >= 500:
+        return SERVICE_UNAVAILABLE_ERROR
+    return GENERIC_GENERATION_ERROR
+
 # Belge SAKLANMAMASI gereken stop_reason'lar (aydinlatma/cerez/kayit generate uclarinin
 # ortak siniflandirmasi — kopyalanmasin, buradan import edilsin).
 # - max_tokens / model_context_window_exceeded: cikti kesildi (kapsam daraltma tavsiyesi anlamli).
@@ -152,7 +201,7 @@ def generate(
         # Üretim başarısız → kilidi bırak: istemci aynı anahtarla yeniden deneyebilsin.
         idempotency.release(identity.org_id, idempotency_key)
         _log.exception("üretim hatası (org=%s, type=%s)", identity.org_id, req.type)
-        raise HTTPException(status_code=502, detail=GENERIC_GENERATION_ERROR) from e
+        raise HTTPException(status_code=502, detail=classify_generation_error(e)) from e
     # Uyum sinyali: başarılı üretimi generated_documents'a yaz. record_generation_usage
     # commit ettiği için kayıt ONDAN ÖNCE flush'lanır → aynı işlemde persist olur (spec §4).
     record_generated_document(session, identity.org_id, req.type, identity.user_id)
@@ -249,7 +298,7 @@ def generate_stream(
             # Yanıt 200 başladı → erişim middleware'i bu hatayı görmez; ops'a burada taşı.
             _log.exception("streaming üretim hatası (org=%s, type=%s)", identity.org_id, req.type)
             capture_exception(e)
-            yield _sse("error", {"detail": GENERIC_GENERATION_ERROR})
+            yield _sse("error", {"detail": classify_generation_error(e)})
 
     return StreamingResponse(
         event_stream(),
