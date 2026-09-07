@@ -2,7 +2,7 @@
 """Isleme kaydi (VERBIS) uretimi — muvekkil envanterinden generate/docx uclari.
 
 Aydinlatma/cerez generate skeleton'ini izler; fark: girdi muvekkilin client_processes
-envanteri (generate_kayit_envanter_stream) ve doc_type='kayit' saklama.
+envanteri (generate_kayit_envanter_stream_async) ve doc_type='kayit' saklama.
 """
 
 from __future__ import annotations

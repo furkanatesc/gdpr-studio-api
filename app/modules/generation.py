@@ -1,7 +1,7 @@
 """Generation modülü — POST /api/generate.
 
 Grounding + iş kuralları Postgres'ten; model çağrısı BYOK (X-Anthropic-Key başlığı)
-veya managed (sunucu anahtarı). Çekirdek mantık legal_core.generate_document'ta.
+veya managed (sunucu anahtarı). Çekirdek mantık legal_core.generate_document_async'ta.
 """
 
 from __future__ import annotations

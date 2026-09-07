@@ -8,6 +8,7 @@ Kullanım:
 
 from __future__ import annotations
 
+import asyncio
 import sys
 import time
 import unicodedata
@@ -15,8 +16,8 @@ from collections import defaultdict
 
 from app.config import get_settings
 from app.seed import CATEGORIES_PATH, RULES
-from legal_core import generate_document
 from legal_core.adapters import DictBusinessRuleRepository, JsonCategoryRepository
+from legal_core.generate import generate_document_async
 from legal_core.grounding import Grounding
 from legal_core.provider import AnthropicProvider
 
@@ -76,7 +77,9 @@ def run_case(case: EvalCase, grounding, rules_repo, provider) -> tuple[list[Chec
     meta: dict = {}
     if provider is not None:
         t = time.time()
-        res = generate_document(case.request, grounding=grounding, rules_repo=rules_repo, provider=provider)
+        res = asyncio.run(
+            generate_document_async(case.request, grounding=grounding, rules_repo=rules_repo, provider=provider)
+        )
         meta = {
             "saniye": round(time.time() - t),
             "in": res.usage.input_tokens if res.usage else 0,

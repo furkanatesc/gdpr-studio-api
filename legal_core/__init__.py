@@ -6,7 +6,7 @@ iş kuralları) ve model çağrısı enjekte edilen arayüzlerle sağlanır; bö
 çekirdek hem web (Postgres) hem masaüstü (SQLite/JSON) tarafında kullanılır.
 """
 
-from .generate import generate_document
+from .generate import generate_document_async
 from .grounding import TAG_SYNONYMS, CategoryRepository, Grounding
 from .models import (
     DocType,
@@ -17,7 +17,7 @@ from .models import (
     Usage,
 )
 from .prompt import DISCLAIMER, build_prompt, format_inventory
-from .provider import ModelProvider, ProviderResult
+from .provider import AsyncModelProvider, ProviderResult
 from .rules import GLOBAL_RULES, BusinessRuleRepository
 
 __all__ = [
@@ -35,7 +35,7 @@ __all__ = [
     "DISCLAIMER",
     "build_prompt",
     "format_inventory",
-    "ModelProvider",
+    "AsyncModelProvider",
     "ProviderResult",
-    "generate_document",
+    "generate_document_async",
 ]
