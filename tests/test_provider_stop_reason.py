@@ -36,12 +36,6 @@ class _FakeAsyncClient:
     def __init__(self, stop_reason="end_turn", **kwargs):
         self.messages = _FakeAsyncMessages(stop_reason)
 
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, *a):
-        return False
-
 
 def _install_fake_anthropic(monkeypatch, stop_reason):
     fake_mod = types.ModuleType("anthropic")
@@ -101,12 +95,6 @@ class _FakeAsyncMessagesStream:
 class _FakeAsyncClientStream:
     def __init__(self, stop_reason, **kwargs):
         self.messages = _FakeAsyncMessagesStream(stop_reason)
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, *a):
-        return False
 
 
 def _install_fake_anthropic_stream(monkeypatch, stop_reason):

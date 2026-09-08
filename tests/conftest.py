@@ -24,6 +24,7 @@ from app.email.sender import reset_email_sender
 from app.main import app
 from app.models import BusinessRule, Category
 from app.redis_client import reset_redis
+from legal_core.provider import _CLIENT_CACHE
 
 _DEV_IDENTITY = Identity(
     user_id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
@@ -194,3 +195,11 @@ def client_no_account(db_session):
     """
     with _dev_bypass_client(db_session) as c:
         yield c
+
+
+@pytest.fixture(autouse=True)
+def clear_provider_cache():
+    """Provider cache'ini her test öncesinde temizle — test izolasyonu."""
+    _CLIENT_CACHE._cache.clear()
+    yield
+    _CLIENT_CACHE._cache.clear()

@@ -8,13 +8,12 @@ bağlantısı ~10 dk tutulur → birkaç asılı çağrı isteği yanıtsız bı
 
 from __future__ import annotations
 
-import asyncio
 import sys
 import types
 
 import httpx
 
-from legal_core.provider import AnthropicProvider, ProviderResult
+from legal_core.provider import AnthropicProvider
 
 
 class _FakeAsyncMessages:
@@ -52,9 +51,10 @@ def test_generate_client_built_with_timeout_and_retries(monkeypatch):
     _install_fake_anthropic(monkeypatch)
     provider = AnthropicProvider("sk-x", model="claude-sonnet-4-6", timeout_s=60, max_retries=2)
 
-    result = asyncio.run(provider.agenerate("prompt", max_tokens=100))
+    # _build_client() doğrudan test et — cache bypass — AsyncAnthropic constructor'ı yakala
+    client = provider._build_client()
 
-    assert isinstance(result, ProviderResult)
+    assert isinstance(client, _FakeAsyncClient)
     kw = _FakeAsyncClient.captured
     assert kw["max_retries"] == 2
     assert isinstance(kw["timeout"], httpx.Timeout)
@@ -66,7 +66,10 @@ def test_defaults_are_bounded(monkeypatch):
     """Varsayılanlar da sınırlı olmalı — timeout/retry hiç 'sonsuz' kalmamalı."""
     _install_fake_anthropic(monkeypatch)
     provider = AnthropicProvider("sk-x")
-    asyncio.run(provider.agenerate("p", max_tokens=10))
+
+    # _build_client() doğrudan test et — cache bypass
+    provider._build_client()
+
     kw = _FakeAsyncClient.captured
     assert isinstance(kw["timeout"], httpx.Timeout)
     assert kw["timeout"].read is not None and kw["timeout"].read > 0
