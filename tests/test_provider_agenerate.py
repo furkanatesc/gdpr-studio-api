@@ -26,18 +26,16 @@ class _FakeAsyncClient:
     def __init__(self, stop_reason="end_turn"):
         self.messages = _FakeAsyncMessages(stop_reason)
 
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, *a):
-        return False
-
 
 def test_agenerate_normal_bitiste_result_text_ve_usage_tasir(monkeypatch):
     """agenerate() message.content[0].text, usage, stop_reason'ı ProviderResult'a taşır."""
     p = AnthropicProvider("sk-fake", model="claude-x")
     fake_client = _FakeAsyncClient("end_turn")
-    monkeypatch.setattr(p, "_aclient", lambda: fake_client)
+
+    async def _fake_aclient():
+        return fake_client
+
+    monkeypatch.setattr(p, "_aclient", _fake_aclient)
 
     async def _run():
         return await p.agenerate("PROMPT", max_tokens=100)
@@ -56,7 +54,11 @@ def test_agenerate_max_tokensta_stop_reason_tasir(monkeypatch):
     """agenerate() max_tokens kesintisinde stop_reason "max_tokens" olur."""
     p = AnthropicProvider("sk-fake", model="claude-y")
     fake_client = _FakeAsyncClient("max_tokens")
-    monkeypatch.setattr(p, "_aclient", lambda: fake_client)
+
+    async def _fake_aclient():
+        return fake_client
+
+    monkeypatch.setattr(p, "_aclient", _fake_aclient)
 
     async def _run():
         return await p.agenerate("PROMPT")

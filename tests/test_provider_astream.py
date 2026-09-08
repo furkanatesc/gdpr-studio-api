@@ -37,17 +37,16 @@ class _FakeAsyncClient:
     def __init__(self, cm):
         self.messages = SimpleNamespace(stream=lambda **kw: cm)
 
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, *a):
-        return False
-
 
 def test_astream_deltalari_akitir_ve_last_result_doldurur(monkeypatch):
     p = AnthropicProvider("sk-fake", model="claude-x")
     cm = _FakeStreamCM(["Ay", "dinlatma"], usage=(11, 22), stop_reason="end_turn")
-    monkeypatch.setattr(p, "_aclient", lambda: _FakeAsyncClient(cm))
+    fake_client = _FakeAsyncClient(cm)
+
+    async def _fake_aclient():
+        return fake_client
+
+    monkeypatch.setattr(p, "_aclient", _fake_aclient)
 
     async def _run():
         return [d async for d in p.astream("PROMPT", max_tokens=100)]

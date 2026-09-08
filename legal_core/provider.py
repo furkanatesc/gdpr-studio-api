@@ -7,9 +7,10 @@ aynı arayüzü kullanır — fark yalnızca hangi api_key'in geçtiğidir.
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections import OrderedDict
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 DEFAULT_MODEL = "claude-sonnet-4-6"
 DEFAULT_MAX_TOKENS = 8000
@@ -38,6 +39,48 @@ class AsyncModelProvider(Protocol):
     def astream(self, prompt: str, *, max_tokens: int = DEFAULT_MAX_TOKENS): ...
 
 
+class _AsyncClientCache:
+    """Anahtar başına paylaşılan async model istemcilerinin sınırlı LRU önbelleği.
+
+    Havuz reuse: aynı (api_key, timeout_s, max_retries) → aynı AsyncAnthropic (dolayısıyla
+    aynı httpx bağlantı havuzu/keepalive). Her çağrıda yeni client + taze TLS handshake
+    yerine yeniden kullanım. BYOK anahtarları sınırsız büyümesin diye maxsize; kapasite
+    aşılınca EN ESKİ (LRU) client evict edilip aclose ile kapatılır. Süreç tek event
+    loop'ta (uvicorn worker) çalıştığından ek kilit gerekmez.
+    """
+
+    def __init__(self, maxsize: int = 32) -> None:
+        self._cache: OrderedDict[tuple[Any, ...], Any] = OrderedDict()
+        self._maxsize = maxsize
+
+    async def get(self, key: tuple[Any, ...], factory: Callable[[], Any]) -> Any:
+        client = self._cache.get(key)
+        if client is not None:
+            self._cache.move_to_end(key)  # LRU: dokunulan en yeni
+            return client
+        client = factory()
+        self._cache[key] = client
+        if len(self._cache) > self._maxsize:
+            _, evicted = self._cache.popitem(last=False)  # en eski
+            await evicted.aclose()
+        return client
+
+    async def aclose_all(self) -> None:
+        clients = list(self._cache.values())
+        self._cache.clear()
+        for c in clients:
+            await c.aclose()
+
+
+# Modül-seviye havuz: aynı süreçteki tüm istekler paylaşır.
+_CLIENT_CACHE = _AsyncClientCache()
+
+
+async def aclose_all_clients() -> None:
+    """Uygulama kapanışında (lifespan/shutdown) havuzdaki tüm async client'ları kapatır."""
+    await _CLIENT_CACHE.aclose_all()
+
+
 class AnthropicProvider:
     """Anthropic Claude implementasyonu (BYOK veya managed anahtar)."""
 
@@ -63,13 +106,16 @@ class AnthropicProvider:
         return self._model
 
     async def agenerate(self, prompt: str, *, max_tokens: int = DEFAULT_MAX_TOKENS) -> ProviderResult:
-        """AsyncAnthropic ile tek-seferlik (stream'siz) üretim; await messages.create."""
-        async with self._aclient() as client:
-            message = await client.messages.create(
-                model=self._model,
-                max_tokens=max_tokens,
-                messages=[{"role": "user", "content": prompt}],
-            )
+        """AsyncAnthropic ile tek-seferlik (stream'siz) üretim; await messages.create.
+
+        Client havuzdan gelir (paylaşılan) — per-call KAPATILMAZ; havuz yaşamı boyunca
+        yeniden kullanılır (kapanış aclose_all_clients ile)."""
+        client = await self._aclient()
+        message = await client.messages.create(
+            model=self._model,
+            max_tokens=max_tokens,
+            messages=[{"role": "user", "content": prompt}],
+        )
         text = message.content[0].text
         usage = getattr(message, "usage", None)
         result = ProviderResult(
@@ -82,8 +128,13 @@ class AnthropicProvider:
         self.last_result = result
         return result
 
-    def _aclient(self):
-        """Async Anthropic istemcisi (lazy import: legal_core saf kalır)."""
+    async def _aclient(self):
+        """Havuzlanmış async Anthropic istemcisi — (api_key,timeout,retries) başına paylaşılır."""
+        key = (self._api_key, self._timeout_s, self._max_retries)
+        return await _CLIENT_CACHE.get(key, self._build_client)
+
+    def _build_client(self):
+        """Yeni AsyncAnthropic (lazy import: legal_core saf kalır). Yalnız cache-miss'te çağrılır."""
         import httpx
         from anthropic import AsyncAnthropic
 
@@ -94,22 +145,25 @@ class AnthropicProvider:
         )
 
     async def astream(self, prompt: str, *, max_tokens: int = DEFAULT_MAX_TOKENS) -> AsyncIterator[str]:
-        """Metin delta'larını akıtır; bitince final usage'ı self.last_result'a yazar."""
+        """Metin delta'larını akıtır; bitince final usage'ı self.last_result'a yazar.
+
+        Client havuzdan gelir (paylaşılan) — per-call KAPATILMAZ; yalnız RESPONSE
+        (messages.stream) kapatılır."""
         self.last_result = None
-        async with self._aclient() as client:
-            async with client.messages.stream(
+        client = await self._aclient()
+        async with client.messages.stream(
+            model=self._model,
+            max_tokens=max_tokens,
+            messages=[{"role": "user", "content": prompt}],
+        ) as s:
+            async for delta in s.text_stream:
+                yield delta
+            final = await s.get_final_message()
+            usage = getattr(final, "usage", None)
+            self.last_result = ProviderResult(
+                text="",
                 model=self._model,
-                max_tokens=max_tokens,
-                messages=[{"role": "user", "content": prompt}],
-            ) as s:
-                async for delta in s.text_stream:
-                    yield delta
-                final = await s.get_final_message()
-                usage = getattr(final, "usage", None)
-                self.last_result = ProviderResult(
-                    text="",
-                    model=self._model,
-                    input_tokens=getattr(usage, "input_tokens", 0) or 0,
-                    output_tokens=getattr(usage, "output_tokens", 0) or 0,
-                    stop_reason=getattr(final, "stop_reason", None),
-                )
+                input_tokens=getattr(usage, "input_tokens", 0) or 0,
+                output_tokens=getattr(usage, "output_tokens", 0) or 0,
+                stop_reason=getattr(final, "stop_reason", None),
+            )
