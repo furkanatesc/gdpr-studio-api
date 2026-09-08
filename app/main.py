@@ -66,6 +66,11 @@ async def lifespan(app: FastAPI):
     if settings.dsar_purge_on_startup:
         _run_startup_purge()
     yield
+    # Kapanış: havuzlanmış AsyncAnthropic client'larını kapat — graceful restart'ta
+    # (ör. Railway rolling deploy) açık soket/bağlantı bırakma.
+    from legal_core.provider import aclose_all_clients
+
+    await aclose_all_clients()
 
 
 def _run_startup_purge() -> None:

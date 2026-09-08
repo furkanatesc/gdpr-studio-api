@@ -47,6 +47,11 @@ class _AsyncClientCache:
     yerine yeniden kullanım. BYOK anahtarları sınırsız büyümesin diye maxsize; kapasite
     aşılınca EN ESKİ (LRU) client evict edilip aclose ile kapatılır. Süreç tek event
     loop'ta (uvicorn worker) çalıştığından ek kilit gerekmez.
+
+    VARSAYIM (evict pinlemez): evict yalnız LRU-yaşına bakar, in-use refcount tutmaz. Aynı
+    anda >maxsize DISTINCT (api_key,timeout,retries) BYOK anahtarı UÇUŞTA ise, hâlâ istek
+    işleyen bir client evict+aclose edilip o istek kırılabilir. Managed anahtar daima MRU →
+    fiilen pinli; bu risk yalnız aşırı BYOK çeşitliliğinde. Gerekirse maxsize artır / refcount ekle.
     """
 
     def __init__(self, maxsize: int = 32) -> None:
