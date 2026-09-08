@@ -14,3 +14,6 @@ _*.tmp
 *.xlsx
 data/categories.enriched.json
 ozet.txt
+
+# Superpowers SDD/scratch workspace (ledger, review paketleri) — commit edilmez
+.superpowers/
