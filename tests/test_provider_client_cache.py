@@ -16,7 +16,7 @@ class _FakeClient:
         self.tag = tag
         self.closed = False
 
-    async def aclose(self) -> None:
+    async def close(self) -> None:  # AsyncAnthropic gerçek metodu (aclose değil)
         self.closed = True
 
 

@@ -67,14 +67,14 @@ class _AsyncClientCache:
         self._cache[key] = client
         if len(self._cache) > self._maxsize:
             _, evicted = self._cache.popitem(last=False)  # en eski
-            await evicted.aclose()
+            await evicted.close()  # AsyncAnthropic.close() (aclose YOK)
         return client
 
     async def aclose_all(self) -> None:
         clients = list(self._cache.values())
         self._cache.clear()
         for c in clients:
-            await c.aclose()
+            await c.close()  # AsyncAnthropic.close() (aclose YOK)
 
 
 # Modül-seviye havuz: aynı süreçteki tüm istekler paylaşır.
