@@ -6,8 +6,10 @@ o basligin adi + placeholder gecer (koşullu atlama YOK — sahadaki hatanin coz
 
 from __future__ import annotations
 
+import asyncio
+
 from legal_core.aggregate_sections import Section
-from legal_core.generate import generate_aydinlatma_envanter_stream
+from legal_core.generate import generate_aydinlatma_envanter_stream_async
 from legal_core.models import ClientProfile
 from legal_core.prompt import DISCLAIMER, build_aydinlatma_envanter_prompt
 from legal_core.provider import ProviderResult
@@ -62,7 +64,7 @@ SECTIONS = [
 
 
 class FakeStreamProvider:
-    """AnthropicProvider.stream() desenini taklit eder: delta akitir, sonda last_result yazar."""
+    """AnthropicProvider.astream() desenini taklit eder: delta akitir, sonda last_result yazar."""
 
     def __init__(self, chunks, model="fake-model", input_tokens=11, output_tokens=22, stop_reason=None):
         self.chunks = chunks
@@ -73,14 +75,27 @@ class FakeStreamProvider:
         self._stop_reason = stop_reason
         self.seen_prompt = None
 
-    def stream(self, prompt, *, max_tokens=8000):
+    async def astream(self, prompt, *, max_tokens=8000):
         self.seen_prompt = prompt
-        yield from self.chunks
+        for chunk in self.chunks:
+            yield chunk
         self.last_result = ProviderResult(
             text="", model=self.model,
             input_tokens=self._input_tokens, output_tokens=self._output_tokens,
             stop_reason=self._stop_reason,
         )
+
+
+def _collect(sections, boilerplate, profile, provider):
+    async def _run():
+        return [
+            ev
+            async for ev in generate_aydinlatma_envanter_stream_async(
+                sections, boilerplate, profile, provider=provider,
+            )
+        ]
+
+    return asyncio.run(_run())
 
 
 def test_prompt_icerir_alti_baslik_talimati_ve_uydurma_uyarisi():
@@ -205,11 +220,7 @@ def test_prompt_bos_sections_uyari_satiri_koyar():
 
 def test_stream_olay_sirasi_ve_grounding():
     provider = FakeStreamProvider(["Merhaba ", "dunya."])
-    events = list(
-        generate_aydinlatma_envanter_stream(
-            SECTIONS, BOILERPLATE, PROFILE, provider=provider,
-        )
-    )
+    events = _collect(SECTIONS, BOILERPLATE, PROFILE, provider)
 
     kinds = [e[0] for e in events]
     assert kinds[0] == "grounding"
@@ -225,11 +236,7 @@ def test_stream_olay_sirasi_ve_grounding():
 
 def test_stream_done_disclaimer_ve_usage_icerir():
     provider = FakeStreamProvider(["Bir metin parcasi."])
-    events = list(
-        generate_aydinlatma_envanter_stream(
-            SECTIONS, BOILERPLATE, PROFILE, provider=provider,
-        )
-    )
+    events = _collect(SECTIONS, BOILERPLATE, PROFILE, provider)
 
     done = dict(events)["done"] if False else next(e for e in events if e[0] == "done")[1]
     assert done["disclaimer"] == DISCLAIMER
@@ -241,18 +248,14 @@ def test_stream_done_disclaimer_ve_usage_icerir():
 def test_stream_done_stop_reason_max_tokens_tasir():
     """max_tokens'ta kesilen uretim done meta'sinda gorunur olmali (borc: gorunmez kesme)."""
     provider = FakeStreamProvider(["kirpik cikti"], stop_reason="max_tokens")
-    events = list(
-        generate_aydinlatma_envanter_stream(SECTIONS, BOILERPLATE, PROFILE, provider=provider)
-    )
+    events = _collect(SECTIONS, BOILERPLATE, PROFILE, provider)
     done = next(e for e in events if e[0] == "done")[1]
     assert done["stopReason"] == "max_tokens"
 
 
 def test_stream_done_stop_reason_normalde_end_turn():
     provider = FakeStreamProvider(["tam cikti"], stop_reason="end_turn")
-    events = list(
-        generate_aydinlatma_envanter_stream(SECTIONS, BOILERPLATE, PROFILE, provider=provider)
-    )
+    events = _collect(SECTIONS, BOILERPLATE, PROFILE, provider)
     done = next(e for e in events if e[0] == "done")[1]
     assert done["stopReason"] == "end_turn"
 
@@ -260,11 +263,7 @@ def test_stream_done_stop_reason_normalde_end_turn():
 def test_stream_final_metin_disclaimer_garantisi():
     """Fake model disclaimer uretmese bile ensure_disclaimer ile eklenir (delta kuyrugu)."""
     provider = FakeStreamProvider(["kisa model ciktisi"])
-    events = list(
-        generate_aydinlatma_envanter_stream(
-            SECTIONS, BOILERPLATE, PROFILE, provider=provider,
-        )
-    )
+    events = _collect(SECTIONS, BOILERPLATE, PROFILE, provider)
 
     full_text = "".join(e[1] for e in events if e[0] == "delta")
     assert "avukat incelemesine tabi" in full_text

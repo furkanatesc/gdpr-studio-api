@@ -42,11 +42,11 @@ def test_generation_stream_error_event_does_not_leak_exception_text(client, monk
     """SSE error olayı gövdesi generic mesaj taşımalı; istisna metnini içermemeli (B1)."""
     _managed_billing_settings()
 
-    def _boom_stream(*a, **k):
+    async def _boom_stream(*a, **k):
         yield "grounding", []
         raise RuntimeError("host=secret-db password=hunter2")
 
-    monkeypatch.setattr(genmod, "generate_document_stream", _boom_stream)
+    monkeypatch.setattr(genmod, "generate_document_stream_async", _boom_stream)
     monkeypatch.setattr(genmod, "capture_exception", lambda e: None)
 
     with client.stream("POST", "/api/generate/stream", json={"type": "aydinlatma"}) as r:

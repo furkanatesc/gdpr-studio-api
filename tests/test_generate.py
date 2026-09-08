@@ -1,6 +1,8 @@
-from legal_core import GenerateRequest, generate_document
+import asyncio
+
+from legal_core import GenerateRequest
 from legal_core.adapters import DictBusinessRuleRepository, DictCategoryRepository
-from legal_core.generate import generate_document_stream
+from legal_core.generate import generate_document_async, generate_document_stream_async
 from legal_core.grounding import Grounding
 from legal_core.prompt import DISCLAIMER_MARKER
 from legal_core.provider import ProviderResult
@@ -28,7 +30,7 @@ class FakeProvider:
         self.text = text
         self.seen_prompt = None
 
-    def generate(self, prompt, *, max_tokens=8000):
+    async def agenerate(self, prompt, *, max_tokens=8000):
         self.seen_prompt = prompt
         return ProviderResult(text=self.text, model="fake-model", input_tokens=10, output_tokens=20)
 
@@ -40,12 +42,18 @@ def _build():
     )
 
 
+def _run_generate(req, grounding, rules_repo, provider):
+    async def _run():
+        return await generate_document_async(req, grounding=grounding, rules_repo=rules_repo, provider=provider)
+    return asyncio.run(_run())
+
+
 def test_generate_temel_akis():
     grounding, rules_repo = _build()
     provider = FakeProvider()
     req = GenerateRequest(type="aydinlatma", fields={"sirket": "ACME"}, veriler=["sağlık verisi"])
 
-    res = generate_document(req, grounding=grounding, rules_repo=rules_repo, provider=provider)
+    res = _run_generate(req, grounding, rules_repo, provider)
 
     assert res.model == "fake-model"
     assert res.usage.input_tokens == 10 and res.usage.output_tokens == 20
@@ -60,7 +68,7 @@ def test_prompt_baglayici_kurallari_icerir():
     provider = FakeProvider()
     req = GenerateRequest(type="aydinlatma", fields={}, veriler=["sağlık verisi"])
 
-    generate_document(req, grounding=grounding, rules_repo=rules_repo, provider=provider)
+    _run_generate(req, grounding, rules_repo, provider)
     p = provider.seen_prompt
 
     assert "DAYANAK UYDURMA YASAĞI" in p  # global kural
@@ -73,12 +81,12 @@ def test_disclaimer_varsa_tekrar_eklenmez():
     provider = FakeProvider(text="Metin\n\n" + "Bu çıktı avukat incelemesine tabi taslaktır.")
     req = GenerateRequest(type="cerez", fields={}, veriler=[])
 
-    res = generate_document(req, grounding=grounding, rules_repo=rules_repo, provider=provider)
+    res = _run_generate(req, grounding, rules_repo, provider)
     assert res.text.count(DISCLAIMER_MARKER) == 1  # ikinci kez eklenmedi
 
 
 class FakeStreamProvider:
-    """generate_document_stream'in bekledigi duck-type: stream() + last_result."""
+    """generate_document_stream_async'in bekledigi duck-type: astream() + last_result."""
 
     def __init__(self, chunks, model="fake-model", stop_reason=None):
         self.chunks = chunks
@@ -86,12 +94,23 @@ class FakeStreamProvider:
         self.last_result = None
         self._stop_reason = stop_reason
 
-    def stream(self, prompt, *, max_tokens=8000):
-        yield from self.chunks
+    async def astream(self, prompt, *, max_tokens=8000):
+        for ch in self.chunks:
+            yield ch
         self.last_result = ProviderResult(
             text="", model=self.model, input_tokens=11, output_tokens=22,
             stop_reason=self._stop_reason,
         )
+
+
+def _run_stream(req, grounding, rules_repo, provider):
+    async def _run():
+        return [
+            ev async for ev in generate_document_stream_async(
+                req, grounding=grounding, rules_repo=rules_repo, provider=provider,
+            )
+        ]
+    return asyncio.run(_run())
 
 
 def test_stream_done_stop_reason_max_tokens_tasir():
@@ -100,9 +119,7 @@ def test_stream_done_stop_reason_max_tokens_tasir():
     provider = FakeStreamProvider(["kirpik cikti"], stop_reason="max_tokens")
     req = GenerateRequest(type="cerez", fields={}, veriler=[])
 
-    events = list(
-        generate_document_stream(req, grounding=grounding, rules_repo=rules_repo, provider=provider)
-    )
+    events = _run_stream(req, grounding, rules_repo, provider)
     done = next(e for e in events if e[0] == "done")[1]
     assert done["stopReason"] == "max_tokens"
 
@@ -112,9 +129,7 @@ def test_stream_done_stop_reason_normalde_end_turn():
     provider = FakeStreamProvider(["tam cikti"], stop_reason="end_turn")
     req = GenerateRequest(type="cerez", fields={}, veriler=[])
 
-    events = list(
-        generate_document_stream(req, grounding=grounding, rules_repo=rules_repo, provider=provider)
-    )
+    events = _run_stream(req, grounding, rules_repo, provider)
     done = next(e for e in events if e[0] == "done")[1]
     assert done["stopReason"] == "end_turn"
 
@@ -123,7 +138,7 @@ def test_camelcase_serilestirme():
     grounding, rules_repo = _build()
     provider = FakeProvider()
     req = GenerateRequest(type="aydinlatma", fields={}, veriler=["sağlık verisi"])
-    res = generate_document(req, grounding=grounding, rules_repo=rules_repo, provider=provider)
+    res = _run_generate(req, grounding, rules_repo, provider)
 
     dumped = res.model_dump(by_alias=True)
     assert "hukukiSebepler" in dumped["grounding"][0]  # web kontratı camelCase

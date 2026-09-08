@@ -17,7 +17,7 @@ from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 from sqlalchemy.orm import Session
 
-from legal_core.generate import generate_ihlal_stream
+from legal_core.generate import generate_ihlal_stream_async
 from legal_core.ihlal import IhlalOlay, evaluate_ihlal_bildirim
 from legal_core.models import DocType
 from legal_core.provider import AnthropicProvider
@@ -149,7 +149,7 @@ def prepare(
 
 
 @router.post("/{client_id}/ihlal/generate", dependencies=[Depends(generate_rate_limit)])
-def generate(
+async def generate(
     client_id: uuid.UUID,
     body: IhlalGenerateIn,
     session: Session = Depends(tenant_session),
@@ -185,12 +185,12 @@ def generate(
     )
     byok = x_anthropic_key is not None
 
-    def event_stream():
+    async def event_stream():
         reserved = 0
         started = False
         generated_doc_id: uuid.UUID | None = None
         try:
-            for kind, payload in generate_ihlal_stream(
+            async for kind, payload in generate_ihlal_stream_async(
                 olay, prof, kategoriler, veri_turleri, measures, rules, bildirim_turu,
                 provider=provider, max_tokens=ihlal_max_tokens,
             ):

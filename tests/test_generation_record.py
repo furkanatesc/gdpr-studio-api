@@ -22,9 +22,13 @@ def _fake_response():
     )
 
 
+async def _fake_generate_document_async(*a, **k):
+    return _fake_response()
+
+
 def test_generate_records_managed_args(client, db_session, monkeypatch):
     _managed_billing_settings()
-    monkeypatch.setattr(genmod, "generate_document", lambda *a, **k: _fake_response())
+    monkeypatch.setattr(genmod, "generate_document_async", _fake_generate_document_async)
     captured = {}
     monkeypatch.setattr(genmod, "record_generation_usage", lambda *a, **k: captured.update(k))
     r = client.post("/api/generate", json={"type": "aydinlatma"})
@@ -37,7 +41,7 @@ def test_generate_records_managed_args(client, db_session, monkeypatch):
 
 def test_generate_records_byok_flag(client, db_session, monkeypatch):
     _managed_billing_settings()
-    monkeypatch.setattr(genmod, "generate_document", lambda *a, **k: _fake_response())
+    monkeypatch.setattr(genmod, "generate_document_async", _fake_generate_document_async)
     captured = {}
     monkeypatch.setattr(genmod, "record_generation_usage", lambda *a, **k: captured.update(k))
     r = client.post("/api/generate", json={"type": "aydinlatma"}, headers={"X-Anthropic-Key": "sk-byok"})

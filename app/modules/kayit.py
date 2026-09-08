@@ -2,7 +2,7 @@
 """Isleme kaydi (VERBIS) uretimi — muvekkil envanterinden generate/docx uclari.
 
 Aydinlatma/cerez generate skeleton'ini izler; fark: girdi muvekkilin client_processes
-envanteri (generate_kayit_envanter_stream) ve doc_type='kayit' saklama.
+envanteri (generate_kayit_envanter_stream_async) ve doc_type='kayit' saklama.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from pydantic.alias_generators import to_camel
 from sqlalchemy.orm import Session
 
 from legal_core.canonical import load_canonicalizer
-from legal_core.generate import generate_kayit_envanter_stream
+from legal_core.generate import generate_kayit_envanter_stream_async
 from legal_core.models import DocType, ProcessRecord
 from legal_core.prompt import ensure_disclaimer
 from legal_core.provider import AnthropicProvider
@@ -84,7 +84,7 @@ class DocxIn(_Camel):
 
 
 @router.post("/{client_id}/kayit/generate", dependencies=[Depends(generate_rate_limit)])
-def generate(
+async def generate(
     client_id: uuid.UUID,
     session: Session = Depends(tenant_session),
     identity: Identity = Depends(enforce_generation_quota),
@@ -123,13 +123,13 @@ def generate(
     )
     byok = x_anthropic_key is not None
 
-    def event_stream():
+    async def event_stream():
         reserved = 0
         started = False
         full_text = ""
         generated_doc_id: uuid.UUID | None = None
         try:
-            for kind, payload in generate_kayit_envanter_stream(
+            async for kind, payload in generate_kayit_envanter_stream_async(
                 records, prof, measures, rules, provider=provider, max_tokens=kayit_max_tokens,
                 process_cap=cap,
             ):

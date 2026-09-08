@@ -48,7 +48,11 @@ def _fixed_result() -> DpaReviewResult:
 @pytest.fixture
 def _patch_review(monkeypatch):
     import app.modules.dpa as dpa_mod
-    monkeypatch.setattr(dpa_mod, "review_dpa", lambda *a, **k: _fixed_result())
+
+    async def _fake_review_dpa(*a, **k):
+        return _fixed_result()
+
+    monkeypatch.setattr(dpa_mod, "review_dpa", _fake_review_dpa)
 
 
 _BYOK = {"X-Anthropic-Key": "test-key"}
@@ -116,7 +120,7 @@ def test_review_processor_id_camel_case_binds(client_fresh, monkeypatch):
 
     captured = []
 
-    def _capturing_review_dpa(source_text, context, *, provider):
+    async def _capturing_review_dpa(source_text, context, *, provider):
         captured.append(context)
         return _fixed_result()
 

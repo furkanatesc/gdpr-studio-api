@@ -1,6 +1,7 @@
+import asyncio
 from datetime import UTC, datetime
 
-from legal_core.generate import generate_ihlal_stream
+from legal_core.generate import generate_ihlal_stream_async
 from legal_core.ihlal import (
     IhlalOlay,
     build_ihlal_ilgili_kisi_prompt,
@@ -113,27 +114,39 @@ class _FakeProvider:
     def __init__(self, capture):
         self._capture = capture
 
-    def stream(self, prompt, max_tokens):
+    async def astream(self, prompt, max_tokens):
         self._capture.append(prompt)
         yield "İhlal bildirim gövdesi..."
 
 
+def _collect(*args, provider, max_tokens=8000):
+    async def _run():
+        return [
+            ev
+            async for ev in generate_ihlal_stream_async(
+                *args, provider=provider, max_tokens=max_tokens,
+            )
+        ]
+
+    return asyncio.run(_run())
+
+
 def test_generate_ihlal_kurul_prompt_kullanir():
     seen = []
-    events = list(generate_ihlal_stream(
+    events = _collect(
         _olay(), _prof(), ["Kimlik"], ["Ad"], ["1.Şifreleme"], ["kural1"],
-        "kurul", provider=_FakeProvider(seen), max_tokens=8000,
-    ))
+        "kurul", provider=_FakeProvider(seen),
+    )
     assert "İHLAL BİLDİRİM FORMU" in seen[0]
     assert events[-1][0] == "done"
 
 
 def test_generate_ihlal_ilgili_kisi_prompt_kullanir():
     seen = []
-    list(generate_ihlal_stream(
+    _collect(
         _olay(), _prof(), ["Kimlik"], ["Ad"], [], [],
-        "ilgili_kisi", provider=_FakeProvider(seen), max_tokens=8000,
-    ))
+        "ilgili_kisi", provider=_FakeProvider(seen),
+    )
     assert "SİZİN ALABİLECEĞİNİZ" in seen[0].upper()
 
 

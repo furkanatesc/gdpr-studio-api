@@ -164,12 +164,13 @@ def parse_review_json(
     return out
 
 
-def _collect_stream(provider, prompt: str, max_tokens: int) -> str:
+async def _collect_stream(provider, prompt: str, max_tokens: int) -> str:
     """Sağlayıcı akışını tam metne biriktirir (streaming → read-timeout tetiklenmez)."""
-    return "".join(provider.stream(prompt, max_tokens=max_tokens))
+    chunks = [chunk async for chunk in provider.astream(prompt, max_tokens=max_tokens)]
+    return "".join(chunks)
 
 
-def review_dpa(
+async def review_dpa(
     text: str,
     context: ReviewContext,
     *,
@@ -178,11 +179,11 @@ def review_dpa(
     checklist: list[ReviewItem] = DPA_CHECKLIST,
 ) -> DpaReviewResult:
     prompt = build_dpa_review_prompt(text, context, checklist)
-    raw = _collect_stream(provider, prompt, max_tokens)
+    raw = await _collect_stream(provider, prompt, max_tokens)
     try:
         findings = parse_review_json(raw, checklist)
     except ReviewParseError:
-        retry_raw = _collect_stream(
+        retry_raw = await _collect_stream(
             provider,
             prompt + "\n\nHATIRLATMA: Çıktı YALNIZCA geçerli JSON dizisi olmalı.",
             max_tokens,

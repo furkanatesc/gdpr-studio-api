@@ -62,6 +62,10 @@ def _fake_response():
     )
 
 
+async def _agenerate_ok(*a, **k):
+    return _fake_response()
+
+
 def _post(client, key: str | None = None):
     headers = {"Idempotency-Key": key} if key else {}
     return client.post("/api/generate", json={"type": "aydinlatma"}, headers=headers)
@@ -73,11 +77,11 @@ def test_duplicate_key_rejected_without_second_generation(client, db_session, mo
     _use_fake_redis(monkeypatch)
     calls = {"n": 0}
 
-    def _counted(*a, **k):
+    async def _counted(*a, **k):
         calls["n"] += 1
         return _fake_response()
 
-    monkeypatch.setattr(genmod, "generate_document", _counted)
+    monkeypatch.setattr(genmod, "generate_document_async", _counted)
 
     assert _post(client, "abc-123").status_code == 200
     dup = _post(client, "abc-123")
@@ -91,7 +95,7 @@ def test_duplicate_key_rejected_without_second_generation(client, db_session, mo
 def test_different_keys_both_generate(client, monkeypatch):
     _managed_billing_settings()
     _use_fake_redis(monkeypatch)
-    monkeypatch.setattr(genmod, "generate_document", lambda *a, **k: _fake_response())
+    monkeypatch.setattr(genmod, "generate_document_async", _agenerate_ok)
 
     assert _post(client, "key-1").status_code == 200
     assert _post(client, "key-2").status_code == 200
@@ -101,7 +105,7 @@ def test_without_key_no_lock(client, monkeypatch):
     """Başlık opsiyonel: gönderilmezse davranış değişmez (kilit yok)."""
     _managed_billing_settings()
     _use_fake_redis(monkeypatch)
-    monkeypatch.setattr(genmod, "generate_document", lambda *a, **k: _fake_response())
+    monkeypatch.setattr(genmod, "generate_document_async", _agenerate_ok)
 
     assert _post(client).status_code == 200
     assert _post(client).status_code == 200
@@ -112,13 +116,13 @@ def test_failed_generation_releases_key(client, monkeypatch):
     _managed_billing_settings()
     _use_fake_redis(monkeypatch)
 
-    def _boom(*a, **k):
+    async def _boom(*a, **k):
         raise RuntimeError("model patladı")
 
-    monkeypatch.setattr(genmod, "generate_document", _boom)
+    monkeypatch.setattr(genmod, "generate_document_async", _boom)
     assert _post(client, "retry-me").status_code == 502
 
-    monkeypatch.setattr(genmod, "generate_document", lambda *a, **k: _fake_response())
+    monkeypatch.setattr(genmod, "generate_document_async", _agenerate_ok)
     assert _post(client, "retry-me").status_code == 200  # kilit bırakıldı
 
 
@@ -127,12 +131,12 @@ def test_stream_duplicate_key_rejected(client, monkeypatch):
     _managed_billing_settings()
     _use_fake_redis(monkeypatch)
 
-    def _fake_stream(*a, **k):
+    async def _fake_stream(*a, **k):
         yield "grounding", []
         yield "delta", "me"
         yield "done", {"model": "claude-sonnet-4-6", "usage": {"inputTokens": 10, "outputTokens": 20}}
 
-    monkeypatch.setattr(genmod, "generate_document_stream", _fake_stream)
+    monkeypatch.setattr(genmod, "generate_document_stream_async", _fake_stream)
     headers = {"Idempotency-Key": "stream-1"}
     with client.stream("POST", "/api/generate/stream", json={"type": "cerez"}, headers=headers) as r:
         assert r.status_code == 200
@@ -145,7 +149,7 @@ def test_stream_duplicate_key_rejected(client, monkeypatch):
 def test_too_long_key_rejected(client, monkeypatch):
     _managed_billing_settings()
     _use_fake_redis(monkeypatch)
-    monkeypatch.setattr(genmod, "generate_document", lambda *a, **k: _fake_response())
+    monkeypatch.setattr(genmod, "generate_document_async", _agenerate_ok)
 
     r = _post(client, "x" * (idem.MAX_KEY_LENGTH + 1))
     assert r.status_code == 400
@@ -155,7 +159,7 @@ def test_redis_disabled_fails_open(client, monkeypatch):
     """Redis yoksa özellik sessizce devre dışı — üretim engellenmez."""
     _managed_billing_settings()
     monkeypatch.setattr(idem, "get_redis", lambda: None)
-    monkeypatch.setattr(genmod, "generate_document", lambda *a, **k: _fake_response())
+    monkeypatch.setattr(genmod, "generate_document_async", _agenerate_ok)
 
     assert _post(client, "same").status_code == 200
     assert _post(client, "same").status_code == 200

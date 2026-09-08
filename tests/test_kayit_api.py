@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import uuid
 
 import app.config as config_module
@@ -51,7 +52,7 @@ def _put_inventory(db_session, client_id, org_id=IDENT.org_id):
     db_session.commit()
 
 
-def _fake_stream(*a, **k):
+async def _fake_stream(*a, **k):
     yield "grounding", []
     yield "delta", "Isleme"
     yield "delta", " kaydi."
@@ -73,12 +74,12 @@ def _consume(response) -> str:
 def _generate(db_session, client_id, **ov):
     kwargs = dict(session=db_session, identity=IDENT, x_anthropic_key=None, idempotency_key=None)
     kwargs.update(ov)
-    return kayitmod.generate(client_id=client_id, **kwargs)
+    return asyncio.run(kayitmod.generate(client_id=client_id, **kwargs))
 
 
 def test_kayit_generate_musvekkil_yok_404(db_session, monkeypatch):
     _managed_billing_settings()
-    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream", _fake_stream)
+    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream_async", _fake_stream)
     from fastapi import HTTPException
     try:
         _generate(db_session, uuid.uuid4())
@@ -90,7 +91,7 @@ def test_kayit_generate_musvekkil_yok_404(db_session, monkeypatch):
 
 def test_kayit_generate_envanter_bos_422(db_session, monkeypatch):
     _managed_billing_settings()
-    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream", _fake_stream)
+    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream_async", _fake_stream)
     cid = _make_client(db_session)
     from fastapi import HTTPException
     try:
@@ -104,7 +105,7 @@ def test_kayit_generate_envanter_bos_422(db_session, monkeypatch):
 def test_kayit_generate_belgeyi_saklar(db_session, monkeypatch):
     from app.models import ClientDocument
     _managed_billing_settings()
-    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream", _fake_stream)
+    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream_async", _fake_stream)
     cid = _make_client(db_session)
     _put_inventory(db_session, cid)
 
@@ -121,7 +122,7 @@ def test_kayit_generate_belgeyi_saklar(db_session, monkeypatch):
     assert rows[0].score_compliance == 0.0  # org'da uyum statusu yok
 
 
-def _fake_stream_truncated(*a, **k):
+async def _fake_stream_truncated(*a, **k):
     yield "grounding", []
     yield "delta", "Kesik VERBIS tablosu..."
     yield "done", {
@@ -137,7 +138,7 @@ def test_kayit_generate_max_tokensta_saklanmaz_ve_uyari_yayinlanir(db_session, m
     from app.models import ClientDocument
 
     _managed_billing_settings()
-    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream", _fake_stream_truncated)
+    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream_async", _fake_stream_truncated)
     cid = _make_client(db_session)
     _put_inventory(db_session, cid)
 
@@ -159,7 +160,7 @@ def test_kayit_generate_max_tokensta_belge_sayaci_geri_alinir(db_session, monkey
     from app.billing.repositories import UsageRepository
 
     _managed_billing_settings()
-    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream", _fake_stream_truncated)
+    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream_async", _fake_stream_truncated)
     cid = _make_client(db_session)
     _put_inventory(db_session, cid)
 
@@ -200,7 +201,7 @@ def test_kayit_generate_uyari_donedan_once_gelir(db_session, monkeypatch):
     import json
 
     _managed_billing_settings()
-    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream", _fake_stream_truncated)
+    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream_async", _fake_stream_truncated)
     cid = _make_client(db_session)
     _put_inventory(db_session, cid)
 
@@ -223,7 +224,7 @@ def test_kayit_generate_max_tokensta_uyum_kaydi_geri_alinir(db_session, monkeypa
     GeneratedDocumentRepository(db_session).record(IDENT.org_id, DocType.kayit)
     db_session.commit()
 
-    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream", _fake_stream_truncated)
+    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream_async", _fake_stream_truncated)
     cid = _make_client(db_session)
     _put_inventory(db_session, cid)
 
@@ -235,7 +236,7 @@ def test_kayit_generate_max_tokensta_uyum_kaydi_geri_alinir(db_session, monkeypa
 
 
 def _fake_stream_with_stop_reason(stop_reason):
-    def _f(*a, **k):
+    async def _f(*a, **k):
         yield "grounding", []
         yield "delta", "Isleme kaydi metni"
         yield "done", {
@@ -253,7 +254,7 @@ def test_kayit_generate_baglam_penceresi_asildiginda_saklanmaz(db_session, monke
 
     _managed_billing_settings()
     monkeypatch.setattr(
-        kayitmod, "generate_kayit_envanter_stream",
+        kayitmod, "generate_kayit_envanter_stream_async",
         _fake_stream_with_stop_reason("model_context_window_exceeded"),
     )
     cid = _make_client(db_session)
@@ -273,7 +274,7 @@ def test_kayit_generate_refusal_saklanmaz_ve_farkli_mesaj_gosterilir(db_session,
 
     _managed_billing_settings()
     monkeypatch.setattr(
-        kayitmod, "generate_kayit_envanter_stream",
+        kayitmod, "generate_kayit_envanter_stream_async",
         _fake_stream_with_stop_reason("refusal"),
     )
     cid = _make_client(db_session)
@@ -295,7 +296,7 @@ def test_kayit_generate_end_turn_saklanir_regresyon_kilidi(db_session, monkeypat
 
     _managed_billing_settings()
     monkeypatch.setattr(
-        kayitmod, "generate_kayit_envanter_stream",
+        kayitmod, "generate_kayit_envanter_stream_async",
         _fake_stream_with_stop_reason("end_turn"),
     )
     cid = _make_client(db_session)
@@ -314,7 +315,7 @@ def test_kayit_generate_kesmede_idempotency_kilidi_birakilir(db_session, monkeyp
     """Borc #4: kesmede idempotency kilidi BIRAKILMALI."""
     _managed_billing_settings()
     fake = _use_fake_redis(monkeypatch)
-    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream", _fake_stream_truncated)
+    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream_async", _fake_stream_truncated)
     cid = _make_client(db_session)
     _put_inventory(db_session, cid)
 
@@ -326,15 +327,16 @@ def test_kayit_generate_kesmede_idempotency_kilidi_birakilir(db_session, monkeyp
 
 def test_kayit_generate_global_kurallar_dahil(db_session, monkeypatch):
     """I2: app/modules/kayit.py yalniz doc_type='kayit' kurallarini degil GLOBAL_RULES'u
-    da (ozellikle yurt disi aktarim kurali) generate_kayit_envanter_stream'e gecirmeli."""
+    da (ozellikle yurt disi aktarim kurali) generate_kayit_envanter_stream_async'e gecirmeli."""
     _managed_billing_settings()
     captured = {}
 
-    def _capture_stream(records, profile, measures, rules, **kw):
+    async def _capture_stream(records, profile, measures, rules, **kw):
         captured["rules"] = rules
-        yield from _fake_stream()
+        async for ev in _fake_stream():
+            yield ev
 
-    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream", _capture_stream)
+    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream_async", _capture_stream)
     cid = _make_client(db_session)
     _put_inventory(db_session, cid)
 
@@ -351,7 +353,7 @@ def test_kayit_generate_puan_a_cap_ile_tutarli(db_session, monkeypatch):
 
     _managed_billing_settings()
     config_module._settings.process_cap = 1
-    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream", _fake_stream)
+    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream_async", _fake_stream)
     cid = _make_client(db_session)
 
     # Ilk satir tam dolu (6/6), ikinci satir tamamen bos (0/6). Cap=1 -> yalniz ilk satir sayilmali.
@@ -389,11 +391,12 @@ def test_kayit_generate_saglayiciya_32000_max_tokens_ile_cagirir(db_session, mon
     _managed_billing_settings()
     captured = {}
 
-    def _capture_stream(records, profile, measures, rules, **kw):
+    async def _capture_stream(records, profile, measures, rules, **kw):
         captured["max_tokens"] = kw.get("max_tokens")
-        yield from _fake_stream()
+        async for ev in _fake_stream():
+            yield ev
 
-    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream", _capture_stream)
+    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream_async", _capture_stream)
     cid = _make_client(db_session)
     _put_inventory(db_session, cid)
 
@@ -415,7 +418,7 @@ def test_kayit_generate_rezervasyon_32000_uzerinden_hesaplanir(db_session, monke
         captured["max_tokens"] = kw.get("max_tokens")
         return real_reserve(*a, **kw)
 
-    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream", _fake_stream)
+    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream_async", _fake_stream)
     monkeypatch.setattr(kayitmod, "reserve_generation_usage", _capture_reserve)
     cid = _make_client(db_session)
     _put_inventory(db_session, cid)
@@ -433,7 +436,7 @@ def test_kayit_generate_baska_org_muvekkili_404(db_session, monkeypatch):
     from app.models import ClientDocument
 
     _managed_billing_settings()
-    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream", _fake_stream)
+    monkeypatch.setattr(kayitmod, "generate_kayit_envanter_stream_async", _fake_stream)
     other_org_id = uuid.UUID("00000000-0000-0000-0000-000000000099")
     other_cid = _make_client(db_session, org_id=other_org_id)
     _put_inventory(db_session, other_cid, org_id=other_org_id)

@@ -98,12 +98,12 @@ def _put_inventory_direct(db_session, client_id, org_id=_IDENT.org_id):
     db_session.commit()
 
 
-def _fake_ihlal_stream(*a, **k):
+async def _fake_ihlal_stream(*a, **k):
     yield "delta", "İhlal bildirim metni..."
     yield "done", {"model": "claude-x", "usage": {"inputTokens": 10, "outputTokens": 20}}
 
 
-def _fake_ihlal_stream_truncated(*a, **k):
+async def _fake_ihlal_stream_truncated(*a, **k):
     yield "delta", "Kesik ihlal metni..."
     yield "done", {
         "model": "claude-x",
@@ -125,6 +125,8 @@ def _consume_direct(response) -> str:
 
 
 def _generate_direct(db_session, client_id, **ov):
+    import asyncio
+
     kwargs = dict(
         session=db_session, identity=_IDENT,
         body=ihlalmod.IhlalGenerateIn(
@@ -135,14 +137,14 @@ def _generate_direct(db_session, client_id, **ov):
         x_anthropic_key=None, idempotency_key=None,
     )
     kwargs.update(ov)
-    return ihlalmod.generate(client_id=client_id, **kwargs)
+    return asyncio.run(ihlalmod.generate(client_id=client_id, **kwargs))
 
 
 def test_ihlal_generate_kurul_sse_persist_yok(db_session, monkeypatch):
     from app.models import ClientDocument
 
     _managed_billing_settings()
-    monkeypatch.setattr(ihlalmod, "generate_ihlal_stream", _fake_ihlal_stream)
+    monkeypatch.setattr(ihlalmod, "generate_ihlal_stream_async", _fake_ihlal_stream)
     cid = _make_client_direct(db_session)
     _put_inventory_direct(db_session, cid)
 
@@ -158,7 +160,7 @@ def test_ihlal_generate_gecersiz_tur_422(db_session, monkeypatch):
     from fastapi import HTTPException
 
     _managed_billing_settings()
-    monkeypatch.setattr(ihlalmod, "generate_ihlal_stream", _fake_ihlal_stream)
+    monkeypatch.setattr(ihlalmod, "generate_ihlal_stream_async", _fake_ihlal_stream)
     cid = _make_client_direct(db_session)
     _put_inventory_direct(db_session, cid)
 
@@ -181,7 +183,7 @@ def test_ihlal_generate_max_tokensta_sayac_geri_alinir(db_session, monkeypatch):
     from app.models import ClientDocument
 
     _managed_billing_settings()
-    monkeypatch.setattr(ihlalmod, "generate_ihlal_stream", _fake_ihlal_stream_truncated)
+    monkeypatch.setattr(ihlalmod, "generate_ihlal_stream_async", _fake_ihlal_stream_truncated)
     cid = _make_client_direct(db_session)
     _put_inventory_direct(db_session, cid)
 
