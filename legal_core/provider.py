@@ -139,13 +139,18 @@ class AnthropicProvider:
         return await _CLIENT_CACHE.get(key, self._build_client)
 
     def _build_client(self):
-        """Yeni AsyncAnthropic (lazy import: legal_core saf kalır). Yalnız cache-miss'te çağrılır."""
-        import httpx
+        """Yeni AsyncAnthropic (lazy import: legal_core saf kalır). Yalnız cache-miss'te çağrılır.
+
+        timeout DÜZ FLOAT (saniye) geçilir — `httpx.Timeout` nesnesi DEĞİL. anthropic SDK'nın
+        yeni sürümleri `httpx2` kullanıyor ve `httpx.Timeout`'u reddediyor
+        (`TypeError: ... use httpx2.Timeout`). Float her iki httpx sürümünde de geçerli; SDK
+        onu kendi içinde doğru Timeout tipine çevirir → sürümden bağımsız dayanıklılık.
+        """
         from anthropic import AsyncAnthropic
 
         return AsyncAnthropic(
             api_key=self._api_key,
-            timeout=httpx.Timeout(self._timeout_s),
+            timeout=self._timeout_s,
             max_retries=self._max_retries,
         )
 
