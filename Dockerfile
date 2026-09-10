@@ -7,13 +7,19 @@ ENV PYTHONUNBUFFERED=1 \
 WORKDIR /srv
 
 # Bağımlılıklar (yerel paketi kurmadan kaynaktan çalıştırırız → veri/alembic yolları sabit kalır)
-# NOT: pyproject.toml [api] ile senkron tutulmalı (dep-layer cache için elle listeleniyor).
-# fastembed HARİÇ (semantic fallback lazy + varsayılan kapalı) — geri kalan pyproject [api] ile aynı.
+# fastembed HARİÇ (semantic fallback lazy + varsayılan kapalı); dev deps (pytest/ruff) HARİÇ.
+#
+# SÜRÜMLER SABİT (exact pin) — test edilen .venv baseline'ı ile birebir (reproducible build).
+# NEDEN: daha önce ">=" tavansız pinler yüzünden her rebuild "en son"u çekiyordu; anthropic
+# yeni bir majora atlayıp httpx yerine httpx2 kullanınca AsyncAnthropic(timeout=httpx.Timeout)
+# prod'da TypeError verip TÜM üretimi düşürdü (bkz #82). Exact pin bu pin-drift sınıfını keser:
+# prod = pytest'in geçtiği sürümler. Sürüm yükseltince .venv'i güncelle + tam suite koştur +
+# buradaki pinleri `.venv` pip freeze ile senkronla. (İzleyen adım: tam lockfile/uv.)
 RUN pip install --no-cache-dir \
-    "fastapi>=0.115" "uvicorn[standard]>=0.32" "pydantic>=2.7" "pydantic-settings>=2.5" \
-    "sqlalchemy>=2.0" "alembic>=1.13" "psycopg[binary]>=3.2" "redis>=5.0" "anthropic>=0.40" \
-    "sentry-sdk[fastapi]>=2.0" "pyjwt[crypto]>=2.8" "itsdangerous>=2.1" "httpx>=0.27" \
-    "email-validator>=2" "stripe>=10" "openpyxl>=3.1" "python-multipart>=0.0.9" "python-docx>=1.1"
+    "fastapi==0.141.1" "uvicorn[standard]==0.49.0" "pydantic==2.13.4" "pydantic-settings==2.14.1" \
+    "sqlalchemy==2.0.51" "alembic==1.18.4" "psycopg[binary]==3.3.4" "redis==8.0.0" "anthropic==0.109.2" \
+    "sentry-sdk[fastapi]==2.63.0" "pyjwt[crypto]==2.13.0" "itsdangerous==2.2.0" "httpx==0.28.1" \
+    "email-validator==2.3.0" "stripe==15.3.0" "openpyxl==3.1.5" "python-multipart==0.0.32" "python-docx==1.2.0"
 
 COPY . .
 
